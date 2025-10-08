@@ -1,0 +1,72 @@
+{% load humanize widget_tweaks %}
+
+<div class="form-section">
+  <h2 class="text-2xl font-semibold text-white mb-4 flex items-center">
+    <i class="fas fa-calendar-alt mr-2 text-blue-400"></i> Durée & Début
+  </h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="field-group">
+      <label for="{{ simulation_form.duree.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
+        <i class="fas fa-clock mr-1 text-green-500"></i>
+        Durée du contrat <span class="text-red-400">*</span>
+      </label>
+      {{ simulation_form.duree|attr:"required:required"|attr:"min:1" }}
+      {% if simulation_form.duree.errors %}
+        <p class="text-red-500 text-xs mt-1">{{ simulation_form.duree.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <div class="field-group">
+      <label for="{{ simulation_form.date_effet.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
+        <i class="fas fa-calendar-day mr-1 text-green-500"></i>
+        Date d'effet <span class="text-red-400">*</span>
+      </label>
+      {{ simulation_form.date_effet|attr:"required:required"|attr:"autocomplete:off" }}
+      {% if simulation_form.date_effet.errors %}
+        <p class="text-red-500 text-xs mt-1">{{ simulation_form.date_effet.errors.0 }}</p>
+      {% endif %}
+      <p class="text-gray-400 text-xs mt-1">
+        <i class="fas fa-info-circle mr-1"></i>
+        Cliquez pour ouvrir le calendrier
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-8 flex flex-col items-center">
+    <button id="btn-calculer-tarif" type="button"
+            hx-post="{% url 'contracts:simuler_tarif' %}"
+            hx-target="#simulation-result"
+            hx-swap="innerHTML"
+            hx-include="#contrat-form"
+            hx-indicator="#sim-indicator"
+            hx-timeout="15000"
+            class="btn btn-primary flex items-center space-x-2">
+      <i class="fas fa-calculator"></i>
+      <span>Envoyer</span>
+    </button>
+
+    <!-- Indicateur unique, caché hors requête -->
+    <div id="sim-indicator" class="htmx-indicator hidden mt-3 text-sm text-blue-300">
+      <i class="fas fa-circle-notch fa-spin mr-2"></i> patientez…
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const dateEffet = document.getElementById("id_date_effet");
+  if (dateEffet && dateEffet.type === "date") {
+    const t = new Date(), pad = n => String(n).padStart(2,"0");
+    const iso = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+    dateEffet.setAttribute("min", iso);
+  }
+
+  document.addEventListener('htmx:afterOnLoad', function (e) {
+    if (e.target && e.target.id === 'simulation-result') {
+      const emitBtn = document.getElementById('btn-emettre-contrat');
+      if (emitBtn) emitBtn.removeAttribute('disabled');
+    }
+  });
+});
+</script>

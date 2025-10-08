@@ -1,0 +1,150 @@
+{% load humanize %}
+
+<div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mt-6 shadow-lg">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-semibold text-white flex items-center">
+      <i class="fas fa-history mr-2 text-gray-400"></i>
+      Derniers Contrats
+    </h2>
+    <a href="{% url 'contracts:liste_contrats' %}"
+       class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">
+      Voir tout <i class="fas fa-arrow-right text-xs"></i>
+    </a>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm font-medium border-separate border-spacing-y-1">
+      <thead>
+        <tr class="bg-gray-800 text-gray-300 uppercase text-xs">
+          <th class="py-3 px-3 text-left rounded-l-lg">Police</th>
+          <th class="py-3 px-3 text-left">Client</th>
+          <th class="py-3 px-3 text-left">Immatriculation</th>
+          <th class="py-3 px-3 text-left">Effet</th>
+          <th class="py-3 px-3 text-left">Échéance</th>
+          <th class="py-3 px-3 text-left">Prime TTC</th>
+          <th class="py-3 px-3 text-left">Commission</th>
+          {% if user.role == 'ADMIN' %}
+            <th class="py-3 px-3 text-left">Apporteur</th>
+          {% endif %}
+          <th class="py-3 px-3 text-center">Docs</th>
+          <th class="py-3 px-3 text-center rounded-r-lg">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for contrat in derniers_contrats_affiches %}
+        <tr class="bg-gray-800/50 hover:bg-gray-700 transition rounded-lg">
+          <!-- Police -->
+          <td class="py-2 px-3">
+            <a href="{% url 'contracts:detail_contrat' contrat.pk %}"
+               class="text-blue-400 hover:text-blue-300 font-semibold">
+              {{ contrat.numero_police|default:"-" }}
+            </a>
+          </td>
+
+          <!-- Client -->
+          <td class="py-2 px-3 text-white">
+            {{ contrat.client.nom_complet|default:"-" }}
+          </td>
+
+          <!-- Immatriculation -->
+          <td class="py-2 px-3 text-gray-300">
+            {{ contrat.vehicule.immatriculation|default:"-" }}
+          </td>
+
+          <!-- Date Effet -->
+          <td class="py-2 px-3 text-gray-300">
+            {{ contrat.date_effet|date:"d/m/Y"|default:"-" }}
+          </td>
+
+          <!-- Date Échéance -->
+          <td class="py-2 px-3 text-gray-300">
+            {{ contrat.date_echeance|date:"d/m/Y"|default:"-" }}
+          </td>
+
+          <!-- Prime TTC -->
+          <td class="py-2 px-3">
+            <span class="text-green-400 font-medium">
+              {{ contrat.prime_ttc|default_if_none:0|floatformat:0|intcomma }} F
+            </span>
+          </td>
+
+          <!-- Commission -->
+          <td class="py-2 px-3">
+            {% if user.role == 'APPORTEUR' %}
+              <span class="px-2 py-1 rounded bg-yellow-900/50 text-yellow-300 text-xs font-medium">
+                {{ contrat.commission_apporteur|default_if_none:0|floatformat:0|intcomma }} F
+              </span>
+            {% else %}
+              <span class="px-2 py-1 rounded bg-green-900/50 text-green-300 text-xs font-medium">
+                {{ contrat.commission_askia|default_if_none:0|floatformat:0|intcomma }} F
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Apporteur (uniquement pour ADMIN) -->
+          {% if user.role == 'ADMIN' %}
+          <td class="py-2 px-3 text-gray-400 text-xs">
+            {% if contrat.apporteur %}
+              {{ contrat.apporteur.get_full_name }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          {% endif %}
+
+          <!-- Documents -->
+          <td class="py-2 px-3">
+            <div class="flex items-center justify-center gap-2">
+              {% if contrat.link_attestation %}
+                <a href="{{ contrat.link_attestation }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="text-green-400 hover:text-green-300"
+                   title="Attestation">
+                  <i class="fas fa-file-pdf"></i>
+                </a>
+              {% endif %}
+              {% if contrat.link_carte_brune %}
+                <a href="{{ contrat.link_carte_brune }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="text-blue-400 hover:text-blue-300"
+                   title="Carte Brune">
+                  <i class="fas fa-id-card"></i>
+                </a>
+              {% endif %}
+              {% if not contrat.link_attestation and not contrat.link_carte_brune %}
+                <span class="text-gray-600 text-xs">-</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Actions -->
+          <td class="py-2 px-3 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <a href="{% url 'contracts:detail_contrat' contrat.pk %}"
+                 class="text-blue-400 hover:text-blue-300"
+                 title="Voir détail">
+                <i class="fas fa-eye"></i>
+              </a>
+              <a href="{% url 'contracts:telecharger_documents' contrat.pk %}"
+                 class="text-purple-400 hover:text-purple-300"
+                 title="Télécharger PDF">
+                <i class="fas fa-download"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="{% if user.role == 'ADMIN' %}10{% else %}9{% endif %}"
+              class="text-center py-8 text-gray-500">
+            <i class="fas fa-inbox text-3xl mb-2 block"></i>
+            <p>Aucun contrat émis pour le moment</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Liste des Contrats{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- En-tête + Actions -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+            <i class="fas fa-file-contract text-primary-green"></i>
+            <span>Liste des Contrats</span>
+            <span class="text-sm font-normal text-gray-400">({{ contrats.paginator.count }} total)</span>
+        </h1>
+
+        <div class="flex gap-2">
+            <a href="{% url 'contracts:nouveau_contrat' %}"
+               class="btn btn-primary flex items-center gap-2">
+                <i class="fas fa-plus"></i>
+                <span>Nouveau Contrat</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recherche et Filtres -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <form method="GET" class="flex flex-col md:flex-row gap-3">
+            <div class="flex-1">
+                <input type="text"
+                       name="search"
+                       value="{{ search_query }}"
+                       placeholder="Rechercher par police, immatriculation, nom, prénom..."
+                       class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700
+                              focus:border-primary-green focus:ring-1 focus:ring-primary-green transition">
+            </div>
+
+            <select name="status"
+                    class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700
+                           focus:border-primary-green focus:ring-1 focus:ring-primary-green">
+                <option value="">Tous les statuts</option>
+                <option value="EMIS" {% if status_filter == 'EMIS' %}selected{% endif %}>Émis</option>
+                <option value="ACTIF" {% if status_filter == 'ACTIF' %}selected{% endif %}>Actif</option>
+                <option value="EXPIRE" {% if status_filter == 'EXPIRE' %}selected{% endif %}>Expiré</option>
+            </select>
+
+            <button type="submit" class="btn btn-primary flex items-center gap-2 whitespace-nowrap">
+                <i class="fas fa-search"></i>
+                <span>Rechercher</span>
+            </button>
+
+            {% if search_query or status_filter or date_debut or date_fin or apporteur_filter %}
+            <a href="{% url 'contracts:liste_contrats' %}"
+               class="btn bg-red-800 hover:bg-red-700 text-white flex items-center gap-2">
+                <i class="fas fa-times"></i>
+                <span>Réinitialiser</span>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Tableau responsive -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 shadow-lg overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-800 border-b border-gray-700">
+                <tr>
+                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Police</th>
+                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Client</th>
+                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Immat.</th>
+                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Effet</th>
+                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Échéance</th>
+                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Prime TTC</th>
+                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Commission</th>
+                    {% if user.role == 'ADMIN' %}
+                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Apporteur</th>
+                    {% endif %}
+                    <th class="px-4 py-3 text-center text-gray-300 font-semibold">Docs</th>
+                    <th class="px-4 py-3 text-center text-gray-300 font-semibold">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for contrat in contrats %}
+                <tr class="hover:bg-gray-800/60 transition">
+                    <!-- Police -->
+                    <td class="px-4 py-3">
+                        <a href="{% url 'contracts:detail_contrat' contrat.pk %}"
+                           class="text-blue-400 hover:text-blue-300 font-semibold">
+                            {{ contrat.numero_police|default:"-" }}
+                        </a>
+                    </td>
+
+                    <!-- Client -->
+                    <td class="px-4 py-3 text-white">
+                        {{ contrat.client.nom_complet|default:"-" }}
+                    </td>
+
+                    <!-- Immatriculation -->
+                    <td class="px-4 py-3 text-gray-300">
+                        {{ contrat.vehicule.immatriculation|default:"-" }}
+                    </td>
+
+                    <!-- Dates -->
+                    <td class="px-4 py-3 text-gray-400">
+                        {{ contrat.date_effet|date:"d/m/Y"|default:"-" }}
+                    </td>
+                    <td class="px-4 py-3 text-gray-400">
+                        {{ contrat.date_echeance|date:"d/m/Y"|default:"-" }}
+                    </td>
+
+                    <!-- Prime TTC -->
+                    <td class="px-4 py-3">
+                        <span class="text-green-400 font-semibold">
+                            {{ contrat.prime_ttc|default_if_none:0|floatformat:0|intcomma }} F
+                        </span>
+                    </td>
+
+                    <!-- Commission -->
+                    <td class="px-4 py-3">
+                        {% if user.role == 'APPORTEUR' %}
+                            <span class="px-2 py-1 rounded bg-yellow-900/50 text-yellow-300 text-xs font-medium">
+                                {{ contrat.commission_apporteur|default_if_none:0|floatformat:0|intcomma }} F
+                            </span>
+                        {% else %}
+                            <span class="px-2 py-1 rounded bg-green-900/50 text-green-300 text-xs font-medium">
+                                {{ contrat.commission_askia|default_if_none:0|floatformat:0|intcomma }} F
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Apporteur (Admin seulement) -->
+                    {% if user.role == 'ADMIN' %}
+                    <td class="px-4 py-3 text-gray-400 text-xs">
+                        {{ contrat.apporteur.get_full_name|default:"Admin" }}
+                    </td>
+                    {% endif %}
+
+                    <!-- Documents -->
+                    <td class="px-4 py-3">
+                        <div class="flex items-center justify-center gap-2">
+                            {% if contrat.link_attestation %}
+                                <a href="{{ contrat.link_attestation }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="text-green-400 hover:text-green-300"
+                                   title="Attestation">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                            {% endif %}
+                            {% if contrat.link_carte_brune %}
+                                <a href="{{ contrat.link_carte_brune }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="text-blue-400 hover:text-blue-300"
+                                   title="Carte Brune">
+                                    <i class="fas fa-id-card"></i>
+                                </a>
+                            {% endif %}
+                            {% if not contrat.link_attestation and not contrat.link_carte_brune %}
+                                <span class="text-gray-600">-</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="px-4 py-3">
+                        <div class="flex items-center justify-center gap-2">
+                            <a href="{% url 'contracts:detail_contrat' contrat.pk %}"
+                               class="text-blue-400 hover:text-blue-300"
+                               title="Voir détail">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'contracts:telecharger_documents' contrat.pk %}"
+                               class="text-purple-400 hover:text-purple-300"
+                               title="Télécharger PDF">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if user.role == 'ADMIN' %}10{% else %}9{% endif %}"
+                        class="text-center py-12 text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-3 block text-gray-700"></i>
+                        <p class="text-lg">Aucun contrat trouvé</p>
+                        {% if search_query %}
+                        <p class="text-sm mt-2">Essayez de modifier votre recherche</p>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if contrats.paginator.num_pages > 1 %}
+    <div class="flex justify-center items-center gap-2">
+        {% if contrats.has_previous %}
+            <a href="?page={{ contrats.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+               class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">
+                <i class="fas fa-chevron-left"></i> Précédent
+            </a>
+        {% endif %}
+
+        <span class="px-4 py-2 text-gray-300 bg-gray-800 rounded-lg">
+            Page {{ contrats.number }} / {{ contrats.paginator.num_pages }}
+        </span>
+
+        {% if contrats.has_next %}
+            <a href="?page={{ contrats.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+               class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">
+                Suivant <i class="fas fa-chevron-right"></i>
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,363 @@
+/* =======================
+   Variables CSS
+   ======================= */
+:root {
+    /* Couleurs principales */
+    --primary-green: #00ff00;
+    --primary-green-hover: #00cc00;
+    --primary-green-dark: #00aa00;
+    --success-green: #00ff00;
+    --warning-yellow: #f59e0b;
+    --danger-red: #ef4444;
+
+    /* Neutres */
+    --black: #000000;
+    --white: #ffffff;
+
+    /* Échelle de gris */
+    --gray-950: #0a0a0a;
+    --gray-900: #111827;
+    --gray-800: #1f2937;
+    --gray-700: #374151;
+    --gray-600: #4b5563;
+    --gray-500: #6b7280;
+    --gray-400: #9ca3af;
+    --gray-300: #d1d5db;
+    --gray-200: #e5e7eb;
+    --gray-100: #f3f4f6;
+
+    /* Transitions */
+    --transition-fast: 0.15s ease-out;
+    --transition-normal: 0.3s ease-out;
+    --transition-slow: 0.5s ease-out;
+
+    /* Ombres */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+}
+
+/* =======================
+   Animations
+   ======================= */
+@keyframes fadeIn { from{opacity:0;transform:translateY(-10px);} to{opacity:1;transform:translateY(0);} }
+@keyframes slideIn { from{opacity:0;transform:translateX(-20px);} to{opacity:1;transform:translateX(0);} }
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);} }
+@keyframes pulse {0%,100%{opacity:1;}50%{opacity:.5;} }
+@keyframes bounce {0%,20%,53%,80%,100%{transform:translateY(0);}40%,43%{transform:translateY(-10px);}70%{transform:translateY(-5px);}90%{transform:translateY(-2px);} }
+@keyframes spin {0%{transform:rotate(0);}100%{transform:rotate(360deg);} }
+@keyframes progress-shimmer {0%{transform:translateX(-100%);}100%{transform:translateX(100%);} }
+@keyframes fadeInCalendar {from{opacity:0;transform:translateY(-10px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);} }
+@keyframes dayFadeIn {from{opacity:0;transform:scale(.8);}to{opacity:1;transform:scale(1);} }
+
+/* Classes d'animation */
+.animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+.animate-slideIn { animation: slideIn 0.3s ease-out; }
+.animate-shake { animation: shake 0.3s ease-in-out; }
+.animate-pulse { animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+.animate-bounce { animation: bounce 1s infinite; }
+
+/* =======================
+   Boutons
+   ======================= */
+.btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .5rem 1rem;
+    border-radius: .5rem;
+    font-weight: 600;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    border: none;
+    outline: none;
+}
+.btn:focus { outline:2px solid var(--primary-green); outline-offset:2px; }
+.btn:disabled { opacity:.5;cursor:not-allowed;transform:none!important; }
+
+.btn-primary {
+    background: linear-gradient(135deg,var(--primary-green),var(--primary-green-hover));
+    color: var(--black);
+    box-shadow: var(--shadow-md);
+}
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(0,255,0,0.4);
+    background: linear-gradient(135deg,var(--primary-green-hover),var(--primary-green-dark));
+}
+.btn-primary::before {
+    content:'';
+    position:absolute;inset:0;
+    left:-100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+    transition:left var(--transition-slow);
+}
+.btn-primary:hover::before { left:100%; }
+
+.btn-secondary { background:var(--gray-600);color:var(--white); }
+.btn-secondary:hover:not(:disabled) { background:var(--gray-500);transform:translateY(-1px); }
+.btn-danger { background:var(--danger-red);color:var(--white); }
+.btn-danger:hover:not(:disabled) { background:#dc2626;transform:translateY(-1px); }
+
+/* =======================
+   Champs / Formulaires
+   ======================= */
+.field-group {
+    margin-bottom: 1rem;
+}
+
+.field-group label {
+    display: block;
+    color: var(--gray-300);
+    font-size: .875rem;
+    font-weight: 500;
+    margin-bottom: .5rem;
+}
+
+.field-group input,
+.field-group select,
+.field-group textarea {
+    border-radius: .5rem;
+    transition: all var(--transition-normal);
+}
+
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 3px rgba(0,255,0,.1);
+}
+
+.field-error {
+    animation: shake .3s ease-in-out;
+}
+
+.field-error input,
+.field-error select,
+.field-error textarea {
+    border-color: var(--danger-red)!important;
+    background-color: rgba(239,68,68,.1)!important;
+}
+
+.error-message {
+    color: var(--danger-red);
+    font-size: .875rem;
+    margin-top: .25rem;
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+}
+
+.error-message i {
+    font-size: .75rem;
+}
+
+/* Validation native seulement si pas de classe JS */
+input:not(.border-red-500):not(.border-green-500):invalid:not(:focus) {
+    border-color: var(--danger-red);
+    background: rgba(239,68,68,.1);
+}
+
+/* États focus - priorité absolue */
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-green)!important;
+    box-shadow: 0 0 0 3px rgba(0,255,0,.1)!important;
+}
+
+/* Classes JS explicites - priorité maximale */
+.border-red-500 {
+    border-color: var(--danger-red)!important;
+    background: rgba(239,68,68,.05)!important;
+}
+
+.border-green-500 {
+    border-color: var(--primary-green)!important;
+    background: rgba(0,255,0,.05)!important;
+}
+
+.border-gray-600 {
+    border-color: var(--gray-600)!important;
+}
+
+/* =======================
+   Progress bar
+   ======================= */
+.progress-container{width:100%;background:var(--gray-700);border-radius:9999px;height:.5rem;overflow:hidden;}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--primary-green),#3b82f6);border-radius:9999px;transition:width var(--transition-normal);position:relative;}
+.progress-bar::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);animation:progress-shimmer 2s infinite;}
+
+/* =======================
+   Sections / Cards / Nav
+   ======================= */
+.form-section{background:linear-gradient(135deg,var(--gray-800),var(--gray-900));border-radius:1rem;padding:2rem;margin-bottom:2rem;border:1px solid var(--gray-700);transition:all var(--transition-normal);position:relative;overflow:hidden;}
+.form-section::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--primary-green),transparent);opacity:0;transition:opacity var(--transition-normal);}
+.form-section:hover{transform:translateY(-3px);box-shadow:var(--shadow-xl);border-color:var(--gray-600);}
+.form-section:hover::before{opacity:1;}
+
+.nav-link{position:relative;padding:.75rem 1rem;border-radius:.5rem;transition:all var(--transition-normal);color:var(--gray-300);}
+.nav-link:hover{background:var(--gray-800);color:var(--white);transform:translateX(4px);}
+.nav-link-active{background:var(--gray-800);font-weight:600;color:var(--primary-green);}
+.nav-link-active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--primary-green);border-radius:0 2px 2px 0;}
+
+.card{background:var(--gray-800);border-radius:.75rem;padding:1.5rem;border:1px solid var(--gray-700);transition:all var(--transition-normal);}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--gray-600);}
+.card-commission{background:linear-gradient(135deg,var(--primary-green),var(--primary-green-hover));color:var(--black);border:none;}
+.card-commission:hover{box-shadow:0 10px 15px -3px rgba(0,255,0,.4);}
+
+/* =======================
+   Select2 (harmonisé dark)
+   ======================= */
+.select2-container {
+    width: 100%!important;
+}
+
+.select2-container--default .select2-selection--single {
+    background: var(--gray-900)!important;
+    border: 1px solid var(--gray-600)!important;
+    border-radius: .5rem!important;
+    height: 42px!important;
+    display: flex!important;
+    align-items: center!important;
+    padding: 0 1rem!important;
+    color: var(--white)!important;
+    cursor: pointer!important;
+    transition: all var(--transition-fast);
+}
+
+.select2-container--default .select2-selection--single:hover {
+    border-color: var(--primary-green)!important;
+}
+
+.select2-selection__rendered {
+    color: var(--white)!important;
+    font-weight: 500!important;
+    line-height: 42px!important;
+}
+
+/* Dropdown */
+.select2-dropdown {
+    background: var(--gray-900)!important;
+    border: 1px solid var(--gray-600)!important;
+    border-radius: .5rem!important;
+    box-shadow: var(--shadow-xl)!important;
+    animation: fadeInCalendar 0.25s ease-out;
+}
+
+.select2-results {
+    background: var(--gray-900)!important;
+}
+
+.select2-results__options {
+    background: var(--gray-900)!important;
+}
+
+.select2-results__option {
+    padding: .75rem 1rem!important;
+    font-size: 1rem!important;
+    color: var(--white)!important;
+    background: var(--gray-900)!important;
+    transition: all var(--transition-fast)!important;
+    border-radius: .375rem!important;
+    margin: 0 .25rem!important;
+}
+
+.select2-results__option:hover,
+.select2-results__option--highlighted {
+    background: var(--primary-green)!important;
+    color: var(--black)!important;
+}
+
+.select2-results__option--selected {
+    background: var(--gray-800)!important;
+    color: var(--primary-green)!important;
+}
+
+/* Icône chevron */
+.select2-selection__arrow {
+    color: var(--gray-400)!important;
+    transition: transform var(--transition-fast);
+    height: 42px!important;
+    display: flex!important;
+    align-items: center!important;
+}
+
+.select2-container--open .select2-selection__arrow {
+    transform: rotate(180deg);
+    color: var(--primary-green)!important;
+}
+
+/* Champ de recherche dans le dropdown */
+.select2-search--dropdown {
+    background: var(--gray-900)!important;
+    padding: .5rem!important;
+}
+
+.select2-search__field {
+    background: var(--gray-800)!important;
+    border: 1px solid var(--gray-600)!important;
+    color: var(--white)!important;
+    caret-color: var(--black)!important;
+    border-radius: .375rem!important;
+    padding: .5rem!important;
+}
+
+.select2-search__field:focus {
+    border-color: var(--primary-green)!important;
+    outline: none!important;
+    box-shadow: 0 0 0 3px rgba(0,255,0,.1)!important;
+    caret-color: var(--black)!important;
+}
+
+.select2-search__field::selection {
+    background: var(--primary-green)!important;
+    color: var(--black)!important;
+}
+
+/* Message "Aucun résultat" */
+.select2-results__message {
+    color: var(--gray-400)!important;
+    background: var(--gray-900)!important;
+}
+/* Accessibilité caret */
+.select2-search__field {
+    caret-color: var(--primary-green)!important;
+}
+
+/* Warning state */
+.border-yellow-500 {
+    border-color: var(--warning-yellow)!important;
+    background: rgba(245, 158, 11, .05)!important;
+}
+
+/* Transition factorisée */
+.card, .form-section {
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+/* Respect du prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* =======================
+   Flatpickr (dark)
+   ======================= */
+.flatpickr-calendar{background:linear-gradient(135deg,var(--gray-900),var(--gray-950))!important;border:2px solid var(--gray-600)!important;border-radius:1rem!important;box-shadow:0 20px 35px -5px rgba(0,0,0,.8)!important;}
+.flatpickr-months{background:var(--gray-950)!important;border-bottom:2px solid var(--primary-green)!important;}
+.flatpickr-day{color:var(--white)!important;border-radius:.5rem!important;transition:all .2s ease!important;animation:dayFadeIn .2s ease-out;}
+.flatpickr-day:hover:not(.flatpickr-disabled){background:var(--primary-green)!important;color:var(--black)!important;}
+
+/* =======================
+   Utilitaires
+   ======================= */
+.text-accent{color:var(--primary-green)!important;}
+.text-muted{color:var(--gray-400)!important;}
+.hidden{display:none!important;}

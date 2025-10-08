@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Nouveau Contrat - BWHITE DIGITAL{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <div class="mb-8 text-center">
+    <h1 class="text-4xl font-bold text-white mb-3">
+      <i class="fas fa-file-contract mr-3 text-primary-green"></i> Nouveau Contrat
+    </h1>
+  </div>
+
+  <div id="contrat-form-wrapper">
+    <form id="contrat-form"
+          hx-post="{% url 'contracts:emettre_contrat' %}"
+          hx-target="#emission-result"
+          hx-swap="innerHTML"
+          hx-timeout="65000"
+          method="POST"
+          autocomplete="off">
+      {% csrf_token %}
+
+      {% include "contracts/partials/_client_form.html" %}
+      {% include "contracts/partials/_vehicule_form.html" %}
+      {% include "contracts/partials/_simulation_form.html" %}
+    </form>
+  </div>
+
+  <div id="simulation-result" class="mt-8 hidden"></div>
+  <div id="emission-result" class="mt-8 hidden"></div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const boot = () => {
+    const form = document.getElementById('contrat-form');
+    if (!form) {
+      console.warn('[ContractForm] Formulaire introuvable');
+      return;
+    }
+
+    const formWrapper = document.getElementById('contrat-form-wrapper');
+    const simulationResult = document.getElementById('simulation-result');
+    const emissionResult = document.getElementById('emission-result');
+
+    // ========================================
+    // 1. Champs required
+    // ========================================
+    const requiredFields = [
+      'id_prenom', 'id_nom', 'id_telephone', 'id_adresse',
+      'id_immatriculation', 'id_marque', 'id_modele', 'id_categorie',
+      'id_carburant', 'id_puissance_fiscale', 'id_nombre_places',
+      'id_duree', 'id_date_effet'
+    ];
+
+    requiredFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.required = true;
+    });
+
+    // ========================================
+    // 2. Uppercase automatique
+    // ========================================
+    form.querySelectorAll('input[type="text"]:not([data-no-uppercase]), textarea:not([data-no-uppercase])')
+      .forEach(input => {
+        input.addEventListener('input', function() {
+          const start = this.selectionStart;
+          const end = this.selectionEnd;
+          this.value = this.value.toUpperCase();
+          this.setSelectionRange(start, end);
+        });
+      });
+
+    // ========================================
+    // 3. LOGIQUE TPC (Catégorie 520) - CORRIGÉE
+    // ========================================
+    const categorieSelect = document.getElementById('id_categorie');
+    const sousCatWrapper = document.getElementById('sous-categorie-wrapper');
+    const chargeUtileWrapper = document.getElementById('charge-utile-wrapper');
+    const sousCatField = document.getElementById('id_sous_categorie');
+    const chargeUtileField = document.getElementById('id_charge_utile');
+
+    function toggleTPCFields() {
+      if (!categorieSelect) {
+        console.error('[ContractForm] #id_categorie introuvable');
+        return;
+      }
+
+      const isTPC = (categorieSelect.value || '').trim() === '520';
+      console.log('[ContractForm] Toggle TPC - Catégorie:', categorieSelect.value, '| TPC:', isTPC);
+
+      // ✅ Toggle visibilité avec logs
+      if (sousCatWrapper) {
+        if (isTPC) {
+          sousCatWrapper.classList.remove('hidden');
+          console.log('[ContractForm] Sous-catégorie wrapper affiché');
+        } else {
+          sousCatWrapper.classList.add('hidden');
+          console.log('[ContractForm] Sous-catégorie wrapper caché');
+        }
+      } else {
+        console.error('[ContractForm] #sous-categorie-wrapper introuvable');
+      }
+
+      if (chargeUtileWrapper) {
+        if (isTPC) {
+          chargeUtileWrapper.classList.remove('hidden');
+          console.log('[ContractForm] Charge utile wrapper affiché');
+        } else {
+          chargeUtileWrapper.classList.add('hidden');
+          console.log('[ContractForm] Charge utile wrapper caché');
+        }
+      } else {
+        console.error('[ContractForm] #charge-utile-wrapper introuvable');
+      }
+
+      // ✅ Gestion attributs disabled/required
+      if (isTPC) {
+        // Mode TPC actif
+        if (sousCatField) {
+          sousCatField.removeAttribute('disabled');
+          sousCatField.setAttribute('required', 'required');
+          console.log('[ContractForm] Sous-catégorie field activé');
+        }
+        if (chargeUtileField) {
+          chargeUtileField.removeAttribute('disabled');
+          chargeUtileField.setAttribute('required', 'required');
+          console.log('[ContractForm] Charge utile field activé');
+        }
+      } else {
+        // Mode TPC désactivé
+        if (sousCatField) {
+          sousCatField.removeAttribute('required');
+          sousCatField.setAttribute('disabled', 'disabled');
+          sousCatField.value = '';
+          console.log('[ContractForm] Sous-catégorie field désactivé et vidé');
+        }
+        if (chargeUtileField) {
+          chargeUtileField.removeAttribute('required');
+          chargeUtileField.setAttribute('disabled', 'disabled');
+          chargeUtileField.value = '';
+          console.log('[ContractForm] Charge utile field désactivé et vidé');
+        }
+
+        // ✅ Reset Select2 si présent
+        if (typeof $ !== 'undefined' && $.fn?.select2) {
+          try {
+            const $sc = $('#id_sous_categorie');
+            if ($sc.data('select2')) {
+              $sc.val('').trigger('change');
+              console.log('[ContractForm] Select2 sous-catégorie réinitialisé');
+            }
+          } catch (e) {
+            console.error('[ContractForm] Erreur reset Select2:', e);
+          }
+        }
+      }
+
+      // Clear cache AppManager si disponible
+      if (window.appManager?.clearCache) {
+        window.appManager.clearCache();
+      }
+    }
+
+    // ✅ Initialisation TPC
+    if (categorieSelect) {
+      // État initial
+      console.log('[ContractForm] Initialisation TPC, valeur initiale:', categorieSelect.value);
+      toggleTPCFields();
+
+      // ✅ Événement change natif
+      categorieSelect.addEventListener('change', function(e) {
+        console.log('[ContractForm] Event change natif détecté, nouvelle valeur:', this.value);
+        toggleTPCFields();
+      });
+
+      // ✅ Événements Select2 si présent
+      if (typeof $ !== 'undefined' && $.fn?.select2) {
+        // Attendre que Select2 soit initialisé
+        setTimeout(() => {
+          const $cat = $(categorieSelect);
+          if ($cat.data('select2')) {
+            console.log('[ContractForm] Select2 détecté sur catégorie, ajout listeners');
+            $cat.on('select2:select.tpcForm select2:clear.tpcForm', function(e) {
+              console.log('[ContractForm] Event Select2 détecté, type:', e.type, 'valeur:', this.value);
+              toggleTPCFields();
+            });
+          } else {
+            console.log('[ContractForm] Select2 non détecté sur catégorie');
+          }
+        }, 500);
+      }
+    } else {
+      console.error('[ContractForm] #id_categorie non trouvé - TPC non initialisé');
+    }
+
+    // ========================================
+    // 4. Sauvegarde/Restauration formulaire
+    // ========================================
+    const STORAGE_KEY = 'contrat_form_data';
+
+    function saveFormData() {
+      try {
+        const formData = new FormData(form);
+        const obj = {};
+        formData.forEach((value, key) => {
+          obj[key] = value;
+        });
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+        console.log('[ContractForm] Données sauvegardées');
+      } catch (e) {
+        console.error('[ContractForm] Erreur sauvegarde:', e);
+      }
+    }
+
+    function restoreFormData() {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY);
+        if (!saved) {
+          console.log('[ContractForm] Aucune donnée à restaurer');
+          return;
+        }
+
+        const obj = JSON.parse(saved);
+        console.log('[ContractForm] Restauration des données');
+
+        Object.keys(obj).forEach(key => {
+          const el = document.querySelector(`[name="${key}"]`);
+          if (!el) return;
+
+          if (el.type === 'checkbox' || el.type === 'radio') {
+            el.checked = el.value === obj[key];
+          } else {
+            el.value = obj[key];
+
+            // Trigger change pour Select2 si présent
+            if (typeof $ !== 'undefined' && el.classList.contains('select2-hidden-accessible')) {
+              try {
+                $(el).val(obj[key]).trigger('change');
+              } catch (e) {
+                console.error('[ContractForm] Erreur restauration Select2:', e);
+              }
+            }
+          }
+        });
+
+        // ✅ IMPORTANT : Re-toggle TPC après restauration
+        setTimeout(() => {
+          console.log('[ContractForm] Re-toggle TPC après restauration');
+          toggleTPCFields();
+        }, 200);
+
+      } catch (e) {
+        console.error('[ContractForm] Erreur restauration:', e);
+      }
+    }
+
+    function clearFormData() {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+        console.log('[ContractForm] Storage nettoyé');
+      } catch (e) {
+        console.error('[ContractForm] Erreur suppression storage:', e);
+      }
+    }
+
+    // ========================================
+    // 5. Affichage formulaire
+    // ========================================
+    function showFormWrapper() {
+      console.log('[ContractForm] Affichage formulaire');
+
+      if (formWrapper) formWrapper.classList.remove('hidden');
+      if (simulationResult) {
+        simulationResult.classList.add('hidden');
+        simulationResult.innerHTML = '';
+      }
+      if (emissionResult) {
+        emissionResult.classList.add('hidden');
+        emissionResult.innerHTML = '';
+      }
+
+      restoreFormData();
+
+      if (formWrapper) {
+        setTimeout(() => {
+          formWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+
+    window.showContractForm = showFormWrapper;
+
+    // ========================================
+    // 6. Événements HTMX
+    // ========================================
+
+    document.addEventListener('htmx:beforeRequest', function(e) {
+      if (e.detail?.elt && e.detail.elt.closest('#contrat-form')) {
+        saveFormData();
+      }
+    });
+
+    document.addEventListener('htmx:afterSwap', function(e) {
+      const target = e.target;
+      if (!target) return;
+
+      if (target.id === 'simulation-result' || target.id === 'emission-result') {
+        const hasContent = target.innerHTML.trim() !== '';
+        target.classList.toggle('hidden', !hasContent);
+
+        if (hasContent) {
+          setTimeout(() => {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
+      }
+
+      // ✅ Réinit Select2 sous-catégorie après swap HTMX
+      if (target.id === 'sous-categorie-wrapper' || target.querySelector?.('#id_sous_categorie')) {
+        console.log('[ContractForm] HTMX swap détecté sur sous-catégorie');
+
+        if (typeof $ !== 'undefined' && $.fn?.select2) {
+          try {
+            const $sc = $('#id_sous_categorie');
+            if ($sc.data('select2')) {
+              $sc.select2('destroy');
+            }
+            $sc.select2({
+              minimumResultsForSearch: Infinity,
+              placeholder: 'Sous-catégorie',
+              width: '100%',
+              allowClear: true
+            });
+            console.log('[ContractForm] Select2 sous-catégorie réinitialisé après swap');
+          } catch (e) {
+            console.error('[ContractForm] Erreur réinit Select2:', e);
+          }
+        }
+
+        // Re-toggle TPC après swap
+        setTimeout(() => {
+          console.log('[ContractForm] Re-toggle TPC après HTMX swap');
+          toggleTPCFields();
+        }, 100);
+      }
+    });
+
+    document.addEventListener('htmx:afterOnLoad', function(e) {
+      const content = e.detail?.xhr?.responseText || '';
+
+      if (content.includes('bg-green-') ||
+          content.includes('Contrat émis') ||
+          content.includes('Émission réussie')) {
+        clearFormData();
+      }
+    });
+
+    // ========================================
+    // 7. Bouton restaurer
+    // ========================================
+    document.addEventListener('click', function(e) {
+      const restoreBtn = e.target.closest('[data-action="restore-form"]');
+      if (restoreBtn) {
+        e.preventDefault();
+        showFormWrapper();
+      }
+    });
+
+    // ========================================
+    // 8. Init
+    // ========================================
+    restoreFormData();
+
+    console.log('[ContractForm] ✅ Initialisation complète');
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+{% endblock %}

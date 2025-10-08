@@ -1,0 +1,36 @@
+<div class="bg-red-900/40 text-red-300 p-6 rounded-lg border border-red-500">
+  <div class="flex items-start gap-3">
+    <i class="fas fa-exclamation-circle text-2xl mt-1"></i>
+    <div class="flex-1">
+      <h3 class="font-bold text-lg mb-2">Une erreur s'est produite</h3>
+
+      {% if error %}
+        <p class="mb-4">{{ error }}</p>
+      {% else %}
+        <p class="mb-4">Une erreur inattendue est survenue. Veuillez réessayer.</p>
+      {% endif %}
+
+      <div class="flex flex-wrap gap-3 mt-4">
+        <button
+          type="button"
+          data-action="restore-form"
+          class="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition flex items-center">
+          <i class="fas fa-arrow-left mr-2"></i>Retour au formulaire
+        </button>
+
+        <a
+          href="{% url 'contracts:liste_contrats' %}"
+          class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition flex items-center">
+          <i class="fas fa-list mr-2"></i>Liste des contrats
+        </a>
+      </div>
+
+      {% if "timeout" in error or "délai" in error %}
+        <div class="mt-4 p-3 bg-yellow-900/40 border border-yellow-600 rounded text-yellow-300 text-sm">
+          <i class="fas fa-info-circle mr-2"></i>
+          <strong>Conseil :</strong> Vérifiez d'abord dans la liste des contrats si le contrat n'a pas été créé malgré l'erreur.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

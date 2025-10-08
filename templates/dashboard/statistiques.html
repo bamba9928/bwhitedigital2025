@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ title }} - BWHITE DIGITAL{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- En-tête -->
+  <div class="flex justify-between items-center">
+    <h1 class="text-3xl font-bold text-white">
+      <i class="fas fa-chart-pie mr-2 text-blue-400"></i> Statistiques
+    </h1>
+    <div class="text-gray-400 flex items-center space-x-2">
+      <i class="far fa-calendar-alt"></i>
+      <span>{% now "l j F Y" %}</span>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <form method="get" class="flex flex-wrap items-center gap-4 bg-gray-900 p-4 rounded-lg border border-gray-800">
+    <select name="periode" class="bg-gray-800 text-white rounded px-3 py-2">
+      <option value="">Toutes périodes</option>
+      <option value="jour" {% if periode == 'jour' %}selected{% endif %}>Aujourd'hui</option>
+      <option value="semaine" {% if periode == 'semaine' %}selected{% endif %}>7 derniers jours</option>
+      <option value="mois" {% if periode == 'mois' %}selected{% endif %}>Mois en cours</option>
+      <option value="annee" {% if periode == 'annee' %}selected{% endif %}>Année en cours</option>
+    </select>
+
+    <input type="date" name="date_debut" value="{{ date_debut|date:'Y-m-d' }}"
+           class="bg-gray-800 text-white rounded px-3 py-2">
+    <input type="date" name="date_fin" value="{{ date_fin|date:'Y-m-d' }}"
+           class="bg-gray-800 text-white rounded px-3 py-2">
+
+    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+      <i class="fas fa-filter"></i> Appliquer
+    </button>
+    <a href="{% url 'dashboard:statistiques' %}" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded">
+      <i class="fas fa-undo"></i> Réinitialiser
+    </a>
+  </form>
+
+  <!-- Totaux -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-blue-900/70 rounded-xl p-6 border border-blue-700">
+      <p class="text-blue-200 text-sm">Total Contrats</p>
+      <p class="text-3xl font-bold text-white mt-2">{{ total_contrats|intcomma }}</p>
+    </div>
+    <div class="bg-green-900/70 rounded-xl p-6 border border-green-700">
+      <p class="text-green-200 text-sm">Total Primes TTC</p>
+      <p class="text-3xl font-bold text-green-300 mt-2">{{ total_primes|floatformat:0|intcomma }} FCFA</p>
+    </div>
+    <div class="bg-purple-900/70 rounded-xl p-6 border border-purple-700">
+      <p class="text-purple-200 text-sm">Période</p>
+      <p class="text-xl font-semibold text-white mt-2">
+        {% if date_debut %}Du {{ date_debut|date:"d/m/Y" }}{% endif %}
+        {% if date_fin %} au {{ date_fin|date:"d/m/Y" }}{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Stats par catégorie -->
+  <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+    <h2 class="text-xl font-semibold text-white mb-4">
+      <i class="fas fa-car mr-2 text-yellow-400"></i> Répartition par Catégorie
+    </h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm font-semibold">
+        <thead>
+          <tr class="border-b border-gray-800 text-gray-400">
+            <th class="py-2 px-3 text-left">Catégorie</th>
+            <th class="py-2 px-3 text-right">Contrats</th>
+            <th class="py-2 px-3 text-right">Primes TTC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in stats_categories %}
+          <tr class="border-b border-gray-800 hover:bg-gray-800 transition">
+            <td class="py-2 px-3 text-white">{{ c.vehicule__categorie|default:"-" }}</td>
+            <td class="py-2 px-3 text-right">{{ c.nombre|default_if_none:0|intcomma }}</td>
+            <td class="py-2 px-3 text-right text-green-400">
+              {{ c.total_primes|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-center py-3 text-gray-500">Aucune donnée</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Stats par durée -->
+  <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+    <h2 class="text-xl font-semibold text-white mb-4">
+      <i class="fas fa-clock mr-2 text-blue-400"></i> Répartition par Durée
+    </h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm font-semibold">
+        <thead>
+          <tr class="border-b border-gray-800 text-gray-400">
+            <th class="py-2 px-3 text-left">Durée</th>
+            <th class="py-2 px-3 text-right">Contrats</th>
+            <th class="py-2 px-3 text-right">Primes TTC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in stats_durees %}
+          <tr class="border-b border-gray-800 hover:bg-gray-800 transition">
+            <td class="py-2 px-3 text-white">{{ d.duree|default:"-" }}</td>
+            <td class="py-2 px-3 text-right">{{ d.nombre|default_if_none:0|intcomma }}</td>
+            <td class="py-2 px-3 text-right text-green-400">
+              {{ d.total_primes|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-center py-3 text-gray-500">Aucune donnée</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Évolution sur 30 jours -->
+  <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+    <h2 class="text-xl font-semibold text-white mb-4">
+      <i class="fas fa-chart-line mr-2 text-green-400"></i> Évolution des 30 derniers jours
+    </h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm font-semibold">
+        <thead>
+          <tr class="border-b border-gray-800 text-gray-400">
+            <th class="py-2 px-3 text-left">Date</th>
+            <th class="py-2 px-3 text-right">Contrats</th>
+            <th class="py-2 px-3 text-right">Primes TTC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in evolution %}
+          <tr class="border-b border-gray-800 hover:bg-gray-800 transition">
+            <td class="py-2 px-3 text-white">{{ e.date|date:"d/m/Y" }}</td>
+            <td class="py-2 px-3 text-right">{{ e.nombre|default_if_none:0|intcomma }}</td>
+            <td class="py-2 px-3 text-right text-green-400">
+              {{ e.primes|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-center py-3 text-gray-500">Aucune donnée</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

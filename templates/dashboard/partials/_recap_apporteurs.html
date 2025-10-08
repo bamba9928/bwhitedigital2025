@@ -1,0 +1,59 @@
+{% load humanize %}
+
+<div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mt-6">
+  <h2 class="text-xl font-semibold text-white mb-4">
+    <i class="fas fa-users mr-2 text-blue-400"></i> Résumé par Apporteur
+  </h2>
+  <div class="overflow-x-auto">
+    <style>.tabular-nums{font-variant-numeric:tabular-nums}</style>
+    <table class="w-full min-w-[700px] text-sm font-semibold">
+      <thead>
+        <tr class="border-b border-gray-800 text-gray-400">
+          <th class="py-2 px-3 text-left">Apporteur</th>
+          <th class="py-2 px-3 text-right">Contrats</th>
+          <th class="py-2 px-3 text-right">Primes</th>
+          <th class="py-2 px-3 text-right">Commissions</th>
+          <th class="py-2 px-3 text-right">Net à Reverser</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in recap_apporteurs %}
+        <tr class="border-b border-gray-800 hover:bg-gray-800 transition">
+          <!-- Nom apporteur cliquable -->
+          <td class="py-2 px-3 text-white text-left">
+            <a href="?apporteur={{ a.apporteur__id }}" class="text-blue-400 hover:text-blue-300">
+              {{ a.apporteur__first_name }} {{ a.apporteur__last_name }}
+            </a>
+          </td>
+
+          <!-- Nombre de contrats -->
+          <td class="py-2 px-3 text-right tabular-nums">
+            {{ a.nb_contrats|default_if_none:0|intcomma }}
+          </td>
+
+          <!-- Primes -->
+          <td class="py-2 px-3 text-right tabular-nums">
+            {{ a.total_primes|default_if_none:0|floatformat:0|intcomma }} FCFA
+          </td>
+
+          <!-- Commissions -->
+          <td class="py-2 px-3 text-right tabular-nums {% if a.total_commissions > 0 %}text-green-400{% else %}text-gray-500{% endif %}">
+            {{ a.total_commissions|default_if_none:0|floatformat:0|intcomma }} FCFA
+          </td>
+
+          <!-- Net à reverser -->
+          <td class="py-2 px-3 text-right tabular-nums {% if a.total_net > 0 %}text-orange-400{% else %}text-gray-500{% endif %}">
+            {{ a.total_net|default_if_none:0|floatformat:0|intcomma }} FCFA
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center py-3 text-gray-500">
+            Aucun apporteur trouvé
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

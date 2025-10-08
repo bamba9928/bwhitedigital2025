@@ -1,0 +1,144 @@
+{% load humanize %}
+
+<div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-7 text-white">
+  <h2 class="text-2xl font-semibold mb-4">
+    <i class="fas fa-receipt text-blue-400 mr-2"></i>
+    Résultats de la simulation
+  </h2>
+
+  <div class="flex flex-wrap gap-2 mb-6 text-xs">
+    {% if date_effet %}
+      <span class="bg-gray-700 px-3 py-1 rounded-full">
+        <i class="fas fa-calendar-day mr-1 text-green-400"></i> Effet: {{ date_effet|date:"d/m/Y" }}
+      </span>
+    {% endif %}
+    {% if duree %}
+      <span class="bg-gray-700 px-3 py-1 rounded-full">
+        <i class="fas fa-clock mr-1 text-yellow-400"></i> Durée: {{ duree }} mois
+      </span>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-gray-700 p-4 rounded-lg">
+      <p class="text-gray-300 text-sm">Prime nette</p>
+      <p class="text-xl font-bold text-blue-400">
+        {{ simulation.prime_nette|default_if_none:0|floatformat:0|intcomma }} FCFA
+      </p>
+    </div>
+
+    <div class="bg-gray-700 p-4 rounded-lg">
+      <p class="text-gray-300 text-sm">Accessoires</p>
+      <p class="text-xl font-bold text-purple-400">
+        {{ simulation.accessoires|default_if_none:0|floatformat:0|intcomma }} FCFA
+      </p>
+    </div>
+
+    <div class="bg-gray-700 p-4 rounded-lg">
+      <p class="text-gray-300 text-sm">FGA</p>
+      <p class="text-xl font-bold text-indigo-400">
+        {{ simulation.fga|default_if_none:0|floatformat:0|intcomma }} FCFA
+      </p>
+    </div>
+
+    <div class="bg-gray-700 p-4 rounded-lg">
+      <p class="text-gray-300 text-sm">Taxes</p>
+      <p class="text-xl font-bold text-red-400">
+        {{ simulation.taxes|default_if_none:0|floatformat:0|intcomma }} FCFA
+      </p>
+    </div>
+
+    <div class="bg-gradient-to-br from-yellow-600 to-yellow-700 p-4 rounded-lg col-span-1 md:col-span-2 border border-yellow-500">
+      <p class="text-yellow-100 text-sm font-semibold">Prime TTC</p>
+      <p class="text-3xl font-bold text-white">
+        {{ simulation.prime_ttc|default_if_none:0|floatformat:0|intcomma }} FCFA
+      </p>
+    </div>
+
+    <div class="bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
+      <p class="text-gray-300 text-sm">Commission ASKIA</p>
+      <p class="text-xl font-bold text-green-400">
+        {{ simulation.commission|default_if_none:0|floatformat:0|intcomma }} FCFA
+      </p>
+    </div>
+
+    {% if is_apporteur %}
+      <div class="bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
+        <p class="text-gray-300 text-sm">Ma Commission</p>
+        <p class="text-xl font-bold text-green-300">
+          {{ commission|default_if_none:0|floatformat:0|intcomma }} FCFA
+        </p>
+      </div>
+
+      <div class="bg-gradient-to-br from-orange-600 to-orange-700 p-4 rounded-lg col-span-1 md:col-span-2 border border-orange-500">
+        <p class="text-orange-100 text-sm font-semibold">Net à reverser</p>
+        <p class="text-2xl font-bold text-white">
+          {{ net_a_reverser|default_if_none:0|floatformat:0|intcomma }} FCFA
+        </p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <button type="button" id="btn-modifier-contrat"
+            onclick="window.location.reload()"
+            class="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg flex items-center justify-center space-x-2 transition">
+      <i class="fas fa-edit"></i>
+      <span>Modifier les Informations</span>
+    </button>
+
+    <div class="w-full sm:w-auto flex items-center justify-center">
+      <button type="button" id="btn-emettre-contrat"
+              hx-post="{% url 'contracts:emettre_contrat' %}"
+              hx-target="#emission-result"
+              hx-swap="innerHTML"
+              hx-include="#contrat-form"
+              hx-indicator="#emit-indicator"
+              hx-timeout="65000"
+              class="w-full sm:w-auto bg-green-600 hover:bg-green-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold px-8 py-3 rounded-lg flex items-center justify-center gap-2 transition">
+
+        <span id="emit-idle" class="flex items-center gap-2">
+          <i class="fas fa-check-circle"></i>
+          <span id="btn-text">Envoyer</span>
+        </span>
+
+        <span id="emit-indicator" class="htmx-indicator hidden items-center gap-2">
+          <i class="fas fa-spinner fa-spin text-white text-lg"></i>
+          <span>Émission en cours…</span>
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const emitBtn = document.getElementById('btn-emettre-contrat');
+  const btnText = document.getElementById('btn-text');
+  if (!emitBtn) return;
+
+  let locked = false;
+
+  document.addEventListener('htmx:beforeRequest', function (e) {
+    if (e.detail.elt === emitBtn) {
+      if (locked) { e.preventDefault(); return; }
+      locked = true;
+      emitBtn.disabled = true;
+    }
+  });
+
+  const unlock = (e) => {
+    if (e.detail && e.detail.elt === emitBtn) {
+      setTimeout(() => {
+        locked = false;
+        emitBtn.disabled = false;
+      }, 600);
+    }
+  };
+
+  document.addEventListener('htmx:afterOnLoad', unlock);
+  document.addEventListener('htmx:responseError', unlock);
+  document.addEventListener('htmx:sendError', unlock);
+  document.addEventListener('htmx:timeout', unlock);
+})();
+</script>

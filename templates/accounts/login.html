@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Connexion - BWHITE DIGITAL</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+
+  <style>
+    :root{
+      /* Palette marque BWHITE DIGITAL */
+      --brand-300:#86efac;  /* vert clair */
+      --brand-400:#4ade80;
+      --brand-600:#16a34a;  /* principal */
+      --brand-700:#15803d;  /* hover */
+      --brand-900:#14532d;  /* foncé */
+    }
+    body{
+      background:
+        radial-gradient(1200px 600px at 10% 10%, rgba(20,83,45,0.25), transparent 60%),
+        radial-gradient(1000px 500px at 90% 20%, rgba(22,163,74,0.20), transparent 60%),
+        linear-gradient(135deg,#111827 0%,#1f2937 45%,#0b1320 100%);
+    }
+    .login-card{ background: rgba(17,24,39,0.92); backdrop-filter: blur(10px); }
+    .input-focus:focus{ box-shadow: 0 0 0 3px rgba(22,163,74,0.20); }
+
+    .brand-chip{ background: var(--brand-600); }
+    .brand-text{ color: var(--brand-400); }
+    .btn-brand{ background: var(--brand-600); }
+    .btn-brand:hover{ background: var(--brand-700); }
+    .link-brand{ color: var(--brand-400); }
+    .link-brand:hover{ color: var(--brand-300); }
+
+    .border-brand{ border-color: rgba(22,163,74,0.35); }
+    .focus-border-brand:focus{ border-color: var(--brand-600); }
+
+    @keyframes slideIn{
+      from{opacity:0;transform:translateY(-20px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-md">
+    <!-- Logo + titre -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 brand-chip shadow-lg shadow-green-900/40">
+        <i class="fas fa-shield-alt text-white text-3xl"></i>
+      </div>
+      <h1 class="text-3xl font-bold text-white">BWHITE DIGITAL</h1>
+      <p class="text-gray-400 mt-2">Plateforme de gestion d'assurance automobile</p>
+    </div>
+
+    <!-- Carte -->
+    <div class="login-card rounded-2xl shadow-2xl p-8 border border-gray-800/70 border-brand" style="animation:slideIn .5s ease-out">
+      <h2 class="text-2xl font-semibold text-white mb-6 text-center">Connexion</h2>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="mb-4 p-3 rounded-lg
+            {% if message.tags == 'error' %} bg-red-900/60 text-red-200 border border-red-700/60
+            {% else %} bg-emerald-900/40 text-emerald-200 border border-emerald-700/40 {% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% if form.non_field_errors %}
+        <div class="mb-4 p-3 bg-red-900/60 text-red-200 border border-red-700/60 rounded-lg">
+          {% for error in form.non_field_errors %} {{ error }} {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="POST" action="{% url 'accounts:login' %}">
+        {% csrf_token %}
+
+        <!-- Username -->
+        <div class="mb-4">
+          <label for="id_username" class="block text-gray-300 text-sm font-medium mb-2">
+            <i class="fas fa-user mr-2 brand-text"></i>Nom d'utilisateur
+          </label>
+          <input type="text" name="username" id="id_username" required autofocus
+                 class="w-full px-4 py-3 bg-gray-800/80 text-white rounded-lg border border-gray-700
+                        focus:outline-none focus-border-brand input-focus transition" placeholder="Entrez votre nom d'utilisateur"/>
+          {% if form.username.errors %}
+            <p class="text-red-400 text-sm mt-1">{{ form.username.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Password -->
+        <div class="mb-6">
+          <label for="id_password" class="block text-gray-300 text-sm font-medium mb-2">
+            <i class="fas fa-lock mr-2 brand-text"></i>Mot de passe
+          </label>
+          <div class="relative">
+            <input type="password" name="password" id="id_password" required
+                   class="w-full px-4 py-3 bg-gray-800/80 text-white rounded-lg border border-gray-700
+                          focus:outline-none focus-border-brand input-focus transition" placeholder="Entrez votre mot de passe"/>
+            <button type="button" onclick="togglePassword()"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200">
+              <i id="password-icon" class="fas fa-eye"></i>
+            </button>
+          </div>
+          {% if form.password.errors %}
+            <p class="text-red-400 text-sm mt-1">{{ form.password.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Remember + forgot -->
+        <div class="flex items-center justify-between mb-6">
+          <label class="flex items-center text-gray-300 text-sm">
+            <input type="checkbox" name="remember" class="mr-2 rounded border-gray-600 bg-gray-800/80">
+            Se souvenir de moi
+          </label>
+          <a href="#" class="text-sm link-brand transition">Mot de passe oublié ?</a>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit"
+                class="w-full btn-brand text-white font-semibold py-3 rounded-lg transition duration-200 transform hover:scale-[1.02] flex items-center justify-center shadow-lg shadow-green-900/30">
+          <i class="fas fa-sign-in-alt mr-2"></i> Se connecter
+        </button>
+
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}"/>
+        {% endif %}
+      </form>
+
+      <!-- Infos -->
+      <div class="mt-6 pt-6 border-t border-gray-800/70">
+        <div class="flex items-center justify-center space-x-4 text-sm text-gray-400">
+          <span><i class="fas fa-shield-alt mr-1 brand-text"></i> Connexion sécurisée</span>
+          <span>•</span>
+          <span><i class="fas fa-lock mr-1 brand-text"></i> SSL activé</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center mt-8 text-gray-500 text-sm">
+      <p>© 2025 BWHITE DIGITAL. Tous droits réservés.</p>
+      <p class="mt-2">
+        <a href="#" class="link-brand transition">Conditions d'utilisation</a>
+        <span class="mx-2">•</span>
+        <a href="#" class="link-brand transition">Politique de confidentialité</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    function togglePassword(){
+      const input = document.getElementById('id_password');
+      const icon  = document.getElementById('password-icon');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      icon.classList.toggle('fa-eye', !show);
+      icon.classList.toggle('fa-eye-slash', show);
+    }
+  </script>
+</body>
+</html>

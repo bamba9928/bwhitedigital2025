@@ -1,0 +1,55 @@
+<div class="form-section">
+  <h2 class="text-2xl font-semibold text-white mb-4 flex items-center">
+    <i class="fas fa-user mr-2 text-blue-400"></i> Informations Client
+  </h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Prénom -->
+    <div class="field-group">
+      <label for="{{ client_form.prenom.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
+        <i class="fas fa-user mr-1 text-blue-400"></i>
+        Prénom <span class="text-red-400">*</span>
+      </label>
+      {{ client_form.prenom }}
+      {% if client_form.prenom.errors %}
+        <p class="text-red-500 text-xs mt-1">{{ client_form.prenom.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Nom -->
+    <div class="field-group">
+      <label for="{{ client_form.nom.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
+        <i class="fas fa-user mr-1 text-blue-400"></i>
+        Nom <span class="text-red-400">*</span>
+      </label>
+      {{ client_form.nom }}
+      {% if client_form.nom.errors %}
+        <p class="text-red-500 text-xs mt-1">{{ client_form.nom.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Téléphone -->
+    <div class="field-group">
+      <label for="{{ client_form.telephone.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
+        <i class="fas fa-phone mr-1 text-blue-400"></i>
+        Téléphone <span class="text-red-400">*</span>
+      </label>
+      {{ client_form.telephone }}
+      {% if client_form.telephone.errors %}
+        <p class="text-red-500 text-xs mt-1">{{ client_form.telephone.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Adresse -->
+    <div class="field-group">
+      <label for="{{ client_form.adresse.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
+        <i class="fas fa-map-marker-alt mr-1 text-blue-400"></i>
+        Adresse <span class="text-red-400">*</span>
+      </label>
+      {{ client_form.adresse }}
+      {% if client_form.adresse.errors %}
+        <p class="text-red-500 text-xs mt-1">{{ client_form.adresse.errors.0 }}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>

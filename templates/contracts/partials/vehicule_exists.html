@@ -1,0 +1,28 @@
+<div class="bg-yellow-900 bg-opacity-50 border border-yellow-700 rounded-lg p-3 fade-in">
+  <p class="text-yellow-300 text-sm mb-2">
+    <i class="fas fa-exclamation-triangle mr-1"></i> Ce véhicule est déjà enregistré
+  </p>
+  <div class="text-white text-sm">
+    <strong>{{ vehicule.get_marque_display }} {{ vehicule.modele }}</strong><br>
+    <span class="text-gray-300">
+      {{ vehicule.get_categorie_display }} - {{ vehicule.puissance_fiscale }}CV
+    </span>
+  </div>
+  <button type="button"
+          onclick="fillVehiculeData('{{ vehicule.marque|escapejs }}', '{{ vehicule.modele|escapejs }}', '{{ vehicule.categorie|escapejs }}', '{{ vehicule.puissance_fiscale }}', '{{ vehicule.nombre_places }}', '{{ vehicule.carburant|escapejs }}')"
+          class="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm px-3 py-1 rounded transition">
+    Utiliser ces informations
+  </button>
+</div>
+
+<script>
+function fillVehiculeData(marque, modele, categorie, puissance, places, carburant) {
+  document.getElementById('id_marque').value = marque;
+  document.getElementById('id_modele').value = modele;
+  document.getElementById('id_categorie').value = categorie;
+  document.getElementById('id_puissance_fiscale').value = puissance;
+  document.getElementById('id_nombre_places').value = places;
+  document.getElementById('id_carburant').value = carburant;
+  document.getElementById('id_categorie').dispatchEvent(new Event('change'));
+}
+</script>

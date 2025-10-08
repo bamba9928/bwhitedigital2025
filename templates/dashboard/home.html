@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ title }} - BWHITE DIGITAL{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+  <!-- En-tête -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+        {% if user.role == 'ADMIN' %}
+          <i class="fas fa-chart-line text-primary-green"></i>
+          <span>Tableau de Bord Administrateur</span>
+        {% else %}
+          <i class="fas fa-user-tie text-primary-green"></i>
+          <span>Mon Tableau de Bord</span>
+        {% endif %}
+      </h1>
+      <p class="text-gray-400 mt-1">Bienvenue, {{ user.get_full_name }}</p>
+    </div>
+
+    <div class="flex items-center gap-2 px-4 py-2 bg-gray-900 rounded-lg border border-gray-800">
+      <i class="far fa-calendar-alt text-primary-green"></i>
+      <span class="text-white text-sm">{% now "l j F Y" %}</span>
+    </div>
+  </div>
+
+  <!-- Actions rapides -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <a href="{% url 'contracts:nouveau_contrat' %}"
+       class="bg-gradient-to-br from-green-900/50 to-green-800/30 hover:from-green-800/60 hover:to-green-700/40
+              p-4 rounded-xl border border-green-700/50 hover:border-green-600 transition-all group">
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-green-600/20 rounded-lg group-hover:bg-green-600/30 transition">
+          <i class="fas fa-plus text-green-400 text-xl"></i>
+        </div>
+        <div>
+          <p class="text-white font-semibold">Nouveau Contrat</p>
+          <p class="text-green-300 text-sm">Créer un contrat</p>
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'contracts:liste_contrats' %}"
+       class="bg-gradient-to-br from-blue-900/50 to-blue-800/30 hover:from-blue-800/60 hover:to-blue-700/40
+              p-4 rounded-xl border border-blue-700/50 hover:border-blue-600 transition-all group">
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-blue-600/20 rounded-lg group-hover:bg-blue-600/30 transition">
+          <i class="fas fa-file-contract text-blue-400 text-xl"></i>
+        </div>
+        <div>
+          <p class="text-white font-semibold">Mes Contrats</p>
+          <p class="text-blue-300 text-sm">Voir tous les contrats</p>
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'contracts:liste_clients' %}"
+       class="bg-gradient-to-br from-purple-900/50 to-purple-800/30 hover:from-purple-800/60 hover:to-purple-700/40
+              p-4 rounded-xl border border-purple-700/50 hover:border-purple-600 transition-all group">
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-purple-600/20 rounded-lg group-hover:bg-purple-600/30 transition">
+          <i class="fas fa-users text-purple-400 text-xl"></i>
+        </div>
+        <div>
+          <p class="text-white font-semibold">Mes Clients</p>
+          <p class="text-purple-300 text-sm">Gérer les clients</p>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- ================== FILTRES ================== -->
+  {% if user.role == 'ADMIN' %}
+    {% include "dashboard/partials/_filtres_admin.html" %}
+  {% elif user.role == 'APPORTEUR' %}
+    {% include "dashboard/partials/_filtres_apporteur.html" %}
+  {% endif %}
+
+  <!-- ================== STATISTIQUES ================== -->
+  {% if user.role == 'ADMIN' %}
+    {% include "dashboard/partials/_stats_admin.html" %}
+  {% else %}
+    {% include "dashboard/partials/_stats_apporteur.html" %}
+  {% endif %}
+
+  <!-- ================== TABLEAUX ================== -->
+  {% include "dashboard/partials/_totaux_filtre.html" %}
+  {% include "dashboard/partials/_derniers_contrats.html" %}
+
+  {% if user.role == 'ADMIN' %}
+    {% include "dashboard/partials/_recap_apporteurs.html" %}
+  {% endif %}
+</div>
+{% endblock %}

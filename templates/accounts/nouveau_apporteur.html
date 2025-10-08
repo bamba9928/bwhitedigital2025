@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Créer un Apporteur - BWHITE DIGITAL{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-8">
+    <h1 class="text-3xl font-bold text-white mb-6">
+        <i class="fas fa-user-plus text-blue-400 mr-2"></i>
+        Créer un Apporteur
+    </h1>
+
+    <!-- Formulaire -->
+    <form method="POST" class="space-y-6 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl">
+        {% csrf_token %}
+
+        <!-- Erreurs globales -->
+        {% if form.non_field_errors %}
+            <div class="p-4 mb-4 text-sm text-red-200 bg-red-900 border border-red-700 rounded-lg">
+                <ul class="space-y-1">
+                    {% for error in form.non_field_errors %}
+                        <li><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <!-- Champs en 2 colonnes -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="{{ form.first_name.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                    {{ form.first_name.label }}
+                </label>
+                {{ form.first_name }}
+            </div>
+            <div>
+                <label for="{{ form.last_name.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                    {{ form.last_name.label }}
+                </label>
+                {{ form.last_name }}
+            </div>
+            <div>
+                <label for="{{ form.email.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                    {{ form.email.label }}
+                </label>
+                {{ form.email }}
+            </div>
+            <div>
+                <label for="{{ form.phone.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                    {{ form.phone.label }}
+                </label>
+                {{ form.phone }}
+            </div>
+            <div>
+                <label for="{{ form.username.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                    {{ form.username.label }}
+                </label>
+                {{ form.username }}
+            </div>
+            <div>
+                <label for="{{ form.grade.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                    {{ form.grade.label }}
+                </label>
+                {{ form.grade }}
+            </div>
+        </div>
+
+        <!-- Adresse -->
+        <div>
+            <label for="{{ form.address.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                {{ form.address.label }}
+            </label>
+            {{ form.address }}
+        </div>
+
+        <!-- Mots de passe -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="{{ form.password1.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                    {{ form.password1.label }}
+                </label>
+                {{ form.password1 }}
+            </div>
+            <div>
+                <label for="{{ form.password2.id_for_label }}" class="block text-gray-300 font-medium mb-1">
+                    {{ form.password2.label }}
+                </label>
+                {{ form.password2 }}
+            </div>
+        </div>
+
+        <!-- Bouton -->
+        <div class="flex justify-end">
+            <button type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg flex items-center space-x-2 transition">
+                <i class="fas fa-save"></i>
+                <span>Enregistrer</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        if (typeof $ !== 'undefined' && $('#id_grade').length) {
+            $('#id_grade').select2({
+                placeholder: "Sélectionner un grade",
+                allowClear: true,
+                width: '100%',
+                theme: 'default',
+                minimumResultsForSearch: Infinity, // 🚀 enlève la barre de recherche
+                language: {
+                    noResults: () => "Aucun résultat trouvé",
+                    searching: () => "Recherche..."
+                }
+            });
+        }
+    });
+</script>
+
+{% endblock %}
