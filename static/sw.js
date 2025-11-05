@@ -3,27 +3,28 @@
  * Version: 1.0.0
  * Stratégies de cache multiples pour optimiser les performances
  */
-
+{% load static %}
 const VERSION = '1.0.0';
-const CACHE_NAME = `bwhite-digital-v${VERSION}`;
+// Les noms de cache sont basés sur la version pour le nettoyage à l'activation
 const STATIC_CACHE = `bwhite-static-v${VERSION}`;
 const DYNAMIC_CACHE = `bwhite-dynamic-v${VERSION}`;
 
-// Ressources critiques à mettre en cache immédiatement
+// Ressources critiques à mettre en cache immédiatement (Pre-cache)
+// Ces chemins doivent être résolus par le moteur de template Django
 const STATIC_ASSETS = [
-  '/',
-  '/static/css/main.css',
-  '/static/js/main.js',
-  '/static/icons/icon-192x192.png',
-  '/static/icons/icon-512x512.png',
+  '/',  // landing page
+  '{% static "css/main.css" %}',
+  '{% static "js/main.js" %}',
+  '{% static "icons/icon-192x192.png" %}',
+  '{% static "icons/icon-512x512.png" %}',
   '/offline.html',
 ];
 
 // Configuration
 const CONFIG = {
-  fetchTimeout: 8000,        // Timeout réseau (ms)
-  maxCacheItems: 50,         // Taille max du cache dynamique
-  maxCacheAge: 7 * 24 * 60 * 60 * 1000, // 7 jours en ms
+  fetchTimeout: 8000,
+  maxCacheItems: 50,
+  maxCacheAge: 7 * 24 * 60 * 60 * 1000, // 7 jours en ms (pour cleanExpiredCache)
 };
 
 /**
@@ -56,14 +57,18 @@ async function fetchWithTimeout(request, timeout = CONFIG.fetchTimeout, retries 
 
 /**
  * Limiter la taille du cache (FIFO)
+ * Appliqué uniquement au DYNAMIC_CACHE
  */
 async function trimCache(cacheName, maxItems = CONFIG.maxCacheItems) {
+  if (cacheName !== DYNAMIC_CACHE) return; // Sécurité: ne pas trimmer le cache statique
+
   try {
     const cache = await caches.open(cacheName);
     const keys = await cache.keys();
 
     if (keys.length > maxItems) {
       console.log(`🗑️ Trim cache ${cacheName}: ${keys.length} -> ${maxItems}`);
+      // Supprime les éléments les plus anciens (FIFO)
       const deletePromises = keys
         .slice(0, keys.length - maxItems)
         .map(key => cache.delete(key));
@@ -76,6 +81,8 @@ async function trimCache(cacheName, maxItems = CONFIG.maxCacheItems) {
 
 /**
  * Supprimer les entrées de cache expirées
+ * NOTE: Se base sur le header 'Date' de la réponse, qui est la date de la réponse du serveur,
+ * et non la date de mise en cache par le SW.
  */
 async function cleanExpiredCache(cacheName) {
   try {
@@ -86,11 +93,12 @@ async function cleanExpiredCache(cacheName) {
     const cleanPromises = requests.map(async (request) => {
       const response = await cache.match(request);
       if (response) {
+        // Le header 'Date' n'est pas toujours fiable ou présent sur une réponse en cache
         const dateHeader = response.headers.get('date');
         if (dateHeader) {
           const responseDate = new Date(dateHeader).getTime();
           if (now - responseDate > CONFIG.maxCacheAge) {
-            console.log(`🧹 Cache expiré: ${request.url}`);
+            console.log(`🧹 Cache expiré (${cacheName}): ${request.url}`);
             return cache.delete(request);
           }
         }
@@ -117,15 +125,24 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then(cache => {
         console.log('📦 Mise en cache des ressources statiques...');
-        return cache.addAll(STATIC_ASSETS);
+        // On gère la requête '/offline.html' séparément pour éviter les problèmes de cross-origin
+        // et s'assurer qu'elle est mise en cache même si le réseau échoue pour d'autres assets.
+        const assetsToCache = STATIC_ASSETS.filter(asset => asset !== '/offline.html');
+        const offlinePageRequest = STATIC_ASSETS.find(asset => asset === '/offline.html');
+
+        return Promise.all([
+            cache.addAll(assetsToCache),
+            fetch(offlinePageRequest).then(response => cache.put(offlinePageRequest, response)),
+        ]);
       })
       .then(() => {
         console.log(`✅ [SW ${VERSION}] Installé avec succès`);
         return self.skipWaiting(); // Active immédiatement la nouvelle version
       })
       .catch(error => {
-        console.error('❌ Erreur installation:', error);
-        // Ne pas bloquer l'installation même en cas d'erreur
+        console.error('❌ Erreur installation (un ou plusieurs assets ont échoué):', error);
+        // L'installation échoue si addAll échoue, mais on peut continuer si c'est juste un warning
+        // Ici, on laisse l'erreur remonter pour un comportement strict.
       })
   );
 });
@@ -138,10 +155,11 @@ self.addEventListener('activate', (event) => {
 
   event.waitUntil(
     Promise.all([
-      // Supprimer les anciens caches
+      // Supprimer les anciens caches (basés sur le nom)
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.map(cacheName => {
+            // Supprime les caches qui ne correspondent pas aux noms actuels
             if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
               console.log('🗑️ Suppression ancien cache:', cacheName);
               return caches.delete(cacheName);
@@ -150,7 +168,7 @@ self.addEventListener('activate', (event) => {
         );
       }),
 
-      // Nettoyer les caches expirés
+      // Nettoyer les entrées expirées dans le cache dynamique
       cleanExpiredCache(DYNAMIC_CACHE),
 
       // Prendre le contrôle immédiatement
@@ -172,8 +190,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Ignorer les requêtes non-GET sauf si explicitement gérées
-  if (request.method !== 'GET' && !url.pathname.startsWith('/api/')) {
+  // Ignorer les requêtes non-GET ou cross-origin qui ne sont pas des documents
+  if (request.method !== 'GET') {
     return;
   }
 
@@ -182,17 +200,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Ignorer les assets tiers sauf s'ils sont des images
+  if (!url.pathname.startsWith('/static/') && url.origin !== location.origin && request.destination !== 'image') {
+      return;
+  }
+
   // Router selon le type de ressource
   if (request.destination === 'image') {
-    event.respondWith(handleImageRequest(request));
+    event.respondWith(handleImageRequest(request)); // Cache First
   } else if (url.pathname.startsWith('/api/')) {
-    event.respondWith(handleAPIRequest(request));
+    event.respondWith(handleAPIRequest(request)); // Network First
   } else if (request.destination === 'document') {
-    event.respondWith(handleDocumentRequest(request));
+    event.respondWith(handleDocumentRequest(request)); // Network First with Cache Fallback
   } else if (request.destination === 'style' || request.destination === 'script') {
-    event.respondWith(handleStaticRequest(request));
+    event.respondWith(handleStaticRequest(request)); // Cache First (pour les assets versionnés)
   } else {
-    // Autres ressources : Network First
+    // Autres ressources (fonts, XHR non-API, etc.) : Network First
     event.respondWith(handleNetworkFirst(request));
   }
 });
@@ -202,7 +225,7 @@ self.addEventListener('fetch', (event) => {
 // ========================================
 
 /**
- * Cache First - Pour les images
+ * Cache First - Pour les images (DYNAMIC_CACHE)
  */
 async function handleImageRequest(request) {
   try {
@@ -219,7 +242,7 @@ async function handleImageRequest(request) {
     if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone());
-      trimCache(DYNAMIC_CACHE);
+      trimCache(DYNAMIC_CACHE); // Limiter la taille du cache dynamique
     }
 
     return networkResponse;
@@ -228,14 +251,14 @@ async function handleImageRequest(request) {
 
     // Retourner une image placeholder SVG
     return new Response(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="#ddd" width="200" height="200"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#999">Image non disponible</text></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect fill="#ddd" width="200" height="200"/><text x="100" y="100" text-anchor="middle" dominant-baseline="middle" fill="#999" font-size="12">Image non disponible</text></svg>',
       { headers: { 'Content-Type': 'image/svg+xml' } }
     );
   }
 }
 
 /**
- * Network First - Pour les API
+ * Network First - Pour les API (DYNAMIC_CACHE)
  */
 async function handleAPIRequest(request) {
   try {
@@ -243,7 +266,7 @@ async function handleAPIRequest(request) {
     const networkResponse = await fetchWithTimeout(request);
 
     // 2. Mettre en cache si GET et succès
-    if (networkResponse && networkResponse.ok && request.method === 'GET') {
+    if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone());
       trimCache(DYNAMIC_CACHE);
@@ -254,12 +277,10 @@ async function handleAPIRequest(request) {
     console.log('🌐 API hors-ligne:', request.url, error.message);
 
     // 3. Fallback vers le cache pour les GET
-    if (request.method === 'GET') {
-      const cachedResponse = await caches.match(request);
-      if (cachedResponse) {
-        console.log('✅ API cache hit:', request.url);
-        return cachedResponse;
-      }
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      console.log('✅ API cache hit:', request.url);
+      return cachedResponse;
     }
 
     // 4. Retourner une erreur JSON structurée
@@ -284,7 +305,7 @@ async function handleAPIRequest(request) {
 }
 
 /**
- * Network First with Cache Fallback - Pour les documents HTML
+ * Network First with Cache Fallback - Pour les documents HTML (DYNAMIC_CACHE)
  */
 async function handleDocumentRequest(request) {
   try {
@@ -317,7 +338,7 @@ async function handleDocumentRequest(request) {
 
     // 5. Dernier recours
     return new Response(
-      '<!DOCTYPE html><html><head><title>Hors ligne</title></head><body><h1>Service indisponible</h1><p>Veuillez vérifier votre connexion Internet.</p></body></html>',
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hors ligne</title></head><body><h1>Service indisponible</h1><p>Veuillez vérifier votre connexion Internet.</p></body></html>',
       {
         status: 503,
         headers: { 'Content-Type': 'text/html' },
@@ -327,7 +348,7 @@ async function handleDocumentRequest(request) {
 }
 
 /**
- * Cache First - Pour les ressources statiques (CSS, JS)
+ * Cache First - Pour les ressources statiques (CSS, JS) (STATIC_CACHE)
  */
 async function handleStaticRequest(request) {
   try {
@@ -340,11 +361,10 @@ async function handleStaticRequest(request) {
     // 2. Sinon, fetch depuis le réseau
     const networkResponse = await fetchWithTimeout(request);
 
-    // 3. Mettre en cache si succès
+    // 3. Mettre en cache si succès (pas de trim sur le STATIC_CACHE)
     if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse.clone());
-      trimCache(STATIC_CACHE);
     }
 
     return networkResponse;
@@ -355,7 +375,7 @@ async function handleStaticRequest(request) {
 }
 
 /**
- * Network First - Pour les autres ressources
+ * Network First - Pour les autres ressources (DYNAMIC_CACHE)
  */
 async function handleNetworkFirst(request) {
   try {
@@ -379,7 +399,7 @@ async function handleNetworkFirst(request) {
 }
 
 // ========================================
-// GESTION DES MESSAGES
+// GESTION DES MESSAGES (Conservation des fonctions utilitaires)
 // ========================================
 
 self.addEventListener('message', (event) => {
@@ -387,7 +407,7 @@ self.addEventListener('message', (event) => {
 
   if (action === 'SKIP_WAITING') {
     self.skipWaiting();
-    event.ports[0]?.postMessage({ success: true });
+    event.ports[0]?.postMessage({ success: true, version: VERSION });
   }
 
   if (action === 'CLEAR_CACHE') {
@@ -395,6 +415,9 @@ self.addEventListener('message', (event) => {
       .then(() => event.ports[0]?.postMessage({ success: true }))
       .catch(error => event.ports[0]?.postMessage({ success: false, error: error.message }));
   }
+
+  // Les fonctions GET_CACHE_SIZE et GET_CACHE_INFO sont gourmandes en calcul,
+  // elles sont conservées ici pour la complétude du débogage.
 
   if (action === 'GET_CACHE_SIZE') {
     getCacheSize()
@@ -428,9 +451,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// ========================================
-// UTILITAIRES
-// ========================================
+// ... (Les fonctions utilitaires clearAllCaches, getCacheSize, getCacheInfo restent inchangées)
 
 /**
  * Supprimer tous les caches
@@ -461,6 +482,7 @@ async function getCacheSize() {
       for (const request of requests) {
         const response = await cache.match(request);
         if (response) {
+          // Note: response.blob() peut être coûteux et lent
           const blob = await response.blob();
           totalSize += blob.size;
         }

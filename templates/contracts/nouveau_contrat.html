@@ -75,7 +75,7 @@
       });
 
     // ========================================
-    // 3. LOGIQUE TPC (Catégorie 520) - CORRIGÉE
+    // 3. CORRECTION: Logique Catégorie (TPC '520' et 2-Roues '550')
     // ========================================
     const categorieSelect = document.getElementById('id_categorie');
     const sousCatWrapper = document.getElementById('sous-categorie-wrapper');
@@ -83,80 +83,64 @@
     const sousCatField = document.getElementById('id_sous_categorie');
     const chargeUtileField = document.getElementById('id_charge_utile');
 
-    function toggleTPCFields() {
+    // Renommage de la fonction pour plus de clarté
+    function toggleDependentFields() {
       if (!categorieSelect) {
         console.error('[ContractForm] #id_categorie introuvable');
         return;
       }
 
-      const isTPC = (categorieSelect.value || '').trim() === '520';
-      console.log('[ContractForm] Toggle TPC - Catégorie:', categorieSelect.value, '| TPC:', isTPC);
+      const selectedCategory = (categorieSelect.value || '').trim();
+      const isTPC = selectedCategory === '520';
+      const isMoto = selectedCategory === '550'; // NOUVELLE VÉRIFICATION
 
-      // ✅ Toggle visibilité avec logs
+      console.log('[ContractForm] Toggle Fields - Catégorie:', selectedCategory, '| TPC:', isTPC, '| Moto:', isMoto);
+
+      // --- Gérer Sous-Catégorie / Genre ---
+      const showSousCat = isTPC || isMoto; // S'affiche pour TPC OU Moto
       if (sousCatWrapper) {
-        if (isTPC) {
-          sousCatWrapper.classList.remove('hidden');
-          console.log('[ContractForm] Sous-catégorie wrapper affiché');
-        } else {
-          sousCatWrapper.classList.add('hidden');
-          console.log('[ContractForm] Sous-catégorie wrapper caché');
-        }
-      } else {
-        console.error('[ContractForm] #sous-categorie-wrapper introuvable');
+        sousCatWrapper.classList.toggle('hidden', !showSousCat);
+        console.log('[ContractForm] Sous-catégorie wrapper', showSousCat ? 'affiché' : 'caché');
       }
 
-      if (chargeUtileWrapper) {
-        if (isTPC) {
-          chargeUtileWrapper.classList.remove('hidden');
-          console.log('[ContractForm] Charge utile wrapper affiché');
-        } else {
-          chargeUtileWrapper.classList.add('hidden');
-          console.log('[ContractForm] Charge utile wrapper caché');
-        }
-      } else {
-        console.error('[ContractForm] #charge-utile-wrapper introuvable');
-      }
-
-      // ✅ Gestion attributs disabled/required
-      if (isTPC) {
-        // Mode TPC actif
-        if (sousCatField) {
+      if (sousCatField) {
+        if (showSousCat) {
           sousCatField.removeAttribute('disabled');
           sousCatField.setAttribute('required', 'required');
-          console.log('[ContractForm] Sous-catégorie field activé');
-        }
-        if (chargeUtileField) {
-          chargeUtileField.removeAttribute('disabled');
-          chargeUtileField.setAttribute('required', 'required');
-          console.log('[ContractForm] Charge utile field activé');
-        }
-      } else {
-        // Mode TPC désactivé
-        if (sousCatField) {
+        } else {
           sousCatField.removeAttribute('required');
           sousCatField.setAttribute('disabled', 'disabled');
           sousCatField.value = '';
-          console.log('[ContractForm] Sous-catégorie field désactivé et vidé');
         }
-        if (chargeUtileField) {
+      }
+
+      // --- Gérer Charge Utile (TPC seulement) ---
+      if (chargeUtileWrapper) {
+        chargeUtileWrapper.classList.toggle('hidden', !isTPC); // S'affiche UNIQUEMENT si TPC
+        console.log('[ContractForm] Charge utile wrapper', isTPC ? 'affiché' : 'caché');
+      }
+
+      if (chargeUtileField) {
+        if (isTPC) {
+          chargeUtileField.removeAttribute('disabled');
+          chargeUtileField.setAttribute('required', 'required');
+        } else {
           chargeUtileField.removeAttribute('required');
           chargeUtileField.setAttribute('disabled', 'disabled');
           chargeUtileField.value = '';
-          console.log('[ContractForm] Charge utile field désactivé et vidé');
         }
+      }
 
-        // ✅ Reset Select2 si présent
-        if (typeof $ !== 'undefined' && $.fn?.select2) {
+      // Reset Select2 si présent
+      if (!showSousCat && typeof $ !== 'undefined' && $.fn?.select2) {
           try {
             const $sc = $('#id_sous_categorie');
             if ($sc.data('select2')) {
               $sc.val('').trigger('change');
-              console.log('[ContractForm] Select2 sous-catégorie réinitialisé');
             }
           } catch (e) {
             console.error('[ContractForm] Erreur reset Select2:', e);
           }
-        }
       }
 
       // Clear cache AppManager si disponible
@@ -165,36 +149,31 @@
       }
     }
 
-    // ✅ Initialisation TPC
+    // Initialisation
     if (categorieSelect) {
-      // État initial
-      console.log('[ContractForm] Initialisation TPC, valeur initiale:', categorieSelect.value);
-      toggleTPCFields();
+      console.log('[ContractForm] Initialisation, valeur initiale:', categorieSelect.value);
+      toggleDependentFields(); // APPEL CORRIGÉ
 
-      // ✅ Événement change natif
+      // Événement change natif
       categorieSelect.addEventListener('change', function(e) {
-        console.log('[ContractForm] Event change natif détecté, nouvelle valeur:', this.value);
-        toggleTPCFields();
+        console.log('[ContractForm] Event natif détecté, nouvelle valeur:', this.value);
+        toggleDependentFields(); // APPEL CORRIGÉ
       });
 
-      // ✅ Événements Select2 si présent
+      // Événements Select2 si présent
       if (typeof $ !== 'undefined' && $.fn?.select2) {
-        // Attendre que Select2 soit initialisé
         setTimeout(() => {
           const $cat = $(categorieSelect);
           if ($cat.data('select2')) {
-            console.log('[ContractForm] Select2 détecté sur catégorie, ajout listeners');
-            $cat.on('select2:select.tpcForm select2:clear.tpcForm', function(e) {
+            $cat.on('select2:select.fieldsToggle select2:clear.fieldsToggle', function(e) {
               console.log('[ContractForm] Event Select2 détecté, type:', e.type, 'valeur:', this.value);
-              toggleTPCFields();
+              toggleDependentFields(); // APPEL CORRIGÉ
             });
-          } else {
-            console.log('[ContractForm] Select2 non détecté sur catégorie');
           }
         }, 500);
       }
     } else {
-      console.error('[ContractForm] #id_categorie non trouvé - TPC non initialisé');
+      console.error('[ContractForm] #id_categorie non trouvé - Logique dépendante non initialisée');
     }
 
     // ========================================
@@ -235,8 +214,6 @@
             el.checked = el.value === obj[key];
           } else {
             el.value = obj[key];
-
-            // Trigger change pour Select2 si présent
             if (typeof $ !== 'undefined' && el.classList.contains('select2-hidden-accessible')) {
               try {
                 $(el).val(obj[key]).trigger('change');
@@ -247,10 +224,10 @@
           }
         });
 
-        // ✅ IMPORTANT : Re-toggle TPC après restauration
+        // IMPORTANT : Re-toggle TPC/Moto après restauration
         setTimeout(() => {
-          console.log('[ContractForm] Re-toggle TPC après restauration');
-          toggleTPCFields();
+          console.log('[ContractForm] Re-toggle TPC/Moto après restauration');
+          toggleDependentFields(); // APPEL CORRIGÉ
         }, 200);
 
       } catch (e) {
@@ -282,22 +259,18 @@
         emissionResult.classList.add('hidden');
         emissionResult.innerHTML = '';
       }
-
       restoreFormData();
-
       if (formWrapper) {
         setTimeout(() => {
           formWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
       }
     }
-
     window.showContractForm = showFormWrapper;
 
     // ========================================
     // 6. Événements HTMX
     // ========================================
-
     document.addEventListener('htmx:beforeRequest', function(e) {
       if (e.detail?.elt && e.detail.elt.closest('#contrat-form')) {
         saveFormData();
@@ -311,7 +284,6 @@
       if (target.id === 'simulation-result' || target.id === 'emission-result') {
         const hasContent = target.innerHTML.trim() !== '';
         target.classList.toggle('hidden', !hasContent);
-
         if (hasContent) {
           setTimeout(() => {
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -319,42 +291,34 @@
         }
       }
 
-      // ✅ Réinit Select2 sous-catégorie après swap HTMX
+      // Réinit Select2 sous-catégorie après swap HTMX
       if (target.id === 'sous-categorie-wrapper' || target.querySelector?.('#id_sous_categorie')) {
         console.log('[ContractForm] HTMX swap détecté sur sous-catégorie');
-
         if (typeof $ !== 'undefined' && $.fn?.select2) {
           try {
             const $sc = $('#id_sous_categorie');
-            if ($sc.data('select2')) {
-              $sc.select2('destroy');
-            }
+            if ($sc.data('select2')) $sc.select2('destroy');
             $sc.select2({
               minimumResultsForSearch: Infinity,
-              placeholder: 'Sous-catégorie',
+              placeholder: 'Genre / Sous-catégorie',
               width: '100%',
               allowClear: true
             });
-            console.log('[ContractForm] Select2 sous-catégorie réinitialisé après swap');
           } catch (e) {
             console.error('[ContractForm] Erreur réinit Select2:', e);
           }
         }
-
         // Re-toggle TPC après swap
         setTimeout(() => {
-          console.log('[ContractForm] Re-toggle TPC après HTMX swap');
-          toggleTPCFields();
+          console.log('[ContractForm] Re-toggle TPC/Moto après HTMX swap');
+          toggleDependentFields(); // APPEL CORRIGÉ
         }, 100);
       }
     });
 
     document.addEventListener('htmx:afterOnLoad', function(e) {
       const content = e.detail?.xhr?.responseText || '';
-
-      if (content.includes('bg-green-') ||
-          content.includes('Contrat émis') ||
-          content.includes('Émission réussie')) {
+      if (content.includes('bg-green-') || content.includes('Contrat émis') || content.includes('Émission réussie')) {
         clearFormData();
       }
     });
@@ -374,7 +338,6 @@
     // 8. Init
     // ========================================
     restoreFormData();
-
     console.log('[ContractForm] ✅ Initialisation complète');
   };
 

@@ -1,7 +1,17 @@
 """
-Django settings for BWHITE DIGITAL project.
-"""
+BWHITE DIGITAL — Django settings
 
+Projet : Plateforme d’assurance BWHITE DIGITAL
+Version : 2025
+Auteur : Mouhamadou Bamba DIENG
+Contact : +221 77 249 05 30 • bigrip2016@gmail.com
+
+Notes :
+- Configurez via les variables d’environnement (SECRET_KEY, DEBUG, ALLOWED_HOSTS, DB…).
+- Ne stockez jamais de secrets en dur dans le dépôt.
+- Utilisez des fichiers .env séparés pour dev / staging / prod.
+- Réglez DJANGO_SETTINGS_MODULE pour cibler le bon module de settings.
+"""
 from pathlib import Path
 from decouple import config, Csv
 import os
@@ -33,10 +43,10 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
 
     # Local apps
-    'accounts',
-    'contracts',
-    'payments',
-    'dashboard',
+    'accounts.apps.AccountsConfig',
+    'contracts.apps.ContractsConfig',
+    'payments.apps.PaymentsConfig',
+    'dashboard.apps.DashboardConfig',
 ]
 
 MIDDLEWARE = [
@@ -169,9 +179,12 @@ LOGGING = {
     },
     'root': {'handlers': ['console'], 'level': 'WARNING'},
     'loggers': {
-        'django': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
-        'bwhite.contracts': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': False},
-    },
+            'django': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+            'django.request': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+            'contracts': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': False},
+            'contracts.api_client': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': False},
+            'bwhite.contracts': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': False},
+        },
 }
 # ==========================
 # ⚙️ CONFIGURATION DES SESSIONS

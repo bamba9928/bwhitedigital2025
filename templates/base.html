@@ -2,340 +2,461 @@
 {% load static %}
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Bwhite Digital{% endblock %}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Bwhite Digital{% endblock %}</title>
 
-    <!-- TailwindCSS avec configuration personnalisée -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'primary-green': '#00FF00',
-                    }
-                }
-            }
-        }
-    </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    <!-- Flatpickr CSS - Thème Dark -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { 'primary-green': '#00FF00' } } }
+    }
+  </script>
 
-    <!-- Select2 -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <style>
+    [x-cloak] { display: none !important; }
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    /* Styles améliorés pour le menu mobile */
+    .mobile-menu-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 30;
+    }
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    .mobile-sidebar {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 16rem;
+      z-index: 40;
+      overflow-y: auto;
+      transform: translateX(-100%);
+    }
 
-    <!-- Styles custom -->
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    .mobile-sidebar.open {
+      transform: translateX(0);
+    }
 
-    <!-- PWA -->
-    <link rel="manifest" href="{% static 'manifest.json' %}">
-    <meta name="theme-color" content="#00FF00">
+    /* Transition smooth */
+    .sidebar-transition {
+      transition: transform 0.3s ease-in-out;
+    }
 
-    <!-- Favicons -->
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'icons/favicon-16x16.png' %}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32x32.png' %}">
+    /* ========== BOUTONS MODERNISÉS ========== */
+
+    /* Bouton primaire moderne avec gradient et shimmer */
+    .btn-primary-modern {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-primary-modern::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn-primary-modern:hover::before {
+      left: 100%;
+    }
+
+    .btn-primary-modern:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-primary-modern:active {
+      transform: translateY(0);
+    }
+
+    /* Effet ripple au clic */
+    .ripple {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ripple::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .ripple:active::after {
+      width: 300px;
+      height: 300px;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <meta name="theme-color" content="#00FF00">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'icons/favicon-16x16.png' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32x32.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'icons/apple-touch-icon.png' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/android-chrome-192x192.png' %}">
+  <link rel="icon" type="image/png" sizes="512x512" href="{% static 'icons/android-chrome-512x512.png' %}">
     <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
-    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/android-chrome-192x192.png' %}">
-    <link rel="icon" type="image/png" sizes="512x512" href="{% static 'icons/android-chrome-512x512.png' %}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
-    {% block extra_css %}{% endblock %}
+  {% block extra_css %}{% endblock %}
 </head>
-<body class="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-gray-200 font-inter">
 
-    <!-- PWA Install Banner -->
-    <div id="pwa-install-banner" class="hidden fixed bottom-4 left-4 right-4 md:left-4 md:right-auto md:w-96 bg-gray-800 text-white p-4 rounded-xl shadow-2xl z-50 border border-gray-700">
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <i class="fas fa-download text-primary-green text-xl"></i>
-                <span class="text-sm">Installer BWHITE DIGITAL ?</span>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="BWHITEUtils.installPWA()"
-                        class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded-lg text-sm transition">
-                    Oui
-                </button>
-                <button onclick="document.getElementById('pwa-install-banner').classList.add('hidden')"
-                        class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg text-sm transition">
-                    Non
-                </button>
-            </div>
+<body class="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-gray-200 font-inter"
+      x-data="{ isMenuOpen: false }"
+      :class="{ 'overflow-hidden': isMenuOpen && window.innerWidth < 1024 }">
+
+  <!-- Banner PWA -->
+  <div id="pwa-install-banner" class="hidden fixed bottom-4 left-4 right-4 md:left-4 md:right-auto md:w-96 bg-gray-800/50 backdrop-blur-sm text-white p-6 rounded-xl shadow-2xl z-50 border border-gray-700">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
+          <i class="fas fa-download text-primary-green text-xl"></i>
         </div>
+        <span class="font-medium">Installer BWHITE DIGITAL ?</span>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="window.BWHITEUtils && window.BWHITEUtils.installPWA()" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:scale-105 active:scale-95">Oui</button>
+        <button onclick="document.getElementById('pwa-install-banner').classList.add('hidden')" class="bg-gray-700 hover:bg-gray-600 px-6 py-2.5 rounded-lg font-medium transition-all duration-300 hover:scale-105 active:scale-95">Non</button>
+      </div>
     </div>
+  </div>
 
-    <!-- Offline Indicator -->
-    <div id="offline-indicator" class="hidden fixed top-0 left-0 w-full bg-yellow-600 text-white text-center py-2 z-50 shadow-lg">
-        <i class="fas fa-wifi-slash mr-2"></i>Mode hors-ligne
-    </div>
-    <!-- Navbar -->
-    <nav class="sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 shadow-lg">
-        <div class="px-4 md:px-6 py-3">
-            <div class="flex items-center justify-between">
-                <!-- Logo -->
-                <a href="{% url 'dashboard:home' %}" class="flex items-center gap-2 group">
-                    <i class="fas fa-shield-alt text-primary-green text-2xl group-hover:scale-110 transition"></i>
-                    <span class="text-xl font-bold bg-gradient-to-r from-primary-green to-green-400 bg-clip-text text-transparent">
-                        Bwhite Digital
-                    </span>
-                </a>
+  <!-- Indicateur hors ligne -->
+  <div id="offline-indicator" class="hidden fixed top-0 left-0 w-full bg-yellow-600 text-white text-center py-2 z-50 shadow-lg">
+    <i class="fas fa-wifi-slash mr-2"></i>Mode hors-ligne
+  </div>
 
-                <!-- Actions à droite -->
-                <div class="flex items-center gap-3">
-                    <!-- Boutons desktop uniquement -->
-                    <div class="flex items-center gap-3">
-                        <a href="{% url 'contracts:nouveau_contrat' %}"
-                           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
-                            <i class="fas fa-plus"></i>
-                            <span>Nouveau Contrat</span>
-                        </a>
+  <!-- Navigation -->
+  <nav class="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 shadow-lg">
+    <div class="px-4 md:px-6 py-3">
+      <div class="flex items-center justify-between">
+        <a href="{% url 'dashboard:home' %}" class="flex items-center gap-2 group" aria-label="Accueil Bwhite Digital">
+            <div class="inline-flex items-center justify-center w-8 h-8 rounded-md brand-chip shadow-md overflow-hidden relative group-hover:scale-110 transition duration-300" role="img" aria-label="Logo BWHITE DIGITAL">
+                <img src="{% static 'images/logo.png' %}"
+                     alt="BWHITE DIGITAL Logo"
+                     class="w-full h-full object-contain"
+                     id="nav-main-logo">
 
-                        {% if user.role == 'ADMIN' %}
-                        <a href="{% url 'accounts:nouveau_apporteur' %}"
-                           class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
-                            <i class="fas fa-user-plus"></i>
-                            <span>Ajouter Apporteur</span>
-                        </a>
-                        {% endif %}
-                    </div>
-
-                    <!-- Menu utilisateur (toujours visible) -->
-                    <div x-data="{ open: false }" class="relative">
-                        <button @click="open = !open"
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition">
-                            <i class="fas fa-user-circle text-xl"></i>
-                            <span class="hidden sm:inline">{{ user.username }}</span>
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </button>
-
-                        <div x-show="open"
-                             x-transition
-                             @click.away="open = false"
-                             class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl py-2 border border-gray-700">
-                            <a href="{% url 'accounts:profile' %}"
-                               class="block px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition">
-                                <i class="fas fa-user mr-2"></i> Mon Profil
-                            </a>
-                            <form action="{% url 'accounts:logout' %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit"
-                                        class="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 transition">
-                                    <i class="fas fa-sign-out-alt mr-2"></i> Déconnexion
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Menu hamburger mobile -->
-                    <button id="mobile-menu-btn" class="md:hidden text-gray-300 hover:text-white">
-                        <i class="fas fa-bars text-xl"></i>
-                    </button>
+                <div id="nav-fallback-icon" class="hidden absolute inset-0 w-full h-full items-center justify-center">
+                    <i class="fas fa-gem text-white text-xl" aria-hidden="true"></i>
                 </div>
             </div>
-        </div>
-    </nav>
-    <div class="flex min-h-[calc(100vh-64px)]">
+
+            <span class="text-xl font-bold bg-gradient-to-r from-primary-green to-green-400 bg-clip-text text-transparent">Bwhite Digital</span>
+        </a>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var logo = document.getElementById('nav-main-logo');
+                var fallback = document.getElementById('nav-fallback-icon');
+
+                if (logo && fallback) {
+                    logo.onerror = function() {
+                        this.classList.add('hidden');
+                        fallback.classList.remove('hidden');
+                        fallback.classList.add('flex');
+                    };
+                }
+            });
+        </script>
+
         {% if user.is_authenticated %}
-        <!-- Sidebar Desktop -->
-        <aside class="block w-64 bg-gray-900/50 border-r border-gray-800">
-            <div class="sticky top-20 p-4">
-                <ul class="space-y-1">
-                    <li>
-                        <a href="{% url 'dashboard:home' %}"
-                           class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-primary-green rounded-lg transition group">
-                            <i class="fas fa-tachometer-alt group-hover:scale-110 transition"></i>
-                            <span>Tableau de bord</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'contracts:liste_contrats' %}"
-                           class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-primary-green rounded-lg transition group">
-                            <i class="fas fa-file-contract group-hover:scale-110 transition"></i>
-                            <span>Contrats</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'contracts:liste_clients' %}"
-                           class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-primary-green rounded-lg transition group">
-                            <i class="fas fa-users group-hover:scale-110 transition"></i>
-                            <span>Clients</span>
-                        </a>
-                    </li>
-                    {% if user.role == 'APPORTEUR' %}
-                    <li>
-                        <a href="{% url 'payments:mes_commissions' %}"
-                           class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-primary-green rounded-lg transition group">
-                            <i class="fas fa-coins group-hover:scale-110 transition"></i>
-                            <span>Mes Commissions</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if user.role == 'ADMIN' %}
-                    <li>
-                        <a href="{% url 'accounts:liste_apporteurs' %}"
-                           class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-primary-green rounded-lg transition group">
-                            <i class="fas fa-user-tie group-hover:scale-110 transition"></i>
-                            <span>Apporteurs</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'payments:liste_paiements' %}"
-                           class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-primary-green rounded-lg transition group">
-                            <i class="fas fa-money-check-alt group-hover:scale-110 transition"></i>
-                            <span>Paiements</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </aside>
+        <div class="flex items-center gap-3">
+          <div class="hidden lg:flex items-center gap-3">
+            <a href="{% url 'contracts:nouveau_contrat' %}" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 font-semibold ripple btn-primary-modern" aria-label="Nouveau Contrat">
+              <i class="fas fa-plus text-lg"></i><span>Nouveau Contrat</span>
+            </a>
+            {% if user.role == 'ADMIN' %}
+            <a href="{% url 'accounts:nouveau_apporteur' %}" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 shadow-lg shadow-green-500/20 hover:shadow-green-500/40 font-semibold ripple btn-primary-modern" aria-label="Ajouter Apporteur">
+              <i class="fas fa-user-plus text-lg"></i><span>Ajouter Apporteur</span>
+            </a>
+            {% endif %}
+          </div>
 
-        <!-- Menu Mobile (overlay) -->
-        <div id="mobile-menu" class="hidden fixed inset-0 z-50 md:hidden">
-            <div class="fixed inset-0 bg-black/50" id="mobile-menu-backdrop"></div>
-            <aside class="fixed top-0 left-0 w-64 h-full bg-gray-900 border-r border-gray-800 p-4 transform transition-transform">
-                <div class="flex items-center justify-between mb-6">
-                    <span class="text-xl font-bold text-primary-green">Menu</span>
-                    <button id="mobile-menu-close" class="text-gray-400 hover:text-white">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
+          <!-- Menu profil -->
+          <div x-data="{ open: false }" @click.outside="open = false" class="relative">
+            <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition" aria-expanded="open ? 'true' : 'false'" aria-controls="profile-menu">
+              <i class="fas fa-user-circle text-xl"></i>
+              <span class="hidden sm:inline">{{ user.username }}</span>
+              <i class="fas fa-chevron-down text-xs"></i>
+            </button>
+            <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95"
+                 class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl py-2 border border-gray-700" x-cloak id="profile-menu">
+              <a href="{% url 'accounts:profile' %}" class="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800/70 hover:text-white rounded-lg transition-all duration-200 flex items-center gap-3 group">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                  <i class="fas fa-user text-blue-400"></i>
                 </div>
-                <ul class="space-y-1">
-                    <li><a href="{% url 'dashboard:home' %}" class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 rounded-lg"><i class="fas fa-tachometer-alt"></i><span>Tableau de bord</span></a></li>
-                    <li><a href="{% url 'contracts:liste_contrats' %}" class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 rounded-lg"><i class="fas fa-file-contract"></i><span>Contrats</span></a></li>
-                    <li><a href="{% url 'contracts:liste_clients' %}" class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 rounded-lg"><i class="fas fa-users"></i><span>Clients</span></a></li>
-                    {% if user.role == 'APPORTEUR' %}
-                    <li><a href="{% url 'payments:mes_commissions' %}" class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 rounded-lg"><i class="fas fa-coins"></i><span>Mes Commissions</span></a></li>
-                    {% endif %}
-                    {% if user.role == 'ADMIN' %}
-                    <li><a href="{% url 'accounts:liste_apporteurs' %}" class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 rounded-lg"><i class="fas fa-user-tie"></i><span>Apporteurs</span></a></li>
-                    <li><a href="{% url 'payments:liste_paiements' %}" class="flex items-center gap-3 px-3 py-2 text-gray-300 hover:bg-gray-800 rounded-lg"><i class="fas fa-money-check-alt"></i><span>Paiements</span></a></li>
-                    {% endif %}
-                </ul>
-            </aside>
+                <span class="font-medium">Mon Profil</span>
+                <i class="fas fa-chevron-right ml-auto text-gray-500 group-hover:text-primary-green group-hover:translate-x-1 transition-all text-xs"></i>
+              </a>
+              <form action="{% url 'accounts:logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="w-full text-left px-4 py-3 text-gray-300 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-all duration-200 flex items-center gap-3 group border border-transparent hover:border-red-500/30">
+                  <div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
+                    <i class="fas fa-sign-out-alt text-red-400"></i>
+                  </div>
+                  <span class="font-medium">Déconnexion</span>
+                  <i class="fas fa-chevron-right ml-auto text-gray-500 group-hover:text-red-400 group-hover:translate-x-1 transition-all text-xs"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Bouton menu mobile -->
+          <button @click="isMenuOpen = !isMenuOpen" class="lg:hidden w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-primary-green/20 hover:scale-110 active:scale-95" aria-controls="mobile-sidebar" :aria-expanded="isMenuOpen ? 'true' : 'false'">
+            <i class="fas fa-bars text-xl" x-show="!isMenuOpen"></i>
+            <i class="fas fa-times text-xl" x-show="isMenuOpen" x-cloak></i>
+          </button>
         </div>
         {% endif %}
-
-        <!-- Contenu principal -->
-        <main class="flex-1 overflow-y-auto">
-            {% block content %}{% endblock %}
-        </main>
+      </div>
     </div>
 
-    <!-- Spinner Global -->
-    <div id="global-spinner" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center backdrop-blur-sm">
-        <div class="flex flex-col items-center gap-4 animate-pulse">
-            <i class="fas fa-spinner fa-spin text-6xl text-primary-green"></i>
-            <p class="text-white font-bold text-lg">Veuillez patienter...</p>
+    <!-- Messages -->
+    {% if messages %}
+    <div class="px-4 md:px-6 py-2 bg-gray-800 border-t border-gray-700">
+      <div class="space-y-2">
+        {% for message in messages %}
+          <div class="text-sm px-3 py-2 rounded border flex items-center justify-between
+            {% if message.tags == 'success' %} text-green-300 border-green-700 bg-green-900/20
+            {% elif message.tags == 'warning' %} text-yellow-300 border-yellow-700 bg-yellow-900/20
+            {% elif message.tags == 'danger' or message.tags == 'error' %} text-red-300 border-red-700 bg-red-900/20
+            {% else %} text-gray-300 border-gray-600 bg-gray-700/30 {% endif %}">
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.style.display='none';" class="ml-4 opacity-75 hover:opacity-100 text-lg" aria-label="Fermer la notification">&times;</button>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </nav>
+
+  {% block banner %}
+    {% include "includes/_top_banner.html" %}
+  {% endblock %}
+
+  <div class="flex min-h-[calc(100vh-64px)]">
+    {% if user.is_authenticated %}
+    <!-- Sidebar Mobile -->
+    <div x-show="isMenuOpen"
+         x-transition:enter="transition-opacity duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity duration-300"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="isMenuOpen = false"
+         class="mobile-menu-overlay lg:hidden"
+         x-cloak>
+    </div>
+
+    <!-- Sidebar -->
+    <aside :class="{ 'translate-x-0': isMenuOpen, '-translate-x-full': !isMenuOpen }"
+           class="mobile-sidebar sidebar-transition bg-gray-900/95 border-r border-gray-800 lg:translate-x-0 lg:relative lg:inset-auto fixed inset-y-0 left-0 z-40 overflow-y-auto"
+           x-cloak
+           id="mobile-sidebar">
+      <div class="pt-20 lg:pt-4 p-4">
+        <!-- En-tête mobile -->
+        <div class="flex items-center justify-between mb-6 lg:hidden">
+          <span class="text-xl font-bold text-primary-green">Menu</span>
+          <button @click="isMenuOpen = false" class="text-gray-400 hover:text-white p-2">
+            <i class="fas fa-times text-xl"></i>
+          </button>
         </div>
+
+        <!-- Actions mobiles -->
+        <div class="lg:hidden mb-6 space-y-3">
+          <a href="{% url 'contracts:nouveau_contrat' %}" @click="isMenuOpen = false"
+             class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:translate-x-1 font-medium group">
+            <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+              <i class="fas fa-plus"></i>
+            </div>
+            <span>Nouveau Contrat</span>
+          </a>
+          {% if user.role == 'ADMIN' %}
+          <a href="{% url 'accounts:nouveau_apporteur' %}" @click="isMenuOpen = false"
+             class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-5 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:translate-x-1 font-medium group">
+            <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+              <i class="fas fa-user-plus"></i>
+            </div>
+            <span>Ajouter Apporteur</span>
+          </a>
+          {% endif %}
+        </div>
+
+        <!-- Navigation -->
+        <ul class="space-y-1">
+          {% url 'dashboard:home' as dashboard_url %}
+          <li>
+            <a href="{{ dashboard_url }}" @click="if (window.innerWidth < 1024) isMenuOpen = false"
+               class="flex items-center gap-3 px-3 py-2 text-gray-300 rounded-lg transition group
+               {% if request.path == dashboard_url %} bg-gray-800 text-primary-green font-semibold {% else %} hover:bg-gray-800 hover:text-primary-green {% endif %}">
+              <i class="fas fa-tachometer-alt group-hover:scale-110 transition"></i><span>Dashboard</span>
+            </a>
+          </li>
+
+          {% url 'contracts:liste_contrats' as contrats_url %}
+          <li>
+            <a href="{{ contrats_url }}" @click="if (window.innerWidth < 1024) isMenuOpen = false"
+               class="flex items-center gap-3 px-3 py-2 text-gray-300 rounded-lg transition group
+               {% if request.path == contrats_url %} bg-gray-800 text-primary-green font-semibold {% else %} hover:bg-gray-800 hover:text-primary-green {% endif %}">
+              <i class="fas fa-file-contract group-hover:scale-110 transition"></i><span>Contrats</span>
+            </a>
+          </li>
+
+          {% url 'contracts:liste_clients' as clients_url %}
+          <li>
+            <a href="{{ clients_url }}" @click="if (window.innerWidth < 1024) isMenuOpen = false"
+               class="flex items-center gap-3 px-3 py-2 text-gray-300 rounded-lg transition group
+               {% if request.path == clients_url %} bg-gray-800 text-primary-green font-semibold {% else %} hover:bg-gray-800 hover:text-primary-green {% endif %}">
+              <i class="fas fa-users group-hover:scale-110 transition"></i><span>Clients</span>
+            </a>
+          </li>
+
+          {% if user.role == 'APPORTEUR' %}
+          {% url 'payments:mes_paiements' as paiements_apporteur_url %}
+          <li>
+            <a href="{{ paiements_apporteur_url }}" @click="if (window.innerWidth < 1024) isMenuOpen = false"
+               class="flex items-center gap-3 px-3 py-2 text-gray-300 rounded-lg transition group
+               {% if request.path == paiements_apporteur_url %} bg-gray-800 text-primary-green font-semibold {% else %} hover:bg-gray-800 hover:text-primary-green {% endif %}">
+              <i class="fas fa-coins group-hover:scale-110 transition"></i><span>Mes paiements</span>
+            </a>
+          </li>
+          {% endif %}
+
+          {% if user.role == 'ADMIN' %}
+          {% url 'accounts:liste_apporteurs' as apporteurs_url %}
+          <li>
+            <a href="{{ apporteurs_url }}" @click="if (window.innerWidth < 1024) isMenuOpen = false"
+               class="flex items-center gap-3 px-3 py-2 text-gray-300 rounded-lg transition group
+               {% if request.path == apporteurs_url %} bg-gray-800 text-primary-green font-semibold {% else %} hover:bg-gray-800 hover:text-primary-green {% endif %}">
+              <i class="fas fa-user-tie group-hover:scale-110 transition"></i><span>Apporteurs</span>
+            </a>
+          </li>
+
+          {% url 'payments:liste_encaissements' as encaissements_url %}
+          <li>
+            <a href="{{ encaissements_url }}" @click="if (window.innerWidth < 1024) isMenuOpen = false"
+               class="flex items-center gap-3 px-3 py-2 text-gray-300 rounded-lg transition group
+               {% if request.path == encaissements_url %} bg-gray-800 text-primary-green font-semibold {% else %} hover:bg-gray-800 hover:text-primary-green {% endif %}">
+              <i class="fas fa-money-check-alt group-hover:scale-110 transition"></i><span>Paiements</span>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </aside>
+    {% endif %}
+
+    <!-- Contenu principal -->
+    <main class="flex-1 p-4 md:p-6 overflow-y-auto w-full">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Spinner global -->
+  <div id="global-spinner" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="flex flex-col items-center gap-4 animate-pulse">
+      <i class="fas fa-spinner fa-spin text-6xl text-primary-green"></i>
+      <p class="text-white font-bold text-lg">Veuillez patienter...</p>
     </div>
+  </div>
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
-    <script src="{% static 'js/app.js' %}"></script>
+  <!-- Scripts -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 
-    <!-- Menu mobile toggle -->
-    <script>
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileMenu = document.getElementById('mobile-menu');
-        const mobileMenuClose = document.getElementById('mobile-menu-close');
-        const mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+  <script src="{% static 'js/app.js' %}"></script>
 
-        if (mobileMenuBtn) {
-            mobileMenuBtn.addEventListener('click', () => mobileMenu?.classList.remove('hidden'));
-            mobileMenuClose?.addEventListener('click', () => mobileMenu?.classList.add('hidden'));
-            mobileMenuBackdrop?.addEventListener('click', () => mobileMenu?.classList.add('hidden'));
-        }
-    </script>
-
-    <!-- Auto-logout après inactivité -->
-    <script>
-    (function() {
-        let timer;
-        const logoutAfter = 10 * 60 * 1000;
-
-        function resetTimer() {
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = "{% url 'accounts:logout' %}";
-                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                if (csrfToken) {
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = 'csrfmiddlewaretoken';
-                    csrfInput.value = csrfToken;
-                    form.appendChild(csrfInput);
-                }
-                document.body.appendChild(form);
-                form.submit();
-            }, logoutAfter);
-        }
-
-        window.onload = resetTimer;
-        ['mousemove', 'keypress', 'click', 'scroll'].forEach(event =>
-            document.addEventListener(event, resetTimer)
-        );
-    })();
-    </script>
-    <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register("/sw.js");
-    }
-    </script>
-    <script>
+  <!-- Scripts existants (déconnexion auto, PWA, etc.) -->
+  <script>
     (function(){
-      const bar = document.getElementById('offline-indicator');
-      const paint = ()=> bar?.classList.toggle('hidden', navigator.onLine);
-      window.addEventListener('online',  paint);
-      window.addEventListener('offline', paint);
-      paint(); // état initial
+      function getCookie(name){
+        const m = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
+        return m ? m.pop() : '';
+      }
+      const logoutAfter = 10 * 60 * 1000;
+      let timer;
+      function reset(){
+        if (!'{{ user.is_authenticated }}') return;
+        clearTimeout(timer);
+        timer = setTimeout(()=>{
+          const form=document.createElement('form');
+          form.method='POST';
+          form.action="{% url 'accounts:logout' %}";
+          const csrf=document.createElement('input');
+          csrf.type='hidden'; csrf.name='csrfmiddlewaretoken'; csrf.value=getCookie('csrftoken')||'';
+          form.appendChild(csrf);
+          document.body.appendChild(form);
+          form.submit();
+        }, logoutAfter);
+      }
+      window.addEventListener('load', reset);
+      ['mousemove','keypress','click','scroll','touchstart'].forEach(e=>document.addEventListener(e, reset));
     })();
+  </script>
+  <script>
+      if ('serviceWorker' in navigator){
+        navigator.serviceWorker.register('/sw.js'); // <-- à la racine !
+      }
     </script>
-    <script>
-(function(){
-  let deferredPrompt=null;
-  const banner=document.getElementById('pwa-install-banner');
 
-  window.BWHITEUtils = {
-    installPWA: async function(){
-      if(!deferredPrompt) return banner?.classList.add('hidden');
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt=null;
-      banner?.classList.add('hidden');
-    }
-  };
+  <script>
+    (function(){
+      const bar=document.getElementById('offline-indicator');
+      const paint=()=> bar && bar.classList.toggle('hidden', navigator.onLine);
+      window.addEventListener('online',paint);
+      window.addEventListener('offline',paint);
+      paint();
+    })();
+  </script>
 
-  window.addEventListener('beforeinstallprompt', (e)=>{
-    e.preventDefault();
-    deferredPrompt = e;
-    banner?.classList.remove('hidden');
-  });
+  <script>
+    (function(){
+      let deferredPrompt=null;
+      const banner=document.getElementById('pwa-install-banner');
+      window.BWHITEUtils={ installPWA: async function(){
+        if(!deferredPrompt){ banner?.classList.add('hidden'); return; }
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt=null; banner?.classList.add('hidden');
+      }};
+      window.addEventListener('beforeinstallprompt', (e)=>{
+        e.preventDefault(); deferredPrompt=e;
+        if ('{{ user.is_authenticated }}' === 'True') {
+          banner?.classList.remove('hidden');
+        }
+      });
+      window.addEventListener('appinstalled', ()=>{ deferredPrompt=null; banner?.classList.add('hidden'); });
+    })();
+  </script>
 
-  window.addEventListener('appinstalled', ()=> {
-    deferredPrompt=null;
-    banner?.classList.add('hidden');
-  });
-})();
-</script>
-
-
-
-
-    {% block extra_js %}{% endblock %}
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -9,7 +9,6 @@ from .models import User
 class UserAdmin(BaseUserAdmin):
     """Admin personnalisé pour le modèle User"""
 
-    # Colonnes visibles dans la liste
     list_display = (
         "username", "get_full_name", "email", "role",
         "grade", "phone", "is_active", "is_staff", "is_superuser"
@@ -60,7 +59,7 @@ class UserAdmin(BaseUserAdmin):
 
     class Media:
         js = ("admin/js/user_admin.js",)
-    # ✅ Actions personnalisées
+
     actions = ["set_admin", "set_apporteur_freemium", "set_apporteur_platine", "reset_grade"]
 
     def set_admin(self, request, queryset):
@@ -83,7 +82,7 @@ class UserAdmin(BaseUserAdmin):
         self.message_user(request, f"{queryset.count()} utilisateur(s) réinitialisé(s) (grade supprimé).")
     reset_grade.short_description = "Réinitialiser le grade"
 
-    # Masquer le champ grade pour les Admin
+
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         if obj and obj.role == "ADMIN":

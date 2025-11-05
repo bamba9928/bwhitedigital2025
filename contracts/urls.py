@@ -11,6 +11,9 @@ urlpatterns = [
     path('contrats/', views.liste_contrats, name='liste_contrats'),
     path('contrats/<int:pk>/', views.detail_contrat, name='detail_contrat'),
     path('contrats/<int:pk>/documents/', views.telecharger_documents, name='telecharger_documents'),
+    path("contrats/<int:pk>/annuler/", views.annuler_contrat, name="annuler_contrat"),
+    path("echeances/aujourdhui/", views.echeances_aujourdhui, name="echeances_aujourdhui"),
+    path("echeances/renouveler/<int:pk>/", views.renouveler_contrat_auto, name="renouveler_contrat_auto"),
 
     # Clients
     path('clients/', views.liste_clients, name='liste_clients'),

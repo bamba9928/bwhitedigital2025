@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Détail encaissement{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+      <i class="fas fa-eye text-primary-green"></i>
+      Détail encaissement
+    </h1>
+
+    <a href="{% url 'payments:liste_encaissements' %}"
+       class="px-3 py-2 rounded-lg border border-gray-700 text-gray-200 hover:bg-gray-800 text-sm">
+      Retour
+    </a>
+  </div>
+
+  <!-- Carte infos paiement -->
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div class="grid md:grid-cols-3 gap-4 text-sm">
+      <div>
+        <p class="text-gray-400">Police</p>
+        <p class="text-white font-semibold">
+          <a class="text-blue-400 hover:text-blue-300"
+             href="{% url 'contracts:detail_contrat' paiement.contrat.pk %}">
+            {{ paiement.contrat.numero_police|default:"-" }}
+          </a>
+        </p>
+      </div>
+      <div>
+        <p class="text-gray-400">Client</p>
+        <p class="text-white font-semibold">{{ paiement.contrat.client.nom_complet }}</p>
+      </div>
+      <div>
+        <p class="text-gray-400">Apporteur</p>
+        <p class="text-white font-semibold">{{ paiement.contrat.apporteur.get_full_name }}</p>
+      </div>
+
+      <div>
+        <p class="text-gray-400">À payer</p>
+        <p class="text-blue-400 font-semibold">{{ paiement.montant_a_payer|floatformat:0|intcomma }} F</p>
+      </div>
+      <div>
+        <p class="text-gray-400">Payé</p>
+        <p class="text-green-400 font-semibold">{{ paiement.montant_paye|floatformat:0|intcomma }} F</p>
+      </div>
+      <div>
+        <p class="text-gray-400">Statut</p>
+        {% if paiement.est_paye %}
+          <span class="px-2 py-1 rounded-full bg-green-900/50 text-green-300 text-xs font-semibold">PAYÉ</span>
+        {% else %}
+          <span class="px-2 py-1 rounded-full bg-yellow-900/50 text-yellow-300 text-xs font-semibold">EN ATTENTE</span>
+        {% endif %}
+      </div>
+
+      <div class="md:col-span-3 grid md:grid-cols-3 gap-4">
+        <div>
+          <p class="text-gray-400">Méthode</p>
+          <p class="text-gray-200">{{ paiement.get_methode_paiement_display|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-400">Référence</p>
+          <p class="text-gray-200 break-all">{{ paiement.reference_transaction|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-400">Dernière maj</p>
+          <p class="text-gray-200">{{ paiement.updated_at|date:"d/m/Y H:i" }}</p>
+        </div>
+      </div>
+
+      {% if paiement.notes %}
+      <div class="md:col-span-3">
+        <p class="text-gray-400">Notes</p>
+        <p class="text-gray-200 whitespace-pre-line">{{ paiement.notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Form validation admin -->
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    {% if paiement.est_paye %}
+      <p class="text-green-300 text-sm flex items-center gap-2">
+        <i class="fas fa-check-circle"></i>
+        Paiement déjà validé.
+      </p>
+    {% else %}
+      <form method="post" action="{% url 'payments:valider_encaissement' paiement.id %}" class="space-y-4">
+        {% csrf_token %}
+        {% if vform.non_field_errors %}
+          <div class="text-red-400 text-sm">{{ vform.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-300 mb-1">Méthode de paiement</label>
+            {{ vform.methode_paiement }}
+            {% if vform.methode_paiement.errors %}
+              <p class="text-red-400 text-xs mt-1">{{ vform.methode_paiement.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-300 mb-1">Référence transaction</label>
+            {{ vform.reference_transaction }}
+            {% if vform.reference_transaction.errors %}
+              <p class="text-red-400 text-xs mt-1">{{ vform.reference_transaction.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <a href="{% url 'payments:liste_encaissements' %}"
+             class="px-4 py-2 rounded-lg border border-gray-700 text-gray-200 hover:bg-gray-800">Annuler</a>
+          <button type="submit"
+                  class="px-5 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700">
+            Valider le paiement
+          </button>
+        </div>
+      </form>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

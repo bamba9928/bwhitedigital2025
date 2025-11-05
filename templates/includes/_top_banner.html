@@ -1,0 +1,169 @@
+<div class="w-full bg-gradient-to-r from-black via-gray-900 to-black border-b border-primary-green/20 overflow-hidden banner-scroll" role="region" aria-label="Informations de contact en défilement continu">
+  <div class="relative flex" aria-hidden="true">
+    <!-- Premier ensemble - visible pour les lecteurs d'écran -->
+    <div class="flex items-center gap-8 animate-scroll whitespace-nowrap py-2 px-4 flex-shrink-0">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-phone-alt text-primary-green" aria-hidden="true"></i>
+        <span class="text-gray-300">Service client :</span>
+        <a href="tel:+221780103636" class="text-primary-green hover:text-green-400 font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-green focus:ring-offset-2 focus:ring-offset-black">
+          78 010 36 36
+        </a>
+      </div>
+
+      <span class="text-primary-green/30" aria-hidden="true">•</span>
+
+      <div class="flex items-center gap-2">
+        <i class="fas fa-envelope text-primary-green" aria-hidden="true"></i>
+        <span class="text-gray-300">Email :</span>
+        <a href="mailto:bwhitemultiservices3d3@gmail.com"
+          class="text-primary-green hover:text-green-400 font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-green focus:ring-offset-2 focus:ring-offset-black">
+          bwhitemultiservices3d3@gmail.com
+        </a>
+      </div>
+
+      <span class="text-primary-green/30" aria-hidden="true">•</span>
+
+      <div class="flex items-center gap-2">
+        <i class="fas fa-clock text-primary-green" aria-hidden="true"></i>
+        <span class="text-gray-300">Disponible 24/7</span>
+      </div>
+    </div>
+
+    <!-- Deuxième ensemble - duplication pour l'effet de boucle -->
+    <div class="flex items-center gap-8 animate-scroll whitespace-nowrap py-2 px-4 flex-shrink-0">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-phone-alt text-primary-green" aria-hidden="true"></i>
+        <span class="text-gray-300">Service client :</span>
+        <a href="tel:+221780103636" class="text-primary-green hover:text-green-400 font-semibold transition-colors duration-200">
+          78 010 36 36
+        </a>
+      </div>
+
+      <span class="text-primary-green/30" aria-hidden="true">•</span>
+
+      <div class="flex items-center gap-2">
+        <i class="fas fa-envelope text-primary-green" aria-hidden="true"></i>
+        <span class="text-gray-300">Email :</span>
+        <a href="mailto:bwhitemultiservices3d3@gmail.com"
+          class="text-primary-green hover:text-green-400 font-semibold transition-colors duration-200">
+          bwhitemultiservices3d3@gmail.com
+        </a>
+      </div>
+
+      <span class="text-primary-green/30" aria-hidden="true">•</span>
+
+      <div class="flex items-center gap-2">
+        <i class="fas fa-clock text-primary-green" aria-hidden="true"></i>
+        <span class="text-gray-300">Disponible 24/7</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Version accessible cachée pour les lecteurs d'écran -->
+  <div class="sr-only">
+    <p>Service client : 78 010 36 36</p>
+    <p>Email : bwhitemultiservices3d3@gmail.com</p>
+    <p>Disponible 24 heures sur 24, 7 jours sur 7</p>
+  </div>
+</div>
+
+<style>
+  .banner-scroll {
+    --scroll-duration: 30s;
+    user-select: none;
+  }
+
+  .animate-scroll {
+    animation: scroll var(--scroll-duration) linear infinite;
+    will-change: transform;
+  }
+
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+
+  /* Pause l'animation au survol pour améliorer l'accessibilité */
+  .banner-scroll:hover .animate-scroll {
+    animation-play-state: paused;
+  }
+
+  /* Respect des préférences de réduction d'animation */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-scroll {
+      animation: none;
+      transform: translateX(0);
+    }
+
+    .banner-scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .banner-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .banner-scroll {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  }
+
+  /* Amélioration du contraste pour l'accessibilité */
+  @media (prefers-contrast: high) {
+    .banner-scroll {
+      border-bottom-color: #00FF00;
+    }
+
+    .text-gray-300 {
+      color: #ffffff;
+    }
+  }
+
+  /* Style pour le focus visible */
+  .banner-scroll a:focus {
+    outline: 2px solid #00FF00;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+</style>
+
+<script>
+// Amélioration progressive : pause l'animation quand un lien reçoit le focus
+document.addEventListener('DOMContentLoaded', function() {
+  const banner = document.querySelector('.banner-scroll');
+  const animatedElements = document.querySelectorAll('.animate-scroll');
+
+  if (banner && animatedElements.length > 0) {
+    // Pause l'animation quand un lien reçoit le focus
+    const links = banner.querySelectorAll('a');
+    links.forEach(link => {
+      link.addEventListener('focus', () => {
+        animatedElements.forEach(el => {
+          el.style.animationPlayState = 'paused';
+        });
+      });
+
+      link.addEventListener('blur', () => {
+        animatedElements.forEach(el => {
+          el.style.animationPlayState = 'running';
+        });
+      });
+    });
+
+    // Redémarrage automatique en cas de perte de focus
+    banner.addEventListener('mouseleave', () => {
+      animatedElements.forEach(el => {
+        if (document.activeElement !== banner.querySelector('a:focus')) {
+          el.style.animationPlayState = 'running';
+        }
+      });
+    });
+  }
+});
+</script>

@@ -92,16 +92,8 @@ class User(AbstractUser):
         """Retourne le nom complet"""
         return f"{self.first_name} {self.last_name}".strip() or self.username
 
-    COMMISSION_RULES = {
-        "PLATINE": {"taux": Decimal("0.18"), "fixe": Decimal("2000")},
-        "FREEMIUM": {"taux": Decimal("0.10"), "fixe": Decimal("1800")},
-    }
-
-    def calculate_commission(self, prime_nette):
-        if self.role != "APPORTEUR" or not self.grade:
-            return Decimal("0.00")
-        rules = self.COMMISSION_RULES.get(self.grade)
-        return (prime_nette * rules["taux"]) + rules["fixe"] if rules else Decimal("0.00")
+    # --- LOGIQUE COMMISSION SUPPRIMÉE ---
+    # La logique est maintenant dans contracts/models.py
 
     @property
     def is_admin(self):
@@ -122,4 +114,3 @@ class User(AbstractUser):
         elif self.role == "APPORTEUR" and not self.grade:
             self.grade = "FREEMIUM"
         super().save(*args, **kwargs)
-

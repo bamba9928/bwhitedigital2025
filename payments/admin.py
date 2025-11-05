@@ -1,51 +1,76 @@
+from decimal import Decimal
 from django.contrib import admin
-from .models import PaiementApporteur, HistoriquePaiement, RecapitulatifCommissions
+from .models import PaiementApporteur, HistoriquePaiement
 
+
+# --- ADMIN DE PAIEMENT APPORTEUR ---
 
 @admin.register(PaiementApporteur)
 class PaiementApporteurAdmin(admin.ModelAdmin):
-    list_display = ('contrat', 'get_apporteur', 'montant_commission', 'montant_verse', 'status', 'methode_paiement',
-                    'date_paiement')
-    search_fields = ('contrat__numero_police', 'reference_transaction')
-    list_filter = ('status', 'methode_paiement', 'date_paiement')
+
+    list_display = (
+        'contrat',
+        'get_apporteur',
+        'montant_a_payer',
+        'status',
+        'methode_paiement',
+        'created_at',
+    )
+
+
+    search_fields = (
+        'contrat__numero_police',
+        'reference_transaction',
+        'contrat__client__prenom',
+        'contrat__client__nom',
+        'contrat__apporteur__first_name',
+        'contrat__apporteur__last_name',
+    )
+
+
+    list_filter = ('status', 'methode_paiement', 'created_at')
+
     ordering = ('-created_at',)
-    date_hierarchy = 'date_paiement'
+    date_hierarchy = 'created_at'
 
-    def get_apporteur(self, obj):
-        return obj.contrat.apporteur.get_full_name()
 
-    get_apporteur.short_description = 'Apporteur'
+    readonly_fields = ('created_at', 'updated_at')
+
 
     fieldsets = (
         ('Contrat', {
             'fields': ('contrat',)
         }),
-        ('Montants', {
-            'fields': ('montant_commission', 'montant_verse')
+        ('Montant dû', {
+
+            'fields': ('montant_a_payer',)
         }),
-        ('Paiement', {
-            'fields': ('status', 'methode_paiement', 'reference_transaction', 'numero_compte')
+        ('Déclaration', {
+            'fields': ('methode_paiement', 'reference_transaction', 'numero_compte')
         }),
-        ('Validation', {
-            'fields': ('date_paiement', 'date_validation', 'validated_by', 'notes')
+        ('Statut et notes', {
+            'fields': ('status', 'notes')
+        }),
+        ('Meta', {
+            'fields': ('created_at', 'updated_at')
         }),
     )
-    readonly_fields = ('created_at', 'updated_at')
 
+
+    def get_apporteur(self, obj):
+        """Affiche le nom complet de l'apporteur lié au contrat."""
+        a = getattr(obj.contrat, 'apporteur', None)
+        return a.get_full_name() if a else '-'
+
+    get_apporteur.short_description = 'Apporteur'
+
+# --- ADMIN D'HISTORIQUE PAIEMENT ---
 
 @admin.register(HistoriquePaiement)
 class HistoriquePaiementAdmin(admin.ModelAdmin):
+
     list_display = ('paiement', 'action', 'effectue_par', 'created_at')
     list_filter = ('action', 'created_at')
     search_fields = ('paiement__contrat__numero_police', 'details')
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
-
-
-@admin.register(RecapitulatifCommissions)
-class RecapitulatifCommissionsAdmin(admin.ModelAdmin):
-    list_display = ('apporteur', 'mois', 'nombre_contrats', 'total_primes_ttc', 'total_commissions', 'total_en_attente')
-    list_filter = ('apporteur', 'mois')
-    search_fields = ('apporteur__username', 'apporteur__first_name', 'apporteur__last_name')
-    ordering = ('-mois',)
-    date_hierarchy = 'mois'

@@ -1,20 +1,14 @@
 from django.apps import AppConfig
-
+import importlib
 
 class AccountsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'accounts'
-    verbose_name = 'Gestion des utilisateurs'
-
-
-# contracts/apps.py
-from django.apps import AppConfig
-
-
-class ContractsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'contracts'
-    verbose_name = 'Gestion des contrats'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "accounts"
+    verbose_name = "Gestion des utilisateurs"
 
     def ready(self):
-        import contracts.signals
+        for mod in ("accounts.signals_onboarding",):
+            try:
+                importlib.import_module(mod)
+            except ModuleNotFoundError:
+                pass

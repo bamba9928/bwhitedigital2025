@@ -6,11 +6,20 @@ DUREE_CHOICES = [
     (6, "6 mois"),
     (12, "12 mois"),
 ]
+
 REGION_PREFIXES = ("AB","AC","DK","TH","SL","DB","LG","TC","KL","KD","ZG","FK","KF","KG","MT","SD")
 CATEGORIES = [
     ('', 'Sélectionner une catégorie'),
     ("510", "VP"),
     ("520", "TPC"),
+    ("550", "2 Roues / Motocyclette")
+]
+SOUS_CATEGORIES_550 = [
+    ('', 'Sélectionner un genre'),
+    ("009", "Cyclomoteur"),
+    ("010", "Scooter -125 cm3"),
+    ("011", "Scooter +125 cm3"),
+    ("012", "Tricycle, Quad..."),
 ]
 SOUS_CATEGORIES_520 = [
     ('', 'Sélectionner une sous catégorie'),

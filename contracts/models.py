@@ -7,17 +7,15 @@ from decimal import Decimal
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 from contracts.referentiels import MARQUES, CATEGORIES, CARBURANTS
+from django.utils import timezone
 
 
 class Client(models.Model):
     """Modèle Client"""
-
     phone_regex = RegexValidator(
         regex=r'^(70|71|75|76|77|78|30|33|34)\d{7}$',
         message="Le numéro doit être au format sénégalais (70,71,75,76,77,78,30,33,34)"
     )
-
-    # Informations personnelles
     prenom = models.CharField(max_length=100, verbose_name='Prénom')
     nom = models.CharField(max_length=100, verbose_name='Nom')
     telephone = models.CharField(
@@ -28,8 +26,6 @@ class Client(models.Model):
     )
     adresse = models.TextField(verbose_name='Adresse')
     email = models.EmailField(blank=True, null=True, verbose_name='Email')
-
-    # Métadonnées
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -39,8 +35,6 @@ class Client(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Date de création')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Dernière modification')
-
-    # Code client ASKIA
     code_askia = models.CharField(
         max_length=50,
         blank=True,
@@ -63,38 +57,27 @@ class Client(models.Model):
 
 
 class Vehicule(models.Model):
-    """Modèle Véhicule - formats d’immatriculation mis à jour (26/05/2025)"""
-
-    # Validation complète des immatriculations
+    """Modèle Véhicule"""
     immat_validators = [
         RegexValidator(
             regex=(
                 r'^('
-                # Dans immat_validators (regex du modèle)
                 r'(AB|AC|DK|TH|SL|DB|LG|TC|KL|KD|ZG|FK|KF|KG|MT|SD)-?\d{4}-?[A-Z]{1,2}'
                 r'|'
-                # 2. Ancien : AA-001-AA ou AA001AA
                 r'[A-Z]{2}-?\d{3}-?[A-Z]{2}'
                 r'|'
-                # 3. Diplomatique : AD-0001 ou AD0001
                 r'AD-?\d{4}'
                 r'|'
-                # 4. Export simple : 0001EX ou 0001-EX
                 r'\d{4}-?EX'
                 r'|'
-                # 5. Export pays : 0001EP01 ou 0001-EP01
                 r'\d{4}-?EP\d{2}'
                 r'|'
-                # 6. Apporteur : 001AP0001 ou 001-AP-0001
                 r'\d{3}-?AP-?\d{4}'
                 r'|'
-                # 7. Transport temporaire : 0001-TT-A ou 0001TTA
                 r'\d{4}-?TT-?[A-Z]'
                 r'|'
-                # 8. Diplomatique TT : AD0001-TT-A ou AD0001TTA
                 r'AD\d{4}-?TT-?[A-Z]'
                 r'|'
-                # 9. Étranger/CH : CH-000001 ou CH000001
                 r'CH-?\d{6}'
                 r')$'
             ),
@@ -106,8 +89,6 @@ class Vehicule(models.Model):
             )
         )
     ]
-
-    # Informations du véhicule
     immatriculation = models.CharField(
         max_length=20,
         unique=True,
@@ -120,7 +101,7 @@ class Vehicule(models.Model):
     categorie = models.CharField(max_length=3, choices=CATEGORIES, verbose_name='Catégorie')
     sous_categorie = models.CharField(
         max_length=3, blank=True, null=True, verbose_name='Sous-catégorie',
-        help_text='Obligatoire pour les TPC (catégorie 520)'
+        help_text='Obligatoire pour les TPC (catégorie 520) ou 2 Roues (550)'
     )
     charge_utile = models.IntegerField(
         blank=True, null=True, validators=[MinValueValidator(0)],
@@ -135,8 +116,6 @@ class Vehicule(models.Model):
         verbose_name='Nombre de places'
     )
     carburant = models.CharField(max_length=6, choices=CARBURANTS, verbose_name='Type de carburant')
-
-    # Valeurs
     valeur_neuve = models.DecimalField(
         max_digits=12, decimal_places=2, default=0,
         validators=[MinValueValidator(0)], verbose_name='Valeur à neuf',
@@ -147,8 +126,6 @@ class Vehicule(models.Model):
         validators=[MinValueValidator(0)], verbose_name='Valeur vénale',
         help_text='Valeur actuelle du véhicule en FCFA'
     )
-
-    # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Date de création')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Dernière modification')
 
@@ -163,17 +140,12 @@ class Vehicule(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.immatriculation} - {self.get_marque_display()} {self.modele}"
+        return f"{self.immatriculation_formatted} - {self.get_marque_display()} {self.modele}"
 
     def clean(self):
-        """Validation + stockage canonique de l’immatriculation (sans tirets/espaces)."""
         errors = {}
-
-        # 1) Immatriculation
         if self.immatriculation:
-            # Normalisation basique
             immat_normalized = self.immatriculation.upper().replace(" ", "")
-            # Validation
             validator = self.immat_validators[0]
             try:
                 validator(immat_normalized)
@@ -182,10 +154,8 @@ class Vehicule(models.Model):
                     f"Format invalide : '{self.immatriculation}'. {e.message}"
                 ]
             else:
-                # Stockage canonique sans tirets pour garantir l’unicité logique
                 self.immatriculation = immat_normalized.replace("-", "")
 
-        # 2) Règles TPC
         if self.categorie == "520":
             if not self.sous_categorie:
                 errors.setdefault('sous_categorie', []).append(
@@ -195,15 +165,16 @@ class Vehicule(models.Model):
                 errors.setdefault('charge_utile', []).append(
                     "La charge utile doit être renseignée et supérieure à 0 pour les TPC"
                 )
+        elif self.categorie == "550":
+            if not self.sous_categorie:
+                errors.setdefault('sous_categorie', []).append(
+                    "Le genre est obligatoire pour les 2 Roues (catégorie 550)"
+                )
 
-        # 3) Modèle
         if self.modele:
             self.modele = self.modele.strip().upper()
-
-        # 4) Cohérence valeurs
         if self.valeur_venale and self.valeur_neuve and self.valeur_venale > self.valeur_neuve:
             errors['valeur_venale'] = ["La valeur vénale ne peut pas être supérieure à la valeur à neuf"]
-
         if errors:
             raise ValidationError(errors)
 
@@ -213,93 +184,59 @@ class Vehicule(models.Model):
 
     @property
     def immatriculation_formatted(self):
-        """Retourne l’immatriculation formatée standard pour affichage."""
         if not self.immatriculation:
             return ""
         immat = self.immatriculation.upper()
-
-        # Immat est stockée sans tirets. Reconstruire selon patterns.
-        # Format régional : DK0001BB -> DK-0001-BB
         if len(immat) >= 8 and immat[:2] in [
             'AB', 'AC', 'DK', 'TH', 'SL', 'DB', 'LG', 'TC', 'KL', 'KD', 'ZG', 'FK', 'KF', 'KG', 'MT', 'SD'
         ] and immat[2:6].isdigit() and immat[6:].isalpha():
             return f"{immat[:2]}-{immat[2:6]}-{immat[6:]}"
-
-        # Ancien : AA001AA -> AA-001-AA
         if len(immat) == 7 and immat[:2].isalpha() and immat[2:5].isdigit() and immat[5:].isalpha():
             return f"{immat[:2]}-{immat[2:5]}-{immat[5:]}"
-
-        # Diplomatique : AD0001 -> AD-0001
         if immat.startswith('AD') and len(immat) == 6 and immat[2:].isdigit():
             return f"AD-{immat[2:]}"
-
-        # Export simple : 0001EX -> 0001-EX
         if len(immat) == 6 and immat[:4].isdigit() and immat.endswith('EX'):
             return f"{immat[:4]}-EX"
-
-        # Export pays : 0001EP01 -> 0001-EP01
         if len(immat) == 8 and immat[:4].isdigit() and immat[4:6] == 'EP' and immat[6:].isdigit():
             return f"{immat[:4]}-{immat[4:]}"
-
-        # Apporteur : 001AP0001 -> 001-AP-0001
         if len(immat) == 9 and immat[:3].isdigit() and immat[3:5] == 'AP' and immat[5:].isdigit():
             return f"{immat[:3]}-AP-{immat[5:]}"
-
-        # TT : 0001TTA -> 0001-TT-A
         if 'TT' in immat and len(immat) >= 7:
             if immat.startswith('AD') and len(immat) == 8:
                 return f"{immat[:6]}-TT-{immat[-1]}"
             if len(immat) == 7 and immat[:4].isdigit():
                 return f"{immat[:4]}-TT-{immat[-1]}"
-
-        # CH : CH000001 -> CH-000001
         if immat.startswith('CH') and len(immat) == 8 and immat[2:].isdigit():
             return f"CH-{immat[2:]}"
-
         return immat
 
-    @property
-    def type_immatriculation(self):
-        """Type d’immatriculation."""
-        if not self.immatriculation:
-            return "INCONNU"
+    def get_marque_display(self):
+        # Fallback pour get_marque_display si le code n'est pas dans MARQUES
+        return dict(MARQUES).get(self.marque, self.marque)
 
-        immat = self.immatriculation.upper()
+    def get_categorie_display(self):
+        return dict(CATEGORIES).get(self.categorie, self.categorie)
 
-        if immat[:2] in ['AB', 'AC', 'DK', 'TH', 'SL', 'DB', 'LG', 'TC', 'KL', 'KD', 'ZG', 'FK', 'KF', 'KG', 'MT', 'SD']:
-            return "RÉGIONAL"
-        if immat.startswith('AD'):
-            return "DIPLOMATIQUE_TT" if 'TT' in immat else "DIPLOMATIQUE"
-        if immat.endswith('EX'):
-            return "EXPORT"
-        if 'EP' in immat:
-            return "EXPORT_PAYS"
-        if 'AP' in immat:
-            return "APPORTEUR"
-        if 'TT' in immat:
-            return "TRANSPORT_TEMPORAIRE"
-        if immat.startswith('CH'):
-            return "ÉTRANGER"
-        return "ANCIEN_FORMAT"
 
-    @property
-    def age_estimation(self):
-        """Estime l'âge du véhicule via le ratio vénale/à neuf."""
-        if not self.valeur_neuve or self.valeur_neuve == 0:
-            return None
-        ratio = float(self.valeur_venale) / float(self.valeur_neuve)
-        if ratio >= 0.9:
-            return "< 1 an"
-        if ratio >= 0.7:
-            return "1-3 ans"
-        if ratio >= 0.5:
-            return "3-5 ans"
-        if ratio >= 0.3:
-            return "5-10 ans"
-        return "> 10 ans"
+class ContratQuerySet(models.QuerySet):
+    def emis_avec_doc(self):
+        """Contrats valides (émis/actifs/expirés) avec au moins un document."""
+        return self.filter(
+            status__in=["EMIS", "ACTIF", "EXPIRE"]
+        ).filter(
+            (Q(link_attestation__isnull=False) & ~Q(link_attestation="")) |
+            (Q(link_carte_brune__isnull=False) & ~Q(link_carte_brune=""))
+        )
+
+    def due_today(self):
+        """Contrats arrivant à échéance aujourd'hui."""
+        return self.filter(date_echeance=timezone.now().date())
 
 
 class ContratManager(Manager):
+    def get_queryset(self):
+        return ContratQuerySet(self.model, using=self._db)
+
     def emis_avec_doc(self):
         """Contrats valides (émis/actifs/expirés) avec au moins un document."""
         # Expiration auto des anciens contrats
@@ -308,13 +245,11 @@ class ContratManager(Manager):
             date_echeance__lt=date.today()
         ).update(status='EXPIRE')
 
-        # Filtre avec documents
-        return self.get_queryset().filter(
-            status__in=["EMIS", "ACTIF", "EXPIRE"]
-        ).filter(
-            (Q(link_attestation__isnull=False) & ~Q(link_attestation="")) |
-            (Q(link_carte_brune__isnull=False) & ~Q(link_carte_brune=""))
-        )
+        return self.get_queryset().emis_avec_doc()
+
+    def due_today(self):
+        """Contrats arrivant à échéance aujourd'hui."""
+        return self.get_queryset().due_today()
 
 
 class Contrat(models.Model):
@@ -358,9 +293,11 @@ class Contrat(models.Model):
 
     # Informations du contrat
     numero_police = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    numero_facture = models.CharField(max_length=50, blank=True, null=True, verbose_name='N° Facture Askia')
     date_effet = models.DateField()
     duree = models.PositiveIntegerField(choices=DUREE_CHOICES, default=12)
     date_echeance = models.DateField(blank=True, null=True)
+    type_garantie = models.CharField(max_length=100, default='Responsabilité Civile', verbose_name='Type de Garantie')
 
     # Tarification
     prime_nette = models.DecimalField(max_digits=10, decimal_places=2)
@@ -369,9 +306,14 @@ class Contrat(models.Model):
     taxes = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     prime_ttc = models.DecimalField(max_digits=10, decimal_places=2)
 
-    commission_askia = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # NOUVELLE LOGIQUE COMMISSION
+    commission_askia = models.DecimalField(max_digits=10, decimal_places=2, default=0,
+                                           verbose_name="Commission BWHITE (Total)")
     commission_apporteur = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    net_a_reverser = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    commission_bwhite = models.DecimalField(max_digits=10, decimal_places=2, default=0,
+                                            verbose_name='Commission BWHITE (Profit)')
+    net_a_reverser = models.DecimalField(max_digits=10, decimal_places=2, default=0,
+                                         verbose_name="Net à reverser (à Askia)")
 
     # Statut
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='EMIS')
@@ -388,6 +330,18 @@ class Contrat(models.Model):
     # Documents
     link_attestation = models.URLField(null=True, blank=True)
     link_carte_brune = models.URLField(null=True, blank=True)
+
+    # Champs d'annulation
+    annule_at = models.DateTimeField(blank=True, null=True, verbose_name="Date d'annulation")
+    annule_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='contrats_annules',
+        verbose_name='Annulé par'
+    )
+    annule_raison = models.CharField(max_length=255, blank=True, verbose_name="Raison d'annulation")
 
     # Manager custom
     objects = ContratManager()
@@ -413,18 +367,47 @@ class Contrat(models.Model):
             raise ValidationError("Un contrat doit avoir une date d'effet.")
 
     def calculate_commission(self):
-        """Calcule la commission apporteur et le net à reverser."""
-        if (
-            self.apporteur
-            and getattr(self.apporteur, "role", None) == "APPORTEUR"
-            and hasattr(self.apporteur, "calculate_commission")
-        ):
-            commission = self.apporteur.calculate_commission(self.prime_nette)
-            self.commission_apporteur = Decimal(str(commission))
-            self.net_a_reverser = self.prime_ttc - self.commission_apporteur
+        """
+        Calcule TOUTES les commissions (Askia, Apporteur, BWHITE) et le Net à Reverser.
+        Basé sur la logique fournie.
+        """
+        # Constantes de la commission ASKIA (Total versé à BWHITE)
+        ASKIA_TAUX = Decimal("0.20")
+        ASKIA_ACCESSOIRES = Decimal("3000")
+
+        # 1. Commission totale versée par Askia à BWHITE
+        self.commission_askia = (self.prime_nette * ASKIA_TAUX) + ASKIA_ACCESSOIRES
+
+        # 2. Commission à payer à l'apporteur
+        if self.apporteur and self.apporteur.role == 'APPORTEUR' and self.apporteur.grade:
+            if self.apporteur.grade == 'PLATINE':
+                TAUX_APP = Decimal("0.18")
+                FIXE_APP = Decimal("2000")
+                self.commission_apporteur = (self.prime_nette * TAUX_APP) + FIXE_APP
+
+            elif self.apporteur.grade == 'FREEMIUM':
+                TAUX_APP = Decimal("0.10")
+                FIXE_APP = Decimal("1800")
+                self.commission_apporteur = (self.prime_nette * TAUX_APP) + FIXE_APP
+            else:
+                self.commission_apporteur = Decimal("0.00")
+
+        elif self.apporteur and self.apporteur.role == 'ADMIN':
+            # Si l'admin crée le contrat, il n'y a pas de commission apporteur
+            # BWHITE garde tout
+            self.commission_apporteur = Decimal("0.00")
+
         else:
             self.commission_apporteur = Decimal("0.00")
-            self.net_a_reverser = self.prime_ttc
+
+        # 3. Commission BWHITE (Profit)
+        # C'est ce que Askia donne MOINS ce que BWHITE paie à l'apporteur
+        # Si l'admin est l'apporteur, commission_apporteur = 0, donc commission_bwhite = commission_askia
+        self.commission_bwhite = self.commission_askia - self.commission_apporteur
+
+        # 4. Net à reverser (ce que BWHITE doit à ASKIA)
+        # Ttc - (20% net + 3000)
+        self.net_a_reverser = self.prime_ttc - self.commission_askia
 
     def calculate_date_echeance(self):
         """Calcule la date d'échéance basée sur la date d'effet et la durée."""
@@ -435,8 +418,10 @@ class Contrat(models.Model):
         """Sauvegarde avec calculs automatiques."""
         if not self.date_echeance:
             self.calculate_date_echeance()
-        if not self.commission_apporteur or self.commission_apporteur == 0:
+
+        if not self.pk:  # Seulement à la création
             self.calculate_commission()
+
         self.full_clean()
         super().save(*args, **kwargs)
 

@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth import update_session_auth_hash, authenticate
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
@@ -11,6 +11,10 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.core.paginator import Paginator
 from django.db import transaction
 import csv
+from django.template.loader import render_to_string
+from django.core.files.base import ContentFile
+import base64
+from .models_onboarding import ApporteurOnboarding
 
 # Imports locaux
 from .models import User
@@ -22,13 +26,10 @@ from .forms import (
     BulkActionForm
 )
 from payments.models import PaiementApporteur
-from contracts.models import Contrat  # ✅ utilisé pour stats admin
-
-
+from contracts.models import Contrat
 # ==========================================
 # VUES PROFIL UTILISATEUR
 # ==========================================
-
 @login_required
 def profile(request):
     """Profil utilisateur complet (infos + mot de passe)"""
@@ -59,8 +60,6 @@ def profile(request):
         'stats': stats,
         'user': request.user
     })
-
-
 @login_required
 @require_POST
 def quick_edit_profile(request):
@@ -89,12 +88,9 @@ def change_password(request):
         'title': 'Changer le mot de passe',
         'password_form': password_form
     })
-
-
 # ==========================================
 # GESTION APPORTEURS (Admin uniquement)
 # ==========================================
-
 @staff_member_required
 def liste_apporteurs(request):
     """Liste + filtres apporteurs"""
@@ -119,11 +115,33 @@ def liste_apporteurs(request):
         apporteurs = apporteurs.filter(is_active=False)
 
     apporteurs = apporteurs.annotate(
-        nb_contrats=Count('contrats_apportes', filter=Q(contrats_apportes__status='EMIS')),
-        total_commissions=Sum('contrats_apportes__commission_apporteur',
-                              filter=Q(contrats_apportes__status='EMIS')),
-        commissions_attente=Sum('contrats_apportes__paiement_apporteur__montant_commission',
-                                filter=Q(contrats_apportes__paiement_apporteur__status='EN_ATTENTE'))
+        nb_contrats=Count(
+            'contrats_apportes',
+            filter=Q(contrats_apportes__status__in=['EMIS', 'ACTIF', 'EXPIRE']),
+            distinct=True,
+        ),
+        total_commissions=Sum(
+            'contrats_apportes__commission_apporteur',
+            filter=Q(contrats_apportes__status__in=['EMIS', 'ACTIF', 'EXPIRE']),
+        ),
+        montant_attente=Sum(
+            'contrats_apportes__encaissement__montant_a_payer',
+            filter=Q(contrats_apportes__encaissement__status='EN_ATTENTE'),
+        ),
+        montant_paye=Sum(
+            'contrats_apportes__encaissement__montant_a_payer',
+            filter=Q(contrats_apportes__encaissement__status='PAYE'),
+        ),
+        nb_encaissements_attente=Count(
+            'contrats_apportes__encaissement',
+            filter=Q(contrats_apportes__encaissement__status='EN_ATTENTE'),
+            distinct=True,
+        ),
+        nb_encaissements_payes=Count(
+            'contrats_apportes__encaissement',
+            filter=Q(contrats_apportes__encaissement__status='PAYE'),
+            distinct=True,
+        ),
     )
 
     paginator = Paginator(apporteurs.order_by('-created_at'), 25)
@@ -138,8 +156,6 @@ def liste_apporteurs(request):
         'status': status,
         'total_count': paginator.count
     })
-
-
 @staff_member_required
 def nouveau_apporteur(request):
     """Création d’un apporteur"""
@@ -159,12 +175,11 @@ def nouveau_apporteur(request):
         'title': 'Nouvel Apporteur',
         'form': form
     })
-
-
 @staff_member_required
 def detail_apporteur(request, pk):
     """Vue détaillée d’un apporteur"""
     apporteur = get_object_or_404(User, pk=pk, role='APPORTEUR')
+    onboarding = ApporteurOnboarding.objects.filter(user=apporteur).first()
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -178,6 +193,17 @@ def detail_apporteur(request, pk):
                 apporteur.grade = new_grade
                 apporteur.save()
                 messages.success(request, f"Grade modifié en {apporteur.get_grade_display()}")
+        elif action == 'valider_onboarding' and onboarding:
+            if onboarding.a_lu_et_approuve and onboarding.cni_recto and onboarding.cni_verso and onboarding.signature_image:
+                onboarding.status = 'VALIDE'
+                onboarding.save()
+                messages.success(request, "Onboarding validé.")
+            else:
+                messages.error(request, "Dossier incomplet. CNI recto/verso et signature requis.")
+        elif action == 'rejeter_onboarding' and onboarding:
+            onboarding.status = 'REJETE'
+            onboarding.save()
+            messages.success(request, "Onboarding rejeté.")
         return redirect('accounts:detail_apporteur', pk=pk)
 
     stats = _get_apporteur_detailed_stats(apporteur)
@@ -191,10 +217,112 @@ def detail_apporteur(request, pk):
         'apporteur': apporteur,
         'stats': stats,
         'derniers_contrats': derniers_contrats,
-        'paiements_attente': paiements_attente
+        'paiements_attente': paiements_attente,
+        'onboarding': onboarding,
     })
+@login_required
+def apporteur_detail(request):
+    """Espace contrat/conditions de l'apporteur: lecture, acceptation, upload CNI, signature"""
+    user = request.user
+    if user.role != 'APPORTEUR':
+        return redirect('accounts:profile')
 
+    ob, _ = ApporteurOnboarding.objects.get_or_create(user=user)
 
+    # Empêche modification après validation admin
+    if ob.status == 'VALIDE' and request.method == 'POST':
+        messages.error(request, "Onboarding déjà validé par l'admin.")
+        return redirect('accounts:apporteur_detail')
+
+    if request.method == 'POST':
+        a_lu = request.POST.get('a_lu_et_approuve') in ['on', 'true', '1']
+        if not a_lu:
+            messages.error(request, "Vous devez accepter le contrat et les conditions.")
+            return redirect('accounts:apporteur_detail')
+
+        # CNI: type et taille
+        ALLOWED = {'image/jpeg', 'image/png', 'application/pdf'}
+        MAX = 5 * 1024 * 1024  # 5 MB
+
+        f_recto = request.FILES.get('cni_recto')
+        if f_recto:
+            if f_recto.content_type not in ALLOWED or f_recto.size > MAX:
+                messages.error(request, "CNI recto: type ou taille invalide (jpeg/png/pdf, 5MB max).")
+                return redirect('accounts:apporteur_detail')
+            ob.cni_recto = f_recto
+
+        f_verso = request.FILES.get('cni_verso')
+        if f_verso:
+            if f_verso.content_type not in ALLOWED or f_verso.size > MAX:
+                messages.error(request, "CNI verso: type ou taille invalide (jpeg/png/pdf, 5MB max).")
+                return redirect('accounts:apporteur_detail')
+            ob.cni_verso = f_verso
+
+        # Signature (dataURL base64) → ImageField
+        data_url = request.POST.get('signature_image')
+        if data_url and data_url.startswith('data:image/'):
+            try:
+                header, b64data = data_url.split(',', 1)
+                ext = 'png' if 'png' in header else 'jpg'
+                content = ContentFile(
+                    base64.b64decode(b64data),
+                    name=f"sig_{user.id}_{int(timezone.now().timestamp())}.{ext}"
+                )
+                ob.signature_image = content
+            except Exception:
+                messages.error(request, "Signature invalide.")
+                return redirect('accounts:apporteur_detail')
+
+        ob.a_lu_et_approuve = True
+        ob.approuve_at = timezone.now()
+
+        # IP réelle si reverse proxy
+        xff = request.META.get('HTTP_X_FORWARDED_FOR')
+        ob.ip_accept = (xff.split(',')[0].strip() if xff else request.META.get('REMOTE_ADDR'))
+        ob.ua_accept = request.META.get('HTTP_USER_AGENT', '')
+
+        if ob.status not in ('VALIDE', 'REJETE'):
+            ob.status = 'SOUMIS'
+
+        ob.save()
+        messages.success(request, "Contrat accepté et données soumises.")
+        return redirect('accounts:apporteur_detail')
+
+    # Injection du HTML des conditions selon la version
+    conditions_html = render_to_string(
+        'accounts/partials/conditions_apporteur_v1.html',
+        {
+            'user': user,
+            'version': ob.version_conditions,
+            'today': timezone.now()
+        },
+        request=request
+    )
+
+    return render(request, 'accounts/apporteur_detail.html', {
+        'title': 'Mon contrat Apporteur',
+        'onboarding': ob,
+        'conditions_html': conditions_html,
+    })
+@login_required
+def contrat_pdf(request):
+    """Téléchargement du contrat en PDF ou fallback imprimable"""
+    user = request.user
+    if user.role != 'APPORTEUR':
+        return redirect('accounts:profile')
+
+    ob = get_object_or_404(ApporteurOnboarding, user=user)
+    html = render_to_string('accounts/contrat_pdf.html', {'user': user, 'onboarding': ob}, request=request)
+
+    try:
+        from weasyprint import HTML
+        pdf = HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf()
+        resp = HttpResponse(pdf, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="Contrat_BWHITE_{user.username}.pdf"'
+        return resp
+    except Exception:
+
+        return HttpResponse(html)
 @staff_member_required
 def edit_apporteur(request, pk):
     """Édition d’un apporteur"""
@@ -213,8 +341,6 @@ def edit_apporteur(request, pk):
         'form': form,
         'apporteur': apporteur
     })
-
-
 @staff_member_required
 @require_POST
 def delete_apporteur(request, pk):
@@ -227,8 +353,6 @@ def delete_apporteur(request, pk):
     apporteur.delete()
     messages.success(request, f"Apporteur {name} supprimé avec succès!")
     return redirect('accounts:liste_apporteurs')
-
-
 # ==========================================
 # ACTIONS AJAX
 # ==========================================
@@ -242,7 +366,6 @@ def toggle_apporteur_status(request, pk):
     apporteur.save()
     return JsonResponse({'success': True, 'is_active': apporteur.is_active})
 
-
 @staff_member_required
 @require_POST
 def change_apporteur_grade(request, pk):
@@ -254,8 +377,6 @@ def change_apporteur_grade(request, pk):
         apporteur.save()
         return JsonResponse({'success': True, 'grade_display': apporteur.get_grade_display()})
     return JsonResponse({'success': False, 'message': 'Grade invalide'})
-
-
 @staff_member_required
 @require_POST
 def bulk_actions_apporteurs(request):
@@ -290,8 +411,6 @@ def bulk_actions_apporteurs(request):
         return JsonResponse({'success': False, 'message': 'Action invalide'})
 
     return JsonResponse({'success': True, 'message': msg})
-
-
 # ==========================================
 # EXPORT / IMPORT
 # ==========================================
@@ -314,8 +433,6 @@ def export_apporteurs(request):
             a.address or ""
         ])
     return response
-
-
 @staff_member_required
 def import_apporteurs(request):
     """Import CSV"""
@@ -354,9 +471,7 @@ def import_apporteurs(request):
             messages.error(request, e)
 
     return render(request, 'accounts/import_apporteurs.html', {'title': 'Importer Apporteurs'})
-
-
-# ==========================================
+# =========================================
 # API CHECKS HTMX
 # ==========================================
 
@@ -366,8 +481,6 @@ def check_username_availability(request):
     exists = User.objects.filter(username=username).exists()
     return JsonResponse({'success': not exists, 'available': not exists,
                          'message': 'Disponible' if not exists else 'Déjà pris'})
-
-
 @require_http_methods(["GET"])
 def check_email_availability(request):
     email = request.GET.get('email', '').lower().strip()
@@ -378,8 +491,6 @@ def check_email_availability(request):
     exists = q.exists()
     return JsonResponse({'success': not exists, 'available': not exists,
                          'message': 'Disponible' if not exists else 'Déjà utilisé'})
-
-
 @require_http_methods(["GET"])
 def check_phone_availability(request):
     phone = ''.join(filter(str.isdigit, request.GET.get('phone', '')))
@@ -392,36 +503,12 @@ def check_phone_availability(request):
     exists = q.exists()
     return JsonResponse({'success': not exists, 'available': not exists,
                          'message': 'Disponible' if not exists else 'Déjà utilisé'})
-
-
-# ==========================================
-# STATISTIQUES
-# ==========================================
-
-@login_required
-def user_stats(request):
-    stats = _get_user_stats(request.user)
-    return render(request, 'accounts/user_stats.html', {'title': 'Mes Statistiques', 'stats': stats})
-
-
-@staff_member_required
-def apporteur_detailed_stats(request, pk):
-    apporteur = get_object_or_404(User, pk=pk, role='APPORTEUR')
-    stats = _get_apporteur_detailed_stats(apporteur)
-    return render(request, 'accounts/apporteur_detailed_stats.html', {
-        'title': f'Statistiques - {apporteur.get_full_name()}',
-        'apporteur': apporteur,
-        'stats': stats
-    })
-
-
 # ==========================================
 # UTILITAIRES STATS
 # ==========================================
 def _safe_sum(queryset, field):
-    """Utilitaire pour retourner une somme numérique jamais None"""
+    """Retourne une somme numérique, jamais None."""
     return queryset.aggregate(total=Sum(field))['total'] or 0
-
 
 def _get_user_stats(user):
     today = timezone.now().date()
@@ -434,17 +521,18 @@ def _get_user_stats(user):
             'contrats_mois': contrats.filter(created_at__gte=first_day).count(),
             'total_commissions': _safe_sum(contrats, 'commission_apporteur'),
             'commissions_mois': _safe_sum(contrats.filter(created_at__gte=first_day), 'commission_apporteur'),
+            # encaissements côté admin
             'commissions_payees': _safe_sum(
                 PaiementApporteur.objects.filter(contrat__apporteur=user, status='PAYE'),
-                'montant_commission'
+                'montant_a_payer'
             ),
             'commissions_attente': _safe_sum(
                 PaiementApporteur.objects.filter(contrat__apporteur=user, status='EN_ATTENTE'),
-                'montant_commission'
+                'montant_a_payer'
             ),
         }
 
-    elif user.role == 'ADMIN':
+    if user.role == 'ADMIN':
         contrats = Contrat.objects.filter(status='EMIS')
         return {
             'apporteurs_total': User.objects.filter(role='APPORTEUR').count(),
@@ -454,21 +542,33 @@ def _get_user_stats(user):
         }
 
     return {}
+
 def _get_apporteur_detailed_stats(apporteur):
     today = timezone.now().date()
     first_day = today.replace(day=1)
+    contrats_emis = apporteur.contrats_apportes.filter(status='EMIS')
+
     return {
-        'total_contrats': apporteur.contrats_apportes.filter(status='EMIS').count(),
-        'contrats_mois': apporteur.contrats_apportes.filter(status='EMIS', created_at__gte=first_day).count(),
-        'total_primes': apporteur.contrats_apportes.filter(status='EMIS').aggregate(
-            total=Sum('prime_ttc'))['total'] or 0,
-        'total_commissions': apporteur.contrats_apportes.filter(status='EMIS').aggregate(
-            total=Sum('commission_apporteur'))['total'] or 0,
-        'commissions_payees': PaiementApporteur.objects.filter(
-            contrat__apporteur=apporteur, status='PAYE').aggregate(total=Sum('montant_commission'))['total'] or 0,
-        'commissions_attente': PaiementApporteur.objects.filter(
-            contrat__apporteur=apporteur, status='EN_ATTENTE').aggregate(total=Sum('montant_commission'))['total'] or 0,
+        'total_contrats': contrats_emis.count(),
+        'contrats_mois': contrats_emis.filter(created_at__gte=first_day).count(),
+        'total_primes': _safe_sum(contrats_emis, 'prime_ttc'),
+        'total_commissions': _safe_sum(contrats_emis, 'commission_apporteur'),
+        'commissions_payees': _safe_sum(
+            PaiementApporteur.objects.filter(contrat__apporteur=apporteur, status='PAYE'),
+            'montant_a_payer'
+        ),
+        'commissions_attente': _safe_sum(
+            PaiementApporteur.objects.filter(contrat__apporteur=apporteur, status='EN_ATTENTE'),
+            'montant_a_payer'
+        ),
     }
+@login_required
+def user_stats(request):
+    stats = _get_user_stats(request.user)
+    return render(request, 'accounts/user_stats.html', {
+        'title': 'Mes Statistiques',
+        'stats': stats,
+    })
 @login_required
 def edit_profile(request):
     """Vue dédiée à l’édition du profil utilisateur"""

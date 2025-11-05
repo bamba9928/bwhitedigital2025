@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from .models import Client, Vehicule
 from datetime import date
-from .referentiels import DUREE_CHOICES, CATEGORIES, SOUS_CATEGORIES_520, CARBURANTS, MARQUES
+from .referentiels import DUREE_CHOICES, CATEGORIES, SOUS_CATEGORIES_520, SOUS_CATEGORIES_550, CARBURANTS, MARQUES
 
 BASE_INPUT_CLASS = (
     'w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-900 text-gray-100 '
@@ -121,16 +121,17 @@ class VehiculeForm(forms.ModelForm):
         })
     )
 
+    ALL_SOUS_CATEGORIES = list(dict.fromkeys(SOUS_CATEGORIES_520 + SOUS_CATEGORIES_550))
+
     sous_categorie = forms.ChoiceField(
-        label="Sous-catégorie",
+        label="Genre / Sous-catégorie",
         required=False,
-        choices=[('', '-- Sélectionner --')] + list(SOUS_CATEGORIES_520),
+        choices=ALL_SOUS_CATEGORIES,  # Utilise la liste fusionnée
         widget=forms.Select(attrs={
             'class': BASE_SELECT_CLASS,
             'id': 'id_sous_categorie'
         })
     )
-
     carburant = forms.ChoiceField(
         label="Carburant",
         choices=[('', '-- Sélectionner --')] + list(CARBURANTS),
@@ -168,11 +169,8 @@ class VehiculeForm(forms.ModelForm):
                 'class': BASE_INPUT_CLASS,
                 'placeholder': 'Modèle du véhicule'
             }),
-            'charge_utile': forms.NumberInput(attrs={
-                'class': BASE_INPUT_CLASS,
-                'placeholder': 'Charge utile en kg',
-                'min': '0',
-                'step': '100'
+            'charge_utile': forms.HiddenInput(attrs={
+                'id': 'id_charge_utile'  # l'ID pour le Javascript
             }),
             'puissance_fiscale': forms.NumberInput(attrs={
                 'class': BASE_INPUT_CLASS,

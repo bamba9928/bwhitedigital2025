@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Mon contrat apporteur{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8 space-y-6">
+
+  <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+    <i class="fas fa-file-signature text-primary-green"></i>
+    Contrat & conditions
+  </h1>
+
+  <!-- Bloc conditions -->
+  {% if conditions_html %}
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+    <h2 class="text-lg text-white font-semibold mb-3">Conditions contractuelles</h2>
+    <div class="bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
+      {{ conditions_html|safe }}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Formulaire d'acceptation -->
+  <form method="post" enctype="multipart/form-data" class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
+    {% csrf_token %}
+
+    <label class="flex items-start gap-2 text-sm text-gray-200">
+      <input type="checkbox" name="a_lu_et_approuve" required class="mt-1">
+      <span>J’ai lu et j’accepte le contrat et les conditions.</span>
+    </label>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">CNI Recto (jpg/png/pdf)</label>
+        <input type="file" name="cni_recto" accept=".jpg,.jpeg,.png,.pdf"
+               class="w-full bg-gray-800 text-gray-200 rounded px-3 py-2 border border-gray-700">
+        {% if onboarding.cni_recto %}
+          <p class="text-xs text-gray-400 mt-1">Déjà fourni:
+            <a href="{{ onboarding.cni_recto.url }}" class="text-primary-green underline" target="_blank">voir</a>
+          </p>
+        {% endif %}
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">CNI Verso (jpg/png/pdf)</label>
+        <input type="file" name="cni_verso" accept=".jpg,.jpeg,.png,.pdf"
+               class="w-full bg-gray-800 text-gray-200 rounded px-3 py-2 border border-gray-700">
+        {% if onboarding.cni_verso %}
+          <p class="text-xs text-gray-400 mt-1">Déjà fourni:
+            <a href="{{ onboarding.cni_verso.url }}" class="text-primary-green underline" target="_blank">voir</a>
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Signature -->
+    <div>
+      <label class="block text-xs text-gray-400 mb-2">Signature</label>
+      <div class="bg-white rounded-md p-2 inline-block">
+        <canvas id="sigpad" width="420" height="160" style="border:1px solid #374151; background:#fff"></canvas>
+      </div>
+      <div class="mt-2 flex gap-2">
+        <button type="button" id="clear_sig" class="px-3 py-1 bg-gray-700 text-white rounded">Effacer</button>
+        <button type="button" id="undo_sig" class="px-3 py-1 bg-gray-700 text-white rounded">Annuler</button>
+      </div>
+      <input type="hidden" name="signature_image" id="signature_image_input">
+      {% if onboarding.signature_image %}
+        <p class="text-xs text-gray-400 mt-2">Signature existante:
+          <img src="{{ onboarding.signature_image.url }}" alt="Signature" class="h-10 inline-block bg-white p-1 rounded">
+        </p>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button type="submit" class="px-5 py-2 bg-primary-green text-black font-semibold rounded">
+        Soumettre
+      </button>
+      {% if onboarding.a_lu_et_approuve %}
+        <a href="{% url 'accounts:contrat_pdf' %}" class="px-5 py-2 bg-blue-800 hover:bg-blue-700 text-white rounded">
+          Télécharger PDF
+        </a>
+        <button type="button" onclick="window.print()" class="px-5 py-2 bg-gray-800 text-white rounded">
+          Imprimer
+        </button>
+      {% endif %}
+    </div>
+
+    {% if onboarding.status %}
+      <p class="text-xs text-gray-500 mt-2">
+        Statut: {{ onboarding.get_status_display }} • Soumis le
+        {% if onboarding.approuve_at %}{{ onboarding.approuve_at|date:"d/m/Y H:i" }}{% else %}-{% endif %}
+      </p>
+    {% endif %}
+  </form>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+(function(){
+  const canvas = document.getElementById('sigpad');
+  const input = document.getElementById('signature_image_input');
+  if (!canvas) return;
+  // Fix DPI for crisp lines
+  function resizeCanvas() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const w = 420, h = 160;
+    canvas.width = w * ratio;
+    canvas.height = h * ratio;
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.scale(ratio, ratio);
+  }
+  resizeCanvas();
+  const pad = new SignaturePad(canvas, {minWidth: 0.7, maxWidth: 2.0});
+  document.getElementById('clear_sig').onclick = () => pad.clear();
+  document.getElementById('undo_sig').onclick = () => {
+    const data = pad.toData();
+    if (data.length) { data.pop(); pad.fromData(data); }
+  };
+  // On submit convert to dataURL
+  const form = canvas.closest('form');
+  form.addEventListener('submit', function(){
+    if (!pad.isEmpty()) input.value = pad.toDataURL('image/png');
+  });
+})();
+</script>
+{% endblock %}

@@ -54,7 +54,7 @@
                         <label class="block text-xs font-medium text-gray-500 mb-1">Email</label>
                         <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
                             <i class="fas fa-envelope text-gray-500 text-sm"></i>
-                            {{ user.email }}
+                            {{ user.email|default:"Non renseigné" }}
                         </div>
                     </div>
 
@@ -165,7 +165,7 @@
 
                 <div class="space-y-3">
                     <div class="text-center p-4 bg-gray-800 rounded-lg">
-                        <div class="text-3xl font-bold text-blue-400">{{ stats.contrats_mois }}</div>
+                        <div class="text-3xl font-bold text-blue-400">{{ stats.contrats_mois|default:0 }}</div>
                         <div class="text-xs text-gray-400 mt-1">Contrats ce mois</div>
                     </div>
 
@@ -177,9 +177,14 @@
                     </div>
                 </div>
 
-                <a href="{% url 'payments:mes_commissions' %}"
+                <a href="{% url 'accounts:user_stats' %}"
                    class="block mt-4 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition">
-                    Voir mes commissions
+                    Voir mes statistiques
+                </a>
+
+                <a href="{% url 'accounts:apporteur_detail' %}"
+                   class="block mt-2 text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm transition">
+                    <i class="fas fa-file-signature mr-2"></i>Contrat et conditions
                 </a>
             </div>
             {% elif user.role == 'ADMIN' %}
@@ -188,12 +193,12 @@
 
                 <div class="space-y-3">
                     <div class="text-center p-4 bg-gray-800 rounded-lg">
-                        <div class="text-3xl font-bold text-blue-400">{{ stats.apporteurs_actifs }}</div>
+                        <div class="text-3xl font-bold text-blue-400">{{ stats.apporteurs_actifs|default:0 }}</div>
                         <div class="text-xs text-gray-400 mt-1">Apporteurs actifs</div>
                     </div>
 
                     <div class="text-center p-4 bg-gray-800 rounded-lg">
-                        <div class="text-3xl font-bold text-green-400">{{ stats.contrats_total }}</div>
+                        <div class="text-3xl font-bold text-green-400">{{ stats.contrats_total|default:0 }}</div>
                         <div class="text-xs text-gray-400 mt-1">Contrats totaux</div>
                     </div>
                 </div>

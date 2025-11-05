@@ -1,3 +1,4 @@
+<!-- templates/contracts/liste_clients.html -->
 {% extends 'base.html' %}
 {% load humanize %}
 
@@ -6,163 +7,182 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
 
-    <!-- En-tête + Actions -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 class="text-3xl font-bold text-white flex items-center gap-3">
-            <i class="fas fa-users text-primary-green"></i>
-            <span>Liste des Clients</span>
-            <span class="text-sm font-normal text-gray-400">({{ clients.paginator.count }} total)</span>
-        </h1>
-    </div>
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+      <i class="fas fa-users text-primary-green"></i>
+      <span>Liste des Clients</span>
+      <span class="text-sm font-normal text-gray-400">({{ clients.paginator.count }} au total)</span>
+    </h1>
+  </div>
 
-    <!-- Recherche -->
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-        <form method="GET" class="flex flex-col md:flex-row gap-3">
-            <div class="flex-1">
-                <input type="text"
-                       name="search"
-                       value="{{ search_query }}"
-                       placeholder="Rechercher par nom, prénom, téléphone, adresse..."
-                       class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700
-                              focus:border-primary-green focus:ring-1 focus:ring-primary-green transition">
-            </div>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+    <form method="GET" class="flex flex-col md:flex-row gap-3" role="search">
+      <div class="flex-1">
+        <label for="search" class="sr-only">Rechercher</label>
+        <input id="search" type="text" name="search" value="{{ search_query }}"
+               placeholder="Nom, prénom, téléphone, adresse, email…"
+               class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700
+                      focus:border-primary-green focus:ring-1 focus:ring-primary-green transition">
+      </div>
 
-            <button type="submit" class="btn btn-primary flex items-center gap-2 whitespace-nowrap">
-                <i class="fas fa-search"></i>
-                <span>Rechercher</span>
-            </button>
+      <button type="submit" class="btn btn-primary flex items-center gap-2 whitespace-nowrap">
+        <i class="fas fa-search"></i>
+        <span>Rechercher</span>
+      </button>
 
-            {% if search_query %}
-            <a href="{% url 'contracts:liste_clients' %}"
-               class="btn bg-red-800 hover:bg-red-700 text-white flex items-center gap-2">
-                <i class="fas fa-times"></i>
-                <span>Réinitialiser</span>
+      {% if search_query %}
+      <a href="{% url 'contracts:liste_clients' %}"
+         class="btn bg-red-800 hover:bg-red-700 text-white flex items-center gap-2">
+        <i class="fas fa-times"></i>
+        <span>Réinitialiser</span>
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="bg-gray-900 rounded-xl border border-gray-800 shadow-lg overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-800 border-b border-gray-700 sticky top-0 z-10">
+        <tr>
+          <th scope="col" class="px-4 py-3 text-left text-gray-300 font-semibold">Client</th>
+          <th scope="col" class="px-4 py-3 text-left text-gray-300 font-semibold">Téléphone</th>
+          <th scope="col" class="px-4 py-3 text-left text-gray-300 font-semibold">Adresse</th>
+          <th scope="col" class="px-4 py-3 text-left text-gray-300 font-semibold">Email</th>
+          <th scope="col" class="px-4 py-3 text-center text-gray-300 font-semibold">Contrats</th>
+          {% if user.role == 'ADMIN' %}
+            <th scope="col" class="px-4 py-3 text-left text-gray-300 font-semibold">Créé par</th>
+          {% endif %}
+          <th scope="col" class="px-4 py-3 text-center text-gray-300 font-semibold">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-gray-800">
+        {% for client in clients %}
+        <tr class="hover:bg-gray-800/60 transition">
+
+          <td class="px-4 py-3">
+            <a href="{% url 'contracts:detail_client' client.pk %}"
+               class="text-white hover:text-primary-green font-semibold transition"
+               title="{{ client.nom_complet }}">
+              {{ client.nom_complet|default:"-" }}
             </a>
+          </td>
+
+          <td class="px-4 py-3 text-gray-300">
+            {% if client.telephone %}
+              <a href="tel:{{ client.telephone }}"
+                 class="hover:text-primary-green transition flex items-center gap-2"
+                 title="{{ client.telephone }}">
+                <i class="fas fa-phone text-xs"></i>
+                {{ client.telephone }}
+              </a>
+            {% else %}
+              <span class="text-gray-600">-</span>
             {% endif %}
-        </form>
-    </div>
+          </td>
 
-    <!-- Tableau responsive -->
-    <div class="bg-gray-900 rounded-xl border border-gray-800 shadow-lg overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-800 border-b border-gray-700">
-                <tr>
-                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Client</th>
-                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Téléphone</th>
-                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Adresse</th>
-                    <th class="px-4 py-3 text-left text-gray-300 font-semibold">Email</th>
-                    <th class="px-4 py-3 text-center text-gray-300 font-semibold">Contrats</th>
-                    <th class="px-4 py-3 text-center text-gray-300 font-semibold">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-800">
-                {% for client in clients %}
-                <tr class="hover:bg-gray-800/60 transition">
-                    <!-- Nom complet -->
-                    <td class="px-4 py-3">
-                        <a href="{% url 'contracts:detail_client' client.pk %}"
-                           class="text-white hover:text-primary-green font-semibold transition">
-                            {{ client.nom_complet }}
-                        </a>
-                    </td>
+          <td class="px-4 py-3 text-gray-400">
+            {% if client.adresse %}
+              <span title="{{ client.adresse }}">{{ client.adresse|truncatechars:40 }}</span>
+            {% else %}
+              <span class="text-gray-600">-</span>
+            {% endif %}
+          </td>
 
-                    <!-- Téléphone -->
-                    <td class="px-4 py-3 text-gray-300">
-                        <a href="tel:{{ client.telephone }}"
-                           class="hover:text-primary-green transition flex items-center gap-2">
-                            <i class="fas fa-phone text-xs"></i>
-                            {{ client.telephone }}
-                        </a>
-                    </td>
+          <td class="px-4 py-3 text-gray-400">
+            {% if client.email %}
+              <a href="mailto:{{ client.email }}"
+                 class="hover:text-primary-green transition flex items-center gap-2"
+                 title="{{ client.email }}">
+                <i class="fas fa-envelope text-xs"></i>
+                {{ client.email|truncatechars:28 }}
+              </a>
+            {% else %}
+              <span class="text-gray-600">-</span>
+            {% endif %}
+          </td>
 
-                    <!-- Adresse -->
-                    <td class="px-4 py-3 text-gray-400">
-                        <span title="{{ client.adresse }}">
-                            {{ client.adresse|truncatechars:40 }}
-                        </span>
-                    </td>
+          <td class="px-4 py-3 text-center">
+            {% with n=client.nb_contrats|default_if_none:0 %}
+              {% if n|add:0 > 0 %}
+                <span class="px-3 py-1 rounded-full bg-blue-900/50 text-blue-300 font-semibold text-xs">
+                  {{ n }} contrat{{ n|pluralize }}
+                </span>
+              {% else %}
+                <span class="px-3 py-1 rounded-full bg-gray-800 text-gray-500 text-xs">Aucun contrat</span>
+              {% endif %}
+            {% endwith %}
+          </td>
 
-                    <!-- Email -->
-                    <td class="px-4 py-3 text-gray-400">
-                        {% if client.email %}
-                            <a href="mailto:{{ client.email }}"
-                               class="hover:text-primary-green transition flex items-center gap-2">
-                                <i class="fas fa-envelope text-xs"></i>
-                                {{ client.email|truncatechars:25 }}
-                            </a>
-                        {% else %}
-                            <span class="text-gray-600">-</span>
-                        {% endif %}
-                    </td>
+          {% if user.role == 'ADMIN' %}
+          <td class="px-4 py-3 text-gray-400">
+            {% if client.apporteur %}
+              <span title="{{ client.apporteur.get_full_name }}">{{ client.apporteur.get_full_name }}</span>
+            {% elif client.created_by %}
+              <span title="{{ client.created_by.get_full_name|default:client.created_by.username }}">
+                {{ client.created_by.get_full_name|default:client.created_by.username }}
+              </span>
+            {% else %}
+              <span class="text-gray-600">-</span>
+            {% endif %}
+          </td>
+          {% endif %}
 
-                    <!-- Nombre de contrats -->
-                    <td class="px-4 py-3 text-center">
-                        {% if client.nb_contrats > 0 %}
-                            <span class="px-3 py-1 rounded-full bg-blue-900/50 text-blue-300 font-semibold text-xs">
-                                {{ client.nb_contrats }} contrat{{ client.nb_contrats|pluralize }}
-                            </span>
-                        {% else %}
-                            <span class="px-3 py-1 rounded-full bg-gray-800 text-gray-500 text-xs">
-                                Aucun contrat
-                            </span>
-                        {% endif %}
-                    </td>
+          <td class="px-4 py-3">
+            <div class="flex items-center justify-center gap-3">
+              <a href="{% url 'contracts:detail_client' client.pk %}"
+                 class="text-blue-400 hover:text-blue-300 transition"
+                 aria-label="Voir détail" title="Voir détail">
+                <i class="fas fa-eye" aria-hidden="true"></i>
+              </a>
 
-                    <!-- Actions -->
-                    <td class="px-4 py-3">
-                        <div class="flex items-center justify-center gap-3">
-                            <a href="{% url 'contracts:detail_client' client.pk %}"
-                               class="text-blue-400 hover:text-blue-300 transition"
-                               title="Voir détail">
-                                <i class="fas fa-eye"></i>
-                            </a>
+              {% with n=client.nb_contrats|default_if_none:0 %}
+                {% if n|add:0 > 0 %}
+                  <a href="{% url 'contracts:liste_contrats' %}?client={{ client.pk }}"
+                     class="text-green-400 hover:text-green-300 transition"
+                     aria-label="Voir contrats" title="Voir contrats">
+                    <i class="fas a fa-file-contract" aria-hidden="true"></i>
+                  </a>
+                {% endif %}
+              {% endwith %}
+            </div>
+          </td>
 
-                            {% if client.nb_contrats > 0 %}
-                            <a href="{% url 'contracts:liste_contrats' %}?search={{ client.telephone }}"
-                               class="text-green-400 hover:text-green-300 transition"
-                               title="Voir contrats">
-                                <i class="fas fa-file-contract"></i>
-                            </a>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center py-12 text-gray-500">
-                        <i class="fas fa-user-slash text-4xl mb-3 block text-gray-700"></i>
-                        <p class="text-lg">Aucun client trouvé</p>
-                        {% if search_query %}
-                        <p class="text-sm mt-2">Essayez de modifier votre recherche</p>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="{% if user.role == 'ADMIN' %}7{% else %}6{% endif %}"
+              class="text-center py-12 text-gray-500">
+            <i class="fas fa-user-slash text-4xl mb-3 block text-gray-700"></i>
+            <p class="text-lg">Aucun client trouvé</p>
+            {% if search_query %}<p class="text-sm mt-2">Modifiez votre recherche</p>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-    <!-- Pagination -->
-    {% if clients.paginator.num_pages > 1 %}
-    <div class="flex justify-center items-center gap-2">
-        {% if clients.has_previous %}
-            <a href="?page={{ clients.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
-               class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">
-                <i class="fas fa-chevron-left"></i> Précédent
-            </a>
-        {% endif %}
-
-        <span class="px-4 py-2 text-gray-300 bg-gray-800 rounded-lg">
-            Page {{ clients.number }} / {{ clients.paginator.num_pages }}
-        </span>
-
-        {% if clients.has_next %}
-            <a href="?page={{ clients.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
-               class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">
-                Suivant <i class="fas fa-chevron-right"></i>
-            </a>
-        {% endif %}
-    </div>
+  {% if clients.paginator.num_pages > 1 %}
+  <div class="flex justify-center items-center gap-2">
+    {% if clients.has_previous %}
+      <a href="?page={{ clients.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+         class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">
+        <i class="fas fa-chevron-left"></i> Précédent
+      </a>
     {% endif %}
+
+    <span class="px-4 py-2 text-gray-300 bg-gray-800 rounded-lg">
+      Page {{ clients.number }} / {{ clients.paginator.num_pages }}
+    </span>
+
+    {% if clients.has_next %}
+      <a href="?page={{ clients.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+         class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">
+        Suivant <i class="fas fa-chevron-right"></i>
+      </a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
