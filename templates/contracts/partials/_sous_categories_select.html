@@ -1,20 +1,15 @@
 {% load widget_tweaks %}
-
 <label for="{{ field.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
   <i class="fas fa-list-alt mr-1 text-yellow-400"></i>
-  Genre / Sous-catégorie
-  {% if required %}
-    <span class="text-red-400">*</span>
-  {% endif %}
+  {{ label }}
+  {% if required %}<span class="text-red-400">*</span>{% endif %}
   <i id="sc-loading" class="fas fa-spinner fa-spin ml-2 htmx-indicator"></i>
 </label>
-
 {% if required %}
   {{ field|attr:"required:required" }}
 {% else %}
   {{ field }}
 {% endif %}
-
 {% if field.errors %}
   <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
 {% endif %}

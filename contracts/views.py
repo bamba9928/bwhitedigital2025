@@ -437,31 +437,29 @@ def check_client(request):
     except Client.DoesNotExist:
         return JsonResponse({"exists": False})
 
-
 @login_required
 @require_http_methods(["GET"])
 def load_sous_categories(request):
-    """
-    Charge le dropdown des sous-catégories (HTMX)
-    en fonction de la catégorie sélectionnée.
-    """
     categorie = request.GET.get('categorie')
-
     form = VehiculeForm()
 
     context = {
         'field': form['sous_categorie'],
-        'required': False
+        'required': False,
+        'label': 'Genre / Sous-catégorie'
     }
 
     if categorie == '520':  # TPC
-        form.fields['sous_categorie'].choices = SOUS_CATEGORIES_520
+        form.fields['sous_categorie'].choices = SOUS_CATEGORIES_520  # <--- Charge la liste TPC
         context['required'] = True
-    elif categorie == '550':  # 2 Roues
-        form.fields['sous_categorie'].choices = SOUS_CATEGORIES_550
+        context['label'] = 'Sous-catégorie (TPC)'
+
+    elif categorie == '550':  # 2 ROUES
+        form.fields['sous_categorie'].choices = SOUS_CATEGORIES_550  # <--- Charge la liste 2 roues
         context['required'] = True
+        context['label'] = 'Genre (2 Roues)'
+
     else:
-        # Si VP ou autre, on renvoie un contenu vide (le wrapper sera vide)
         return HttpResponse("")
 
     return render(request, "contracts/partials/_sous_categories_select.html", context)
@@ -608,7 +606,6 @@ def telecharger_documents(request, pk):
     filename = f'attestation_{contrat.numero_police or "contrat"}.pdf'
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
-
 
 @login_required
 def liste_contrats(request):
@@ -897,7 +894,6 @@ def annuler_contrat(request, pk):
         messages.warning(request, f"Contrat annulé localement. Échec annulation Askia: {api_msg}")
 
     return redirect("contracts:detail_contrat", pk=pk)
-
 
 @login_required
 def detail_client(request, pk):

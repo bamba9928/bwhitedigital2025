@@ -1,4 +1,4 @@
-/* app.js */
+/* static/js/app.js */
 (() => {
   'use strict';
 
@@ -9,7 +9,7 @@
     constructor() {
       this.timers = new Map();
       this.cache = new Map();
-      this.ac = new AbortController(); // AbortController global pour cleanup
+      this.ac = new AbortController();
       this.spinnerTimer = null;
       this.inactivity = null;
       this.contract = null;
@@ -22,10 +22,9 @@
       this.initInactivity();
     }
 
-    // -------- Context
+    // -------- Context Detection
     detectContext() {
       if (document.getElementById('contrat-form')) {
-        // Passe le signal global au ContractFormManager
         this.contract = new ContractFormManager(this, this.ac.signal);
         this.bindContractValidation();
       }
@@ -35,10 +34,10 @@
     }
 
     initProfile() {
-      // réservé
+      // Réservé pour gestion profil utilisateur
     }
 
-    // -------- Validation contrat
+    // -------- Validation temps réel du formulaire contrat
     bindContractValidation() {
       const form = document.querySelector('#contrat-form');
       if (!form) return;
@@ -76,7 +75,6 @@
       let ok = true;
       for (const id of requiredIds) {
         const el = get(id);
-        // ignore les champs non visibles
         if (!el || el.offsetParent === null) continue;
 
         const empty = !String(el.value ?? '').trim();
@@ -97,24 +95,40 @@
       return ok;
     }
 
-    // -------- Utils
+    // -------- Utilitaires
     debounce(key, cb, delay = 300) {
       this.clearDebounce(key);
       const t = setTimeout(cb, delay);
       this.timers.set(key, t);
     }
+
     clearDebounce(key) {
       const t = this.timers.get(key);
       if (t) clearTimeout(t);
       this.timers.delete(key);
     }
-    clearCache() { this.cache.clear(); }
+
+    clearCache() {
+      this.cache.clear();
+    }
 
     toast(msg, type = 'info', ms = 5000) {
-      const color = { success:'bg-green-600', error:'bg-red-600', warning:'bg-yellow-600', info:'bg-blue-600' }[type] || 'bg-blue-600';
-      const icon  = { success:'fa-check-circle', error:'fa-times-circle', warning:'fa-exclamation-triangle', info:'fa-info-circle' }[type] || 'fa-info-circle';
+      const colorMap = {
+        success: 'bg-green-600',
+        error: 'bg-red-600',
+        warning: 'bg-yellow-600',
+        info: 'bg-blue-600'
+      };
+      const iconMap = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+      };
 
-      // max 3 toasts
+      const color = colorMap[type] || 'bg-blue-600';
+      const icon = iconMap[type] || 'fa-info-circle';
+
       const existing = document.querySelectorAll('.app-toast');
       if (existing.length >= 3) existing[0].remove();
 
@@ -125,80 +139,101 @@
         <div class="flex items-center space-x-3">
           <i class="fas ${icon}" aria-hidden="true"></i>
           <span>${this.escape(msg)}</span>
-          <button class="ml-2 hover:opacity-75" aria-label="Fermer la notification">&times;</button>
+          <button class="ml-2 hover:opacity-75 focus:outline-none" aria-label="Fermer">&times;</button>
         </div>`;
-      el.querySelector('button').onclick = () => {
-        el.style.transform = 'translateX(100%)';
-        setTimeout(() => el.remove(), 300);
-      };
+
+      const closeBtn = el.querySelector('button');
+      if (closeBtn) {
+        closeBtn.onclick = () => {
+          el.style.transform = 'translateX(100%)';
+          setTimeout(() => el.remove(), 300);
+        };
+      }
 
       document.body.appendChild(el);
       setTimeout(() => el.style.transform = 'translateX(0)', 10);
-      setTimeout(() => { el.style.transform = 'translateX(100%)'; setTimeout(() => el.remove(), 300); }, ms);
+      setTimeout(() => {
+        el.style.transform = 'translateX(100%)';
+        setTimeout(() => el.remove(), 300);
+      }, ms);
     }
 
-    escape(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    escape(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
 
-    // -------- Global HTMX + spinner
+    // -------- Événements globaux HTMX + Spinner
     bindGlobalEvents() {
       const signal = this.ac.signal;
 
+      // CSRF Token pour toutes les requêtes HTMX
       document.body.addEventListener('htmx:configRequest', (evt) => {
         const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
         if (csrf) evt.detail.headers['X-CSRFToken'] = csrf;
       }, { signal });
 
+      // Gestion des erreurs réseau
       document.body.addEventListener('htmx:responseError', (evt) => {
         const status = evt.detail.xhr?.status;
         const msg =
           status === 500 ? 'Erreur serveur. Veuillez réessayer.' :
-          status === 404 ? 'Ressource non trouvée' :
-          status === 403 ? 'Accès refusé' :
-          status === 0   ? 'Erreur de connexion réseau' :
-                           `Erreur lors de la requête (Code: ${status})`;
+          status === 404 ? 'Ressource non trouvée.' :
+          status === 403 ? 'Accès refusé.' :
+          status === 0 ? 'Erreur de connexion réseau.' :
+          `Erreur lors de la requête (Code: ${status}).`;
         this.toast(msg, 'error');
         this.hideSpinner();
       }, { signal });
 
+      // Timeout
       document.body.addEventListener('htmx:timeout', () => {
-        this.toast('La requête a pris trop de temps', 'warning');
+        this.toast('La requête a pris trop de temps.', 'warning');
         this.hideSpinner();
       }, { signal });
 
+      // Spinner global
       document.body.addEventListener('htmx:beforeRequest', () => this.showSpinner(), { signal });
-      document.body.addEventListener('htmx:afterRequest',  () => this.hideSpinner(), { signal });
+      document.body.addEventListener('htmx:afterRequest', () => this.hideSpinner(), { signal });
     }
 
     showSpinner() {
-      const sp = document.getElementById('global-spinner');
-      if (!sp) return;
-      sp.classList.remove('hidden');
-      if (this.spinnerTimer) clearTimeout(this.spinnerTimer);
+      const spinner = document.getElementById('global-spinner');
+      if (!spinner) return;
 
+      spinner.classList.remove('hidden');
+
+      if (this.spinnerTimer) clearTimeout(this.spinnerTimer);
       this.spinnerTimer = setTimeout(() => {
         this.hideSpinner();
-        this.toast('La requête prend plus de temps que prévu…', 'warning');
+        this.toast('La requête prend plus de temps que prévu.', 'warning');
       }, 60000);
     }
+
     hideSpinner() {
-      const sp = document.getElementById('global-spinner');
-      if (!sp) return;
-      sp.classList.add('hidden');
-      if (this.spinnerTimer) clearTimeout(this.spinnerTimer);
-      this.spinnerTimer = null;
+      const spinner = document.getElementById('global-spinner');
+      if (!spinner) return;
+
+      spinner.classList.add('hidden');
+
+      if (this.spinnerTimer) {
+        clearTimeout(this.spinnerTimer);
+        this.spinnerTimer = null;
+      }
     }
 
-    // -------- Inactivité
+    // -------- Gestion inactivité utilisateur
     initInactivity() {
       this.inactivity = new InactivityManager({
         appSignal: this.ac.signal,
-        logoutAfter: 10 * 60 * 1000,
-        warningBefore: 60 * 1000,
-        onWarning: () => this.toast('Vous serez déconnecté dans 1 minute par inactivité', 'warning', 60000)
+        logoutAfter: 10 * 60 * 1000, // 10 minutes
+        warningBefore: 60 * 1000, // 1 minute
+        onWarning: () => this.toast('Vous serez déconnecté dans 1 minute par inactivité.', 'warning', 60000)
       });
     }
 
-    // -------- Teardown
+    // -------- Nettoyage
     destroy() {
       this.ac.abort();
       for (const t of this.timers.values()) clearTimeout(t);
@@ -214,7 +249,13 @@
   // === INACTIVITY MANAGER ===
   // ======================================
   class InactivityManager {
-    constructor({ logoutAfter = 600000, warningBefore = 60000, logoutUrl = '/accounts/logout/', onWarning = null, appSignal = null } = {}) {
+    constructor({
+      logoutAfter = 600000,
+      warningBefore = 60000,
+      logoutUrl = '/accounts/logout/',
+      onWarning = null,
+      appSignal = null
+    } = {}) {
       this.logoutAfter = logoutAfter;
       this.warningBefore = warningBefore;
       this.logoutUrl = logoutUrl;
@@ -228,7 +269,7 @@
     bind() {
       const reset = this.reset.bind(this);
       const options = { passive: true, signal: this.appSignal };
-      ['load','mousemove','keypress','click','scroll','touchstart'].forEach(ev =>
+      ['load', 'mousemove', 'keypress', 'click', 'scroll', 'touchstart'].forEach(ev =>
         window.addEventListener(ev, reset, options)
       );
       this.reset();
@@ -241,20 +282,27 @@
       this.timer = setTimeout(() => this.logout(), this.logoutAfter);
     }
 
-    warn() { if (this.onWarning) this.onWarning(); }
+    warn() {
+      if (this.onWarning) this.onWarning();
+    }
 
     logout() {
       if (this.appSignal?.aborted) return;
+
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = this.logoutUrl;
       form.style.display = 'none';
+
       const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
       if (csrf) {
-        const i = document.createElement('input');
-        i.type = 'hidden'; i.name = 'csrfmiddlewaretoken'; i.value = csrf;
-        form.appendChild(i);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrfmiddlewaretoken';
+        input.value = csrf;
+        form.appendChild(input);
       }
+
       document.body.appendChild(form);
       form.submit();
     }
@@ -272,59 +320,85 @@
     constructor(app, signal) {
       this.app = app;
       this.signal = signal;
-      this.listeners = []; // Gardé au cas où
       this.initWidgets();
-      this.bindCategorie();          // fixe la valeur de id_charge_utile
-      this.bindSimulationView();     // gère l’affichage et ré-init Select2 sous-catégorie
+      this.bindCategorie();
+      this.bindSimulationView();
       this.bindButtons();
     }
 
-    // ---- Champs requis dynamiques
+    // -------- Champs requis dynamiques
     requiredIds() {
       const baseIds = [
-        'id_prenom','id_nom','id_adresse','id_telephone',
-        'id_immatriculation','id_marque','id_modele','id_categorie',
-        'id_carburant','id_puissance_fiscale','id_nombre_places',
-        'id_duree','id_date_effet'
+        'id_prenom', 'id_nom', 'id_adresse', 'id_telephone',
+        'id_immatriculation', 'id_marque', 'id_modele', 'id_categorie',
+        'id_carburant', 'id_puissance_fiscale', 'id_nombre_places',
+        'id_duree', 'id_date_effet'
       ];
 
       const cat = document.getElementById('id_categorie');
-      const selectedCat = cat?.value;
-      const isTPC  = selectedCat === '520';
-      const isMoto = selectedCat === '550'; // NOUVELLE VÉRIFICATION
+      const selectedCat = cat?.value || '';
+      const isTPC = selectedCat === '520';
+      const isMoto = selectedCat === '550';
 
       const ids = [...baseIds];
 
-      // Sous-catégorie requise si TPC ou 2 roues, et visible
       const scWrap = document.getElementById('sous-categorie-wrapper');
-      // Vérifie si le wrapper contient un <select> (donc n'est pas vide)
-      if ((isTPC || isMoto) && scWrap && scWrap.querySelector('select')) {
-        ids.push('id_sous_categorie');
+      if ((isTPC || isMoto) && scWrap && !scWrap.classList.contains('hidden')) {
+        const scSelect = scWrap.querySelector('#id_sous_categorie');
+        if (scSelect && !scSelect.disabled) {
+          ids.push('id_sous_categorie');
+        }
       }
 
       return ids;
     }
 
-    // ---- Widgets
+    // -------- Initialisation des widgets
     initWidgets() {
       this.initSelect2();
-      this.initDate();
+      this.initDatePicker();
       this.ensurePlaceholders();
     }
 
     initSelect2() {
       if (typeof $ === 'undefined' || !$.fn?.select2) return;
+
       try {
-        $('#id_marque').select2({ placeholder:'Sélectionner une marque', width:'100%', allowClear:true, dropdownCssClass: 'animate-fadeInCalendar' });
-        $('#id_categorie').select2({ minimumResultsForSearch: Infinity, placeholder:'Sélectionner une catégorie', dropdownCssClass: 'animate-fadeInCalendar' });
-        $('#id_carburant').select2({ minimumResultsForSearch: Infinity, placeholder:'Sélectionner un carburant', dropdownCssClass: 'animate-fadeInCalendar' });
-        // Laisse HTMX injecter #id_sous_categorie
-        $('#id_duree').select2({ minimumResultsForSearch: Infinity, placeholder:'Durée', dropdownCssClass: 'animate-fadeInCalendar' });
-      } catch (e) { console.error('Select2:', e); }
+        $('#id_marque').select2({
+          placeholder: 'Sélectionner une marque',
+          width: '100%',
+          allowClear: true,
+          dropdownCssClass: 'animate-fadeInCalendar'
+        });
+
+        $('#id_categorie').select2({
+          minimumResultsForSearch: Infinity,
+          placeholder: 'Sélectionner une catégorie',
+          width: '100%',
+          dropdownCssClass: 'animate-fadeInCalendar'
+        });
+
+        $('#id_carburant').select2({
+          minimumResultsForSearch: Infinity,
+          placeholder: 'Sélectionner un carburant',
+          width: '100%',
+          dropdownCssClass: 'animate-fadeInCalendar'
+        });
+
+        $('#id_duree').select2({
+          minimumResultsForSearch: Infinity,
+          placeholder: 'Durée',
+          width: '100%',
+          dropdownCssClass: 'animate-fadeInCalendar'
+        });
+      } catch (e) {
+        console.error('Erreur Select2:', e);
+      }
     }
 
-    initDate() {
+    initDatePicker() {
       if (typeof flatpickr === 'undefined') return;
+
       try {
         flatpickr('#id_date_effet', {
           locale: 'fr',
@@ -335,7 +409,9 @@
           maxDate: new Date().fp_incr(60),
           onChange: () => this.app.clearCache()
         });
-      } catch (e) { console.error('Flatpickr:', e); }
+      } catch (e) {
+        console.error('Erreur Flatpickr:', e);
+      }
     }
 
     ensurePlaceholders() {
@@ -347,42 +423,88 @@
       }
     }
 
-    // ---- Catégorie -> charge utile
-    // Ne gère QUE la valeur du champ caché id_charge_utile
+    // -------- Gestion catégorie -> sous-catégorie + charge utile
     bindCategorie() {
       const cat = document.getElementById('id_categorie');
       if (!cat) return;
 
       const toggle = () => {
-        const selectedCat = (cat.value || '').trim();
-        const isTPC = selectedCat === '520';
+        let val = cat.value;
+        if (typeof $ !== 'undefined' && $.fn?.select2) {
+          val = $('#id_categorie').val();
+        }
+        val = String(val || '').trim();
 
-        const cu = document.getElementById('id_charge_utile'); // champ caché
+        const isTPC = val === '520';
+        const isMoto = val === '550';
+        const showSousCat = isTPC || isMoto;
+
+        // Gestion du wrapper sous-catégorie
+        const scWrap = document.getElementById('sous-categorie-wrapper');
+        if (scWrap) {
+          if (showSousCat) {
+            scWrap.classList.remove('hidden');
+
+            // Charger dynamiquement si le wrapper est vide
+            const hasContent = scWrap.querySelector('#id_sous_categorie');
+            if (!hasContent && window.htmx) {
+              const url = scWrap.getAttribute('hx-get');
+              if (url) {
+                const fullUrl = url.includes('?')
+                  ? `${url}&categorie=${encodeURIComponent(val)}`
+                  : `${url}?categorie=${encodeURIComponent(val)}`;
+                htmx.ajax('GET', fullUrl, { target: scWrap });
+              }
+            } else if (hasContent) {
+              // Réactiver le select si déjà présent
+              hasContent.disabled = false;
+              hasContent.removeAttribute('aria-disabled');
+              if (typeof $ !== 'undefined' && $.fn?.select2 && $(hasContent).data('select2')) {
+                $(hasContent).trigger('change.select2');
+              }
+            }
+          } else {
+            scWrap.classList.add('hidden');
+
+            // Désactiver proprement le select sans supprimer le HTML
+            const sc = scWrap.querySelector('#id_sous_categorie');
+            if (sc) {
+              sc.disabled = true;
+              sc.setAttribute('aria-disabled', 'true');
+              sc.removeAttribute('required');
+              if (typeof $ !== 'undefined' && $.fn?.select2 && $(sc).data('select2')) {
+                $(sc).val('').trigger('change.select2');
+              } else {
+                sc.value = '';
+              }
+            }
+          }
+        }
+
+        // Gestion charge utile cachée
+        const cu = document.getElementById('id_charge_utile');
         if (cu) {
           cu.value = isTPC ? '3500' : '0';
-          cu.removeAttribute('disabled'); // garantir la soumission
-          // console.log('[ContractForm] Charge utile (cachée) =', cu.value);
+          cu.removeAttribute('disabled');
         }
 
         this.app.clearCache();
         this.app.validate(false);
       };
 
-      // init
+      // Initialisation immédiate
       toggle();
 
-      // events
+      // Événements DOM natifs
       cat.addEventListener('change', toggle, { signal: this.signal });
 
-        // jQuery/Select2
-        if (typeof $ !== 'undefined' && $.fn?.select2) {
-          $('#id_categorie')
-            .off('.app') // évite doublons
-            .on('change.app select2:select.app select2:clear.app', toggle);
-        }
-      } // Fin de bindCategorie()
+      // Événements jQuery/Select2
+      if (typeof $ !== 'undefined' && $.fn?.select2) {
+        $('#id_categorie').off('.app').on('change.app select2:select.app select2:clear.app', toggle);
+      }
+    }
 
-    // ---- Affichage simulation / formulaire + re-init Select2 sur sous-catégorie
+    // -------- Gestion des vues simulation/émission après HTMX
     bindSimulationView() {
       const handler = (evt) => {
         const target = evt.detail?.target;
@@ -392,7 +514,7 @@
         const simulationResult = document.getElementById('simulation-result');
         const emissionResult = document.getElementById('emission-result');
 
-        // Simulation
+        // Affichage résultat simulation
         if (target === simulationResult) {
           if (target.innerHTML.trim()) {
             formWrap?.classList.add('hidden');
@@ -403,13 +525,13 @@
           }
         }
 
-        // Emission
+        // Affichage résultat émission
         if (target === emissionResult && target.innerHTML.trim()) {
           simulationResult?.classList.add('hidden');
           emissionResult.classList.remove('hidden');
         }
 
-        // Ré-init Select2 après swap HTMX de la sous-catégorie
+        // Réinitialisation Select2 pour sous-catégorie après injection HTMX
         if (target.id === 'sous-categorie-wrapper' && typeof $ !== 'undefined' && $.fn?.select2) {
           const $sc = $('#id_sous_categorie');
           if ($sc.length) {
@@ -428,9 +550,9 @@
       document.body.addEventListener('htmx:afterSwap', handler, { signal: this.signal });
     }
 
-    // ---- Boutons (Modifier Contrat)
+    // -------- Gestion boutons
     bindButtons() {
-      const click = (e) => {
+      const clickHandler = (e) => {
         if (e.target.closest('#btn-modifier-contrat')) {
           document.getElementById('contrat-form-wrapper')?.classList.remove('hidden');
           document.getElementById('simulation-result')?.classList.add('hidden');
@@ -438,17 +560,23 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       };
-      document.body.addEventListener('click', click, { signal: this.signal });
+
+      document.body.addEventListener('click', clickHandler, { signal: this.signal });
     }
 
-    // ---- Teardown
+    // -------- Nettoyage
     destroy() {
-      // tout listener a été attaché avec {signal: this.signal}
-      console.log('ContractFormManager destroyed.');
+      // Nettoyage automatique via AbortController signal
+      // Nettoyage des handlers jQuery nommés
+      if (typeof $ !== 'undefined') {
+        $('#id_categorie').off('.app');
+      }
     }
-  } // Fin de ContractFormManager
+  }
 
-  // === BOOT ===
+  // ======================================
+  // === INITIALISATION ===
+  // ======================================
   document.addEventListener('DOMContentLoaded', () => {
     window.appManager = new AppManager();
   });

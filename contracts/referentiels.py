@@ -12,7 +12,15 @@ CATEGORIES = [
     ('', 'Sélectionner une catégorie'),
     ("510", "VP"),
     ("520", "TPC"),
-    ("550", "2 Roues / Motocyclette")
+    ("550", "2 Roues / Motocyclette"),
+]
+
+SOUS_CATEGORIES_520 = [
+    ('', 'Sélectionner une sous catégorie'),
+    ("002", "Fourgonnette"),
+    ("003", "Utilitaires jusqu'à 3T500"),
+    ("004", "Utilitaires au-delà de 3T500"),
+    ("025", "Remorque"),
 ]
 SOUS_CATEGORIES_550 = [
     ('', 'Sélectionner un genre'),
@@ -20,13 +28,6 @@ SOUS_CATEGORIES_550 = [
     ("010", "Scooter -125 cm3"),
     ("011", "Scooter +125 cm3"),
     ("012", "Tricycle, Quad..."),
-]
-SOUS_CATEGORIES_520 = [
-    ('', 'Sélectionner une sous catégorie'),
-    ("002", "Fourgonnette"),
-    ("003", "Utilitaires jusqu'à 3T500"),
-    ("004", "Utilitaires au-delà de 3T500"),
-    ("025", "Remorque"),
 ]
 CARBURANTS = [
     ('', 'Sélectionner un carburant'),
