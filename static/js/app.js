@@ -173,6 +173,26 @@
         const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
         if (csrf) evt.detail.headers['X-CSRFToken'] = csrf;
       }, { signal });
+      // Erreur réseau ou timeout
+        ['htmx:responseError', 'htmx:sendError', 'htmx:timeout'].forEach(evtName => {
+           document.body.addEventListener(evtName, (evt) => {
+               this.hideSpinner();
+               // Tentative de récupération du message d'erreur spécifique si disponible
+               let msg = "Une erreur est survenue.";
+               if (evt.detail.xhr) {
+                   if (evt.detail.xhr.status === 0) msg = "Erreur de connexion réseau. Vérifiez votre internet.";
+                   else if (evt.detail.xhr.status >= 500) msg = "Erreur serveur (500). Réessayez plus tard.";
+               }
+               this.toast(msg, 'error');
+
+               // IMPORTANT: Déverrouiller manuellement les boutons si nécessaire
+               // HTMX le fait souvent automatiquement, mais c'est une sécurité supplémentaire
+               const triggeringElt = evt.detail.requestConfig?.elt;
+               if (triggeringElt && triggeringElt.disabled) {
+                    triggeringElt.disabled = false;
+               }
+           }, { signal });
+        });
 
       // Gestion des erreurs réseau
       document.body.addEventListener('htmx:responseError', (evt) => {

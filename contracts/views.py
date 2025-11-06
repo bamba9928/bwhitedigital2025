@@ -831,70 +831,100 @@ def renouveler_contrat_auto(request, pk: int):
 
     messages.success(request, f"Contrat {new_police} renouvelé avec succès.")
     return redirect("contracts:detail_contrat", pk=nouveau_contrat.pk)
-
-
 @login_required
 @require_http_methods(["POST"])
 @transaction.atomic
 def annuler_contrat(request, pk):
-    """Annule localement un contrat et tente l'annulation d'attestation côté Askia (ADMIN)."""
+    """
+    Annule un contrat.
+    - Si API OK : Statut 'ANNULE', suppression des liens documents.
+    - Si API KO : Statut 'ANNULE_LOCAL', conservation des liens pour retry futur.
+    """
     contrat = get_object_or_404(Contrat, pk=pk)
 
     if getattr(request.user, "role", "") != "ADMIN":
         messages.error(request, "Action non autorisée.")
         return redirect("contracts:detail_contrat", pk=pk)
 
-    if contrat.status == "ANNULE":
+    if contrat.status in ["ANNULE", "ANNULE_LOCAL"]:
         messages.info(request, "Ce contrat est déjà annulé.")
         return redirect("contracts:detail_contrat", pk=pk)
 
-    api_ok, api_msg = True, ""
-    try:
-        if contrat.numero_facture:
-            # CORRECTION: Appel de la méthode qui existe maintenant
+    api_success = False
+    api_msg = ""
+
+    # 1. Tentative Annulation API
+    if contrat.numero_facture:
+        try:
+            # On suppose que l'API renvoie un dict avec 'success' ou on analyse le message
             resp = askia_client.annuler_attestation(contrat.numero_facture)
+
+            # Adapter selon la réponse réelle de votre API.
+            # Ici on considère succès si pas d'exception levée par _make_request
+            # ou si le message contient "déjà annulé".
+            api_success = True
             api_msg = resp.get("message", "Succès API")
-        else:
-            api_ok, api_msg = False, "Numéro de facture manquant, annulation locale uniquement."
-            logger.warning("Annulation locale seulement (pas de N° facture) pour Police %s", contrat.numero_police)
 
-    except Exception as e:
-        api_ok, api_msg = False, str(e)
-        logger.error("Échec annulation Askia pour Facture %s: %s", contrat.numero_facture, e)
+        except Exception as e:
+            logger.error("Échec annulation Askia pour Facture %s: %s", contrat.numero_facture, e)
+            api_msg = str(e)
+            api_success = False
+    else:
+        # Pas de numéro de facture = contrat purement local (ex: erreur d'émission précédente)
+        api_success = True
+        api_msg = "Annulation locale (pas de N° facture Askia)"
 
-    # CORRECTION: Utilisation des champs qui existent (ajoutés au modèle)
-    contrat.status = "ANNULE"
+    # 2. Mise à jour locale
+    old_status = contrat.status
+    new_status = 'ANNULE' if api_success else 'ANNULE_LOCAL'
+
+    contrat.status = new_status
     contrat.annule_at = timezone.now()
     contrat.annule_par = request.user
     contrat.annule_raison = (request.POST.get("raison") or "Annulé par Admin")[:255]
-    contrat.link_attestation = ""  # Effacer les liens
-    contrat.link_carte_brune = ""
+
+    # On ne supprime les documents que si l'annulation est confirmée côté Askia
+    if api_success:
+        contrat.link_attestation = ""
+        contrat.link_carte_brune = ""
+
     contrat.save(update_fields=[
         "status", "annule_at", "annule_par", "annule_raison",
         "link_attestation", "link_carte_brune", "updated_at",
     ])
 
-    # Annulation du paiement apporteur associé
+    logger.info(
+        "Contrat %s annulé | Ancien statut: %s -> Nouveau: %s | API OK: %s",
+        contrat.numero_police, old_status, new_status, api_success
+    )
+
+    # 3. Annulation du paiement apporteur associé (toujours annulé car le contrat n'est plus valide)
     try:
         from payments.models import PaiementApporteur, HistoriquePaiement
         p = PaiementApporteur.objects.filter(contrat=contrat).first()
-        if p and p.status not in {"ANNULE"}:
+        if p and p.status != "ANNULE":
             p.status = "ANNULE"
             p.save(update_fields=["status", "updated_at"])
             HistoriquePaiement.objects.create(
-                paiement=p, action="ANNULATION", effectue_par=request.user,
-                details="Contrat annulé par Admin → Paiement marqué ANNULE"
+                paiement=p,
+                action="STATUS_CHANGE",
+                effectue_par=request.user,
+                details=f"Annulation suite à l'annulation du contrat {contrat.numero_police}"
             )
     except Exception as e:
-        logger.warning("MAJ paiement apporteur échouée lors d'annulation contrat: %s", e)
+        logger.warning("Erreur MAJ paiement lors d'annulation contrat %s: %s", contrat.pk, e)
 
-    if api_ok:
-        messages.success(request, f"Contrat annulé. Annulation Askia réussie: {api_msg}")
+    # 4. Feedback utilisateur
+    if api_success:
+        messages.success(request, f"Contrat annulé avec succès. (Réponse API: {api_msg})")
     else:
-        messages.warning(request, f"Contrat annulé localement. Échec annulation Askia: {api_msg}")
+        messages.warning(
+            request,
+            f"⚠️ Contrat annulé LOCALEMENT uniquement. L'API Askia n'a pas pu être jointe ou a refusé. "
+            f"Erreur: {api_msg}. Le statut est 'Annulé (Local)', veuillez réessayer plus tard."
+        )
 
     return redirect("contracts:detail_contrat", pk=pk)
-
 @login_required
 def detail_client(request, pk):
     """Fiche client avec ses contrats valides uniquement (avec scope apporteur)."""

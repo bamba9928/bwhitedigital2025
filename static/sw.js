@@ -303,39 +303,49 @@ async function handleAPIRequest(request) {
     );
   }
 }
-
 /**
- * Network First with Cache Fallback - Pour les documents HTML (DYNAMIC_CACHE)
+ * Network ONLY pour les pages critiques, avec fallback offline.html
+ * On évite 'Network First' pour le dashboard pour garantir des données financières à jour.
  */
 async function handleDocumentRequest(request) {
+  const url = new URL(request.url);
+
+  // Liste des routes qui ne DOIVENT PAS être mises en cache (données financières sensibles)
+  const NO_CACHE_ROUTES = [
+      '/dashboard/',
+      '/payments/',
+      '/contracts/',
+      '/accounts/profile/'
+  ];
+
+  const isCritical = NO_CACHE_ROUTES.some(route => url.pathname.startsWith(route));
+
   try {
-    // 1. Essayer le réseau d'abord
+    // Toujours tenter le réseau en premier
     const networkResponse = await fetchWithTimeout(request);
 
-    // 2. Mettre en cache si succès
     if (networkResponse && networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, networkResponse.clone());
-      trimCache(DYNAMIC_CACHE);
+       // On ne met en cache que si ce N'EST PAS une route critique
+       if (!isCritical) {
+           const cache = await caches.open(DYNAMIC_CACHE);
+           cache.put(request, networkResponse.clone());
+       }
+       return networkResponse;
     }
-
-    return networkResponse;
   } catch (error) {
-    console.log('📄 Document hors-ligne:', request.url, error.message);
+    console.log('Document hors-ligne:', request.url);
 
-    // 3. Fallback vers le cache
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      console.log('✅ Document cache hit:', request.url);
-      return cachedResponse;
+    // Si hors-ligne, essayer le cache SEULEMENT si ce n'est pas critique
+    if (!isCritical) {
+        const cachedResponse = await caches.match(request);
+        if (cachedResponse) return cachedResponse;
     }
 
-    // 4. Fallback vers la page offline
+    // Fallback final : page hors-ligne générique
     const offlinePage = await caches.match('/offline.html');
-    if (offlinePage) {
-      return offlinePage;
-    }
-
+    if (offlinePage) return offlinePage;
+  }
+}
     // 5. Dernier recours
     return new Response(
       '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hors ligne</title></head><body><h1>Service indisponible</h1><p>Veuillez vérifier votre connexion Internet.</p></body></html>',

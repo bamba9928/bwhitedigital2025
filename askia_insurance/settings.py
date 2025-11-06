@@ -220,3 +220,16 @@ CACHES = {
         'LOCATION': 'unique-snowflake',
     }
 }
+# ==============================
+# COMMISSIONS & TARIFS
+# ==============================
+# Taux Askia (fixe)
+COMMISSION_ASKIA_TAUX = config('COMMISSION_ASKIA_TAUX', default=0.20, cast=float)
+COMMISSION_ASKIA_FIXE = config('COMMISSION_ASKIA_FIXE', default=3000, cast=int)
+
+# Taux Apporteurs
+COMMISSION_PLATINE_TAUX = config('COMMISSION_PLATINE_TAUX', default=0.18, cast=float)
+COMMISSION_PLATINE_FIXE = config('COMMISSION_PLATINE_FIXE', default=2000, cast=int)
+
+COMMISSION_FREEMIUM_TAUX = config('COMMISSION_FREEMIUM_TAUX', default=0.10, cast=float)
+COMMISSION_FREEMIUM_FIXE = config('COMMISSION_FREEMIUM_FIXE', default=1800, cast=int)
