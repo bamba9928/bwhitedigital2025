@@ -36,8 +36,6 @@ def to_jsonable(value):
 def _is_hx(request) -> bool:
     """True si la requête provient d'HTMX."""
     return request.headers.get("HX-Request") == "true"
-
-
 def _render_error(request, message: str, redirect_name: str = "contracts:nouveau_contrat"):
     """Rendu d'une erreur (partiel HTMX ou message + redirect)."""
     logger.warning("Erreur rendue à l'utilisateur : %s", message)  # Log de l'erreur
@@ -145,41 +143,26 @@ def simuler_tarif(request):
             logger.error("Erreur simulation Askia | %s", str(e), exc_info=True)
             return _render_error(request, f"Erreur API Askia : {str(e)}")
 
-        # ========================================================================
-        # CORRECTION : NOUVELLE LOGIQUE DE COMMISSION
-        # ========================================================================
         prime_nette = Decimal(str(simulation["prime_nette"]))
         prime_ttc = Decimal(str(simulation["prime_ttc"]))
         accessoires = Decimal(str(simulation.get("accessoires", 0)))
         fga = Decimal(str(simulation.get("fga", 0)))
         taxes = Decimal(str(simulation.get("taxes", 0)))
 
-        # Constantes de commission
-        ASKIA_TAUX = Decimal("0.20")
-        ASKIA_ACCESSOIRES = Decimal("3000")
+        temp_contrat = Contrat(
+            prime_nette=prime_nette,
+            prime_ttc=prime_ttc,
+            apporteur=request.user,
+            duree=duree,
+            date_effet=date_effet
+        )
+        temp_contrat.calculate_commission()
 
-        # 1. Commission Askia (Total pour BWHITE)
-        commission_askia_bwhite = (prime_nette * ASKIA_TAUX) + ASKIA_ACCESSOIRES
-
-        # 2. Commission Apporteur
-        commission_apporteur = Decimal("0.00")
-        if request.user.role == 'APPORTEUR':
-            if request.user.grade == 'PLATINE':
-                TAUX_APP = Decimal("0.18")
-                FIXE_APP = Decimal("2000")
-                commission_apporteur = (prime_nette * TAUX_APP) + FIXE_APP
-            elif request.user.grade == 'FREEMIUM':
-                TAUX_APP = Decimal("0.10")
-                FIXE_APP = Decimal("1800")
-                commission_apporteur = (prime_nette * TAUX_APP) + FIXE_APP
-
-        # 3. Commission BWHITE (Profit)
-        commission_bwhite_profit = commission_askia_bwhite - commission_apporteur
-
-        # 4. Net à reverser (ce que BWHITE doit à Askia)
-        net_a_reverser_askia = prime_ttc - commission_askia_bwhite
-        # ========================================================================
-
+        # On récupère les valeurs calculées par le modèle
+        commission_askia_bwhite = temp_contrat.commission_askia
+        commission_apporteur = temp_contrat.commission_apporteur
+        commission_bwhite_profit = temp_contrat.commission_bwhite
+        net_a_reverser_askia = temp_contrat.net_a_reverser
         # Stockage session
         request.session["simulation_data"] = to_jsonable({
             "vehicule": vehicule_data,
@@ -209,7 +192,7 @@ def simuler_tarif(request):
                 "fga": fga,
                 "taxes": taxes,
                 "prime_ttc": prime_ttc,
-                "commission": simulation.get("commission", 0),  # Commission API originale (pour info)
+                "commission": simulation.get("commission", 0),
             },
             "commission": commission_apporteur,  # Ce que l'apporteur voit
             "net_a_reverser": net_a_reverser_askia,  # Ce que BWHITE doit à Askia
@@ -404,7 +387,7 @@ def check_immatriculation(request):
     try:
         from django.core.exceptions import ValidationError
         validator = Vehicule.immat_validators[0]
-        validator(immat)  # Valide la version avec ou sans tirets
+        validator(immat)
     except ValidationError:
         return HttpResponse(
             '<span class="text-orange-400 text-xs"><i class="fas fa-exclamation-triangle mr-1"></i>'
@@ -713,8 +696,6 @@ def echeances_aujourdhui(request):
         qs = qs.filter(apporteur=request.user)
 
     return render(request, "contracts/echeances_aujourdhui.html", {"contrats": qs})
-
-
 @login_required
 @transaction.atomic
 def renouveler_contrat_auto(request, pk: int):
@@ -734,24 +715,20 @@ def renouveler_contrat_auto(request, pk: int):
         messages.error(request, "Contrat original introuvable.")
         return redirect("dashboard:home")
 
-    # Vérifier les permissions
     if getattr(request.user, "role", "") != "ADMIN" and contrat_ancien.apporteur_id != request.user.id:
         messages.error(request, "Vous n'êtes pas autorisé à renouveler ce contrat.")
         return redirect("dashboard:home")
 
-    # Préparer les données pour l'API
     dure = int(request.POST.get("dure", contrat_ancien.duree))  # Réutilise l'ancienne durée par défaut
 
     due_date = contrat_ancien.date_echeance
     effet_date = due_date + timedelta(days=1)
-    effet_str = effet_date.strftime("%d/%m/%Y")  # Format requis par ASKIA
+    effet_str = effet_date.strftime("%d/%m/%Y")
 
-    # Récupérer les options du contrat précédent
     v = contrat_ancien.vehicule
     opts = {
         "vaf": v.valeur_neuve or 0,
         "vvn": v.valeur_venale or 0,
-        # TODO: Stocker les garanties sur le modèle Contrat si vous voulez les réutiliser
         "recour": 0,
         "vol": 0,
         "inc": 0,
@@ -770,11 +747,7 @@ def renouveler_contrat_auto(request, pk: int):
         )
     except Exception as e:
         messages.error(request, f"Le renouvellement API a échoué : {e}")
-        return redirect("contracts:liste_contrats")  # Redirige vers la liste
-
-    # ========================================================================
-    # CORRECTION : CRÉER UN NOUVEAU CONTRAT, NE PAS MODIFIER L'ANCIEN
-    # ========================================================================
+        return redirect("contracts:liste_contrats")
 
     # 1. Mettre l'ancien contrat en 'EXPIRE'
     contrat_ancien.status = "EXPIRE"
@@ -794,6 +767,7 @@ def renouveler_contrat_auto(request, pk: int):
     # Recalculer TOUTES les commissions
     temp_contrat = Contrat(
         prime_nette=prime_nette,
+        prime_ttc=prime_ttc,
         apporteur=contrat_ancien.apporteur
     )
     temp_contrat.calculate_commission()  # Utilise la logique du modèle
@@ -856,12 +830,9 @@ def annuler_contrat(request, pk):
     # 1. Tentative Annulation API
     if contrat.numero_facture:
         try:
-            # On suppose que l'API renvoie un dict avec 'success' ou on analyse le message
+
             resp = askia_client.annuler_attestation(contrat.numero_facture)
 
-            # Adapter selon la réponse réelle de votre API.
-            # Ici on considère succès si pas d'exception levée par _make_request
-            # ou si le message contient "déjà annulé".
             api_success = True
             api_msg = resp.get("message", "Succès API")
 
@@ -870,7 +841,7 @@ def annuler_contrat(request, pk):
             api_msg = str(e)
             api_success = False
     else:
-        # Pas de numéro de facture = contrat purement local (ex: erreur d'émission précédente)
+
         api_success = True
         api_msg = "Annulation locale (pas de N° facture Askia)"
 

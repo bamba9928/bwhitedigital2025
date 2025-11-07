@@ -1,4 +1,4 @@
-/* static/js/app.js */
+/* static/js/app.js - Version corrigée pour HTMX */
 (() => {
   'use strict';
 
@@ -75,7 +75,7 @@
       let ok = true;
       for (const id of requiredIds) {
         const el = get(id);
-        if (!el || el.offsetParent === null) continue;
+        if (!el || el.offsetParent === null || el.disabled) continue;
 
         const empty = !String(el.value ?? '').trim();
 
@@ -173,45 +173,28 @@
         const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
         if (csrf) evt.detail.headers['X-CSRFToken'] = csrf;
       }, { signal });
-      // Erreur réseau ou timeout
-        ['htmx:responseError', 'htmx:sendError', 'htmx:timeout'].forEach(evtName => {
-           document.body.addEventListener(evtName, (evt) => {
-               this.hideSpinner();
-               // Tentative de récupération du message d'erreur spécifique si disponible
-               let msg = "Une erreur est survenue.";
-               if (evt.detail.xhr) {
-                   if (evt.detail.xhr.status === 0) msg = "Erreur de connexion réseau. Vérifiez votre internet.";
-                   else if (evt.detail.xhr.status >= 500) msg = "Erreur serveur (500). Réessayez plus tard.";
-               }
-               this.toast(msg, 'error');
-
-               // IMPORTANT: Déverrouiller manuellement les boutons si nécessaire
-               // HTMX le fait souvent automatiquement, mais c'est une sécurité supplémentaire
-               const triggeringElt = evt.detail.requestConfig?.elt;
-               if (triggeringElt && triggeringElt.disabled) {
-                    triggeringElt.disabled = false;
-               }
-           }, { signal });
-        });
 
       // Gestion des erreurs réseau
-      document.body.addEventListener('htmx:responseError', (evt) => {
-        const status = evt.detail.xhr?.status;
-        const msg =
-          status === 500 ? 'Erreur serveur. Veuillez réessayer.' :
-          status === 404 ? 'Ressource non trouvée.' :
-          status === 403 ? 'Accès refusé.' :
-          status === 0 ? 'Erreur de connexion réseau.' :
-          `Erreur lors de la requête (Code: ${status}).`;
-        this.toast(msg, 'error');
-        this.hideSpinner();
-      }, { signal });
+      ['htmx:responseError', 'htmx:sendError', 'htmx:timeout'].forEach(evtName => {
+        document.body.addEventListener(evtName, (evt) => {
+          this.hideSpinner();
 
-      // Timeout
-      document.body.addEventListener('htmx:timeout', () => {
-        this.toast('La requête a pris trop de temps.', 'warning');
-        this.hideSpinner();
-      }, { signal });
+          let msg = "Une erreur est survenue.";
+          if (evt.detail.xhr) {
+            if (evt.detail.xhr.status === 0) msg = "Erreur de connexion réseau. Vérifiez votre internet.";
+            else if (evt.detail.xhr.status >= 500) msg = "Erreur serveur (500). Réessayez plus tard.";
+            else if (evt.detail.xhr.status === 404) msg = "Ressource non trouvée.";
+            else if (evt.detail.xhr.status === 403) msg = "Accès refusé.";
+          }
+          this.toast(msg, 'error');
+
+          // Déverrouiller manuellement les boutons si nécessaire
+          const triggeringElt = evt.detail.requestConfig?.elt;
+          if (triggeringElt && triggeringElt.disabled) {
+            triggeringElt.disabled = false;
+          }
+        }, { signal });
+      });
 
       // Spinner global
       document.body.addEventListener('htmx:beforeRequest', () => this.showSpinner(), { signal });
@@ -334,19 +317,20 @@
   }
 
   // ======================================
-  // === CONTRACT FORM MANAGER ===
+  // === CONTRACT FORM MANAGER (CORRIGÉ) ===
   // ======================================
   class ContractFormManager {
     constructor(app, signal) {
       this.app = app;
       this.signal = signal;
       this.initWidgets();
-      this.bindCategorie();
+      // ⚠️ SUPPRIMÉ : this.bindCategorie() - Conflit avec HTMX
+      this.bindSelect2Bridge(); // ✅ AJOUTÉ : Pont Select2 → HTMX
       this.bindSimulationView();
       this.bindButtons();
     }
 
-    // -------- Champs requis dynamiques
+    // -------- Champs requis dynamiques (Validation JS côté client)
     requiredIds() {
       const baseIds = [
         'id_prenom', 'id_nom', 'id_adresse', 'id_telephone',
@@ -355,61 +339,52 @@
         'id_duree', 'id_date_effet'
       ];
 
-      const cat = document.getElementById('id_categorie');
-      const selectedCat = cat?.value || '';
-      const isTPC = selectedCat === '520';
-      const isMoto = selectedCat === '550';
-
-      const ids = [...baseIds];
-
-      const scWrap = document.getElementById('sous-categorie-wrapper');
-      if ((isTPC || isMoto) && scWrap && !scWrap.classList.contains('hidden')) {
-        const scSelect = scWrap.querySelector('#id_sous_categorie');
-        if (scSelect && !scSelect.disabled) {
-          ids.push('id_sous_categorie');
-        }
+      // Ajout dynamique de sous-catégorie si visible et actif
+      const scSelect = document.getElementById('id_sous_categorie');
+      if (scSelect && !scSelect.disabled && scSelect.offsetParent !== null) {
+        baseIds.push('id_sous_categorie');
       }
 
-      return ids;
+      return baseIds;
     }
 
-    // -------- Initialisation des widgets
+    // -------- Initialisation des widgets (Select2, Flatpickr)
     initWidgets() {
       this.initSelect2();
       this.initDatePicker();
-      this.ensurePlaceholders();
     }
 
     initSelect2() {
       if (typeof $ === 'undefined' || !$.fn?.select2) return;
 
       try {
-        $('#id_marque').select2({
-          placeholder: 'Sélectionner une marque',
+        const commonConfig = {
           width: '100%',
-          allowClear: true,
           dropdownCssClass: 'animate-fadeInCalendar'
+        };
+
+        $('#id_marque').select2({
+          ...commonConfig,
+          placeholder: 'Sélectionner une marque',
+          allowClear: true
         });
 
         $('#id_categorie').select2({
+          ...commonConfig,
           minimumResultsForSearch: Infinity,
-          placeholder: 'Sélectionner une catégorie',
-          width: '100%',
-          dropdownCssClass: 'animate-fadeInCalendar'
+          placeholder: 'Sélectionner une catégorie'
         });
 
         $('#id_carburant').select2({
+          ...commonConfig,
           minimumResultsForSearch: Infinity,
-          placeholder: 'Sélectionner un carburant',
-          width: '100%',
-          dropdownCssClass: 'animate-fadeInCalendar'
+          placeholder: 'Sélectionner un carburant'
         });
 
         $('#id_duree').select2({
+          ...commonConfig,
           minimumResultsForSearch: Infinity,
-          placeholder: 'Durée',
-          width: '100%',
-          dropdownCssClass: 'animate-fadeInCalendar'
+          placeholder: 'Durée'
         });
       } catch (e) {
         console.error('Erreur Select2:', e);
@@ -434,97 +409,21 @@
       }
     }
 
-    ensurePlaceholders() {
-      const cat = document.getElementById('id_categorie');
-      if (cat && !cat.querySelector("option[value='']")) {
-        const opt = new Option('Sélectionner une catégorie', '', true, true);
-        opt.disabled = true;
-        cat.insertBefore(opt, cat.firstChild);
-      }
+    // -------- ✅ NOUVEAU : Pont Select2 → HTMX
+    // Force les événements natifs 'change' pour que HTMX les détecte
+    bindSelect2Bridge() {
+      if (typeof $ === 'undefined' || !$.fn?.select2) return;
+
+      $('#id_categorie, #id_marque, #id_carburant, #id_duree').on(
+        'select2:select select2:clear select2:unselect',
+        (e) => {
+          // Déclenche un événement natif 'change' pour HTMX
+          e.target.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      );
     }
 
-    // -------- Gestion catégorie -> sous-catégorie + charge utile
-    bindCategorie() {
-      const cat = document.getElementById('id_categorie');
-      if (!cat) return;
-
-      const toggle = () => {
-        let val = cat.value;
-        if (typeof $ !== 'undefined' && $.fn?.select2) {
-          val = $('#id_categorie').val();
-        }
-        val = String(val || '').trim();
-
-        const isTPC = val === '520';
-        const isMoto = val === '550';
-        const showSousCat = isTPC || isMoto;
-
-        // Gestion du wrapper sous-catégorie
-        const scWrap = document.getElementById('sous-categorie-wrapper');
-        if (scWrap) {
-          if (showSousCat) {
-            scWrap.classList.remove('hidden');
-
-            // Charger dynamiquement si le wrapper est vide
-            const hasContent = scWrap.querySelector('#id_sous_categorie');
-            if (!hasContent && window.htmx) {
-              const url = scWrap.getAttribute('hx-get');
-              if (url) {
-                const fullUrl = url.includes('?')
-                  ? `${url}&categorie=${encodeURIComponent(val)}`
-                  : `${url}?categorie=${encodeURIComponent(val)}`;
-                htmx.ajax('GET', fullUrl, { target: scWrap });
-              }
-            } else if (hasContent) {
-              // Réactiver le select si déjà présent
-              hasContent.disabled = false;
-              hasContent.removeAttribute('aria-disabled');
-              if (typeof $ !== 'undefined' && $.fn?.select2 && $(hasContent).data('select2')) {
-                $(hasContent).trigger('change.select2');
-              }
-            }
-          } else {
-            scWrap.classList.add('hidden');
-
-            // Désactiver proprement le select sans supprimer le HTML
-            const sc = scWrap.querySelector('#id_sous_categorie');
-            if (sc) {
-              sc.disabled = true;
-              sc.setAttribute('aria-disabled', 'true');
-              sc.removeAttribute('required');
-              if (typeof $ !== 'undefined' && $.fn?.select2 && $(sc).data('select2')) {
-                $(sc).val('').trigger('change.select2');
-              } else {
-                sc.value = '';
-              }
-            }
-          }
-        }
-
-        // Gestion charge utile cachée
-        const cu = document.getElementById('id_charge_utile');
-        if (cu) {
-          cu.value = isTPC ? '3500' : '0';
-          cu.removeAttribute('disabled');
-        }
-
-        this.app.clearCache();
-        this.app.validate(false);
-      };
-
-      // Initialisation immédiate
-      toggle();
-
-      // Événements DOM natifs
-      cat.addEventListener('change', toggle, { signal: this.signal });
-
-      // Événements jQuery/Select2
-      if (typeof $ !== 'undefined' && $.fn?.select2) {
-        $('#id_categorie').off('.app').on('change.app select2:select.app select2:clear.app', toggle);
-      }
-    }
-
-    // -------- Gestion des vues simulation/émission après HTMX
+    // -------- Gestion des vues après injection HTMX
     bindSimulationView() {
       const handler = (evt) => {
         const target = evt.detail?.target;
@@ -535,14 +434,9 @@
         const emissionResult = document.getElementById('emission-result');
 
         // Affichage résultat simulation
-        if (target === simulationResult) {
-          if (target.innerHTML.trim()) {
-            formWrap?.classList.add('hidden');
-            simulationResult.classList.remove('hidden');
-          } else {
-            formWrap?.classList.remove('hidden');
-            simulationResult.classList.add('hidden');
-          }
+        if (target === simulationResult && target.innerHTML.trim()) {
+          formWrap?.classList.add('hidden');
+          simulationResult.classList.remove('hidden');
         }
 
         // Affichage résultat émission
@@ -551,17 +445,22 @@
           emissionResult.classList.remove('hidden');
         }
 
-        // Réinitialisation Select2 pour sous-catégorie après injection HTMX
-        if (target.id === 'sous-categorie-wrapper' && typeof $ !== 'undefined' && $.fn?.select2) {
-          const $sc = $('#id_sous_categorie');
-          if ($sc.length) {
+        // ✅ Réinitialisation Select2 pour sous-catégorie après injection HTMX
+        if (target.id === 'sous-categorie-wrapper') {
+          const $sc = $(target).find('select');
+          if ($sc.length && typeof $ !== 'undefined' && $.fn?.select2) {
+            // Détruire l'instance existante si présente
             if ($sc.data('select2')) $sc.select2('destroy');
+
+            // Réinitialiser avec la bonne config
             $sc.select2({
               minimumResultsForSearch: Infinity,
               placeholder: 'Genre / Sous-catégorie',
               width: '100%',
               dropdownCssClass: 'animate-fadeInCalendar'
             });
+
+            // Revalider le formulaire
             this.app.validate(false);
           }
         }
@@ -570,7 +469,7 @@
       document.body.addEventListener('htmx:afterSwap', handler, { signal: this.signal });
     }
 
-    // -------- Gestion boutons
+    // -------- Gestion boutons (Modifier contrat)
     bindButtons() {
       const clickHandler = (e) => {
         if (e.target.closest('#btn-modifier-contrat')) {
@@ -587,9 +486,8 @@
     // -------- Nettoyage
     destroy() {
       // Nettoyage automatique via AbortController signal
-      // Nettoyage des handlers jQuery nommés
       if (typeof $ !== 'undefined') {
-        $('#id_categorie').off('.app');
+        $('#id_categorie, #id_marque, #id_carburant, #id_duree').off('select2:select select2:clear select2:unselect');
       }
     }
   }
