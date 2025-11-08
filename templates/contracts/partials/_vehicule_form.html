@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 {% load widget_tweaks %}
+{% load static %}
+{% load humanize %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -9,36 +11,87 @@
 
     <!-- HTMX + JS MAGIQUE -->
     <script>
-        // 1. Cache/monte le wrapper après chaque swap
+        // 1. Affiche/cache le wrapper après chaque swap HTMX
         document.body.addEventListener('htmx:afterSwap', evt => {
             if (evt.detail.target.id !== 'sous-categorie-wrapper') return;
             const wrapper = evt.detail.target;
-            wrapper.classList.toggle('hidden', wrapper.innerHTML.trim() === '');
+            const hasContent = wrapper.innerHTML.trim() !== '';
+            wrapper.classList.toggle('hidden', !hasContent);
+
+            console.log('🔄 HTMX swap:', hasContent ? 'Contenu reçu' : 'Vide');
         });
 
-        // 2. Réinitialise la sous-catégorie avant chaque changement
+        // 2. Vide complètement le wrapper avant chaque requête
         document.body.addEventListener('htmx:beforeRequest', evt => {
             if (evt.detail.elt.id === 'id_categorie') {
-                const sousCat = document.getElementById('id_sous_categorie');
-                if (sousCat) sousCat.value = '';
+                const wrapper = document.getElementById('sous-categorie-wrapper');
+                if (wrapper) {
+                    wrapper.innerHTML = '';
+                    wrapper.classList.add('hidden');
+                    console.log('🧹 Wrapper vidé avant requête');
+                }
             }
         });
 
-        // 3. Charge automatiquement en édition
+        // 3. Charge automatiquement les sous-catégories en mode édition
         document.addEventListener('DOMContentLoaded', () => {
             const cat = document.getElementById('id_categorie');
-            if (cat && ['520', '550'].includes(cat.value)) {
+            if (cat && cat.value && ['520', '550'].includes(cat.value)) {
+                console.log('📋 Chargement initial pour catégorie:', cat.value);
                 htmx.trigger(cat, 'change');
             }
+        });
+
+        // 4. Nettoie le wrapper quand on sélectionne une catégorie sans sous-catégories
+        document.body.addEventListener('htmx:afterRequest', evt => {
+            if (evt.detail.elt.id === 'id_categorie') {
+                const wrapper = document.getElementById('sous-categorie-wrapper');
+                const response = evt.detail.xhr.responseText.trim();
+
+                if (!response || response === '') {
+                    wrapper.innerHTML = '';
+                    wrapper.classList.add('hidden');
+                    console.log('🔒 Wrapper caché (pas de sous-catégories)');
+                }
+            }
+        });
+
+        // 5. Debug - Logs détaillés
+        document.body.addEventListener('htmx:beforeRequest', evt => {
+            if (evt.detail.elt.id === 'id_categorie') {
+                const categorieId = evt.detail.elt.value;
+                console.log('📤 Requête pour catégorie:', categorieId);
+            }
+        });
+
+        document.body.addEventListener('htmx:afterRequest', evt => {
+            if (evt.detail.elt.id === 'id_categorie') {
+                const status = evt.detail.xhr.status;
+                const preview = evt.detail.xhr.responseText.substring(0, 100);
+                console.log(`📥 Réponse ${status}:`, preview);
+            }
+        });
+
+        document.body.addEventListener('htmx:responseError', evt => {
+            console.error('❌ Erreur HTMX:', evt.detail.xhr.status, evt.detail.xhr.statusText);
         });
     </script>
 
     <!-- STYLE -->
     <style>
-        #sous-categorie-wrapper.hidden { display: none !important; }
-        .htmx-indicator { opacity: 0; transition: opacity 0.2s; }
-        .htmx-request .htmx-indicator { opacity: 1; }
-        .htmx-request { opacity: 0.8; }
+        #sous-categorie-wrapper.hidden {
+            display: none !important;
+        }
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .htmx-request .htmx-indicator {
+            opacity: 1;
+        }
+        .htmx-request {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body class="bg-gray-950 text-white">
@@ -55,7 +108,7 @@
             <label class="block text-gray-300 text-sm font-medium mb-2">
                 <i class="fas fa-id-card mr-1 text-green-500"></i> Immatriculation <span class="text-red-400">*</span>
             </label>
-            {% render_field vehicule_form.immatriculation %}
+            {{ vehicule_form.immatriculation }}
             <div id="immat-error"></div>
             <div id="immat-loading" class="htmx-indicator hidden text-xs text-green-400 mt-1">
                 <i class="fas fa-spinner fa-spin mr-1"></i> Vérification...
@@ -70,7 +123,7 @@
             <label class="block text-gray-300 text-sm font-medium mb-2">
                 <i class="fas fa-tag mr-1 text-green-500"></i> Marque <span class="text-red-400">*</span>
             </label>
-            {% render_field vehicule_form.marque %}
+            {{ vehicule_form.marque }}
             {% if vehicule_form.marque.errors %}
                 <p class="text-red-500 text-xs mt-1">{{ vehicule_form.marque.errors.0 }}</p>
             {% endif %}
@@ -81,18 +134,18 @@
             <label class="block text-gray-300 text-sm font-medium mb-2">
                 <i class="fas fa-car-side mr-1 text-green-500"></i> Modèle <span class="text-red-400">*</span>
             </label>
-            {% render_field vehicule_form.modele %}
+            {{ vehicule_form.modele }}
             {% if vehicule_form.modele.errors %}
- finals               <p class="text-red-500 text-xs mt-1">{{ vehicule_form.modele.errors.0 }}</p>
+                <p class="text-red-500 text-xs mt-1">{{ vehicule_form.modele.errors.0 }}</p>
             {% endif %}
         </div>
 
-        <!-- Catégorie -->
+        <!-- Catégorie - UTILISE LES ATTRIBUTS HTMX DU FORMS.PY -->
         <div class="field-group">
             <label class="block text-gray-300 text-sm font-medium mb-2">
                 <i class="fas fa-layer-group mr-1 text-green-500"></i> Catégorie <span class="text-red-400">*</span>
             </label>
-            {% render_field vehicule_form.categorie %}
+            {{ vehicule_form.categorie }}
             <div id="sc-loading" class="htmx-indicator hidden text-xs text-gray-400 mt-1">
                 <i class="fas fa-spinner fa-spin mr-1"></i> Chargement...
             </div>
@@ -101,9 +154,9 @@
             {% endif %}
         </div>
 
-        <!-- SOUS-CATÉGORIE : CACHÉE PAR DÉFAUT -->
+        <!-- SOUS-CATÉGORIE : CACHÉE PAR DÉFAUT, REMPLACÉE PAR HTMX -->
         <div id="sous-categorie-wrapper" class="hidden field-group md:col-span-2 lg:col-span-1">
-            <!-- Remplacé par HTMX -->
+            <!-- Le contenu sera inséré ici par HTMX -->
         </div>
 
         <!-- Puissance -->
@@ -111,7 +164,7 @@
             <label class="block text-gray-300 text-sm font-medium mb-2">
                 <i class="fas fa-tachometer-alt mr-1 text-green-500"></i> Puissance (CV) <span class="text-red-400">*</span>
             </label>
-            {% render_field vehicule_form.puissance_fiscale %}
+            {{ vehicule_form.puissance_fiscale }}
         </div>
 
         <!-- Nombre de places -->
@@ -119,7 +172,7 @@
             <label class="block text-gray-300 text-sm font-medium mb-2">
                 <i class="fas fa-users mr-1 text-green-500"></i> Nombre de places <span class="text-red-400">*</span>
             </label>
-            {% render_field vehicule_form.nombre_places %}
+            {{ vehicule_form.nombre_places }}
         </div>
 
         <!-- Carburant -->
@@ -127,11 +180,11 @@
             <label class="block text-gray-300 text-sm font-medium mb-2">
                 <i class="fas fa-gas-pump mr-1 text-green-500"></i> Carburant <span class="text-red-400">*</span>
             </label>
-            {% render_field vehicule_form.carburant %}
+            {{ vehicule_form.carburant }}
         </div>
 
         <!-- Champs cachés -->
-        {% render_field vehicule_form.charge_utile type="hidden" %}
+        {{ vehicule_form.charge_utile }}
         <div class="hidden">
             {{ vehicule_form.valeur_neuve }}
             {{ vehicule_form.valeur_venale }}

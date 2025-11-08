@@ -422,32 +422,38 @@ def check_client(request):
 @login_required
 @require_http_methods(["GET"])
 def load_sous_categories(request):
-    categorie = request.GET.get('categorie')
+    categorie = request.GET.get('categorie', '').strip()
 
+    # Si pas TPC ou MOTO, retourne vide pour cacher le wrapper
     if categorie not in ['520', '550']:
         return HttpResponse("")
 
+    # Créer un formulaire propre à chaque fois
     form = VehiculeForm()
-    required = False
+    required = True
     label = 'Genre / Sous-catégorie'
     choices = []
 
     if categorie == '520':
         choices = SOUS_CATEGORIES_520
-        required = True
         label = 'Sous-catégorie (TPC)'
     elif categorie == '550':
         choices = SOUS_CATEGORIES_550
-        required = True
         label = 'Genre (2 Roues)'
 
+    # Configuration du champ
     form.fields['sous_categorie'].choices = [('', '-- Sélectionner --')] + choices
     form.fields['sous_categorie'].required = required
     form.fields['sous_categorie'].widget.attrs.update({
         'class': BASE_SELECT_CLASS,
         'id': 'id_sous_categorie',
         'name': 'sous_categorie',
+        'required': 'required'
     })
+
+    # IMPORTANT : Enlever les attributs qui cachent le champ
+    form.fields['sous_categorie'].widget.attrs.pop('disabled', None)
+    form.fields['sous_categorie'].widget.attrs.pop('style', None)
 
     return render(request, "contracts/partials/_sous_categories_select.html", {
         'field': form['sous_categorie'],

@@ -138,16 +138,16 @@ class VehiculeForm(forms.ModelForm):
         widget=forms.Select(attrs={
             'class': BASE_SELECT_CLASS,
             'id': 'id_categorie',
+            'name': 'categorie',  # Important pour HTMX
             'required': True,
             'hx-get': '/contracts/load-sous-categories/',
             'hx-target': '#sous-categorie-wrapper',
-            'hx-trigger': 'change, load',  # load = déclenche en édition
-            'hx-swap': 'outerHTML',
+            'hx-trigger': 'change',
+            'hx-swap': 'innerHTML',
             'hx-indicator': '#sc-loading',
         })
     )
 
-    # Sous-catégorie : caché + désactivé par défaut
     sous_categorie = forms.ChoiceField(
         label="Genre / Sous-catégorie",
         required=False,
@@ -155,8 +155,7 @@ class VehiculeForm(forms.ModelForm):
         widget=forms.Select(attrs={
             'class': BASE_SELECT_CLASS,
             'id': 'id_sous_categorie',
-            'disabled': True,
-            'style': 'display: none;'  # caché au départ
+            'name': 'sous_categorie',
         })
     )
 
