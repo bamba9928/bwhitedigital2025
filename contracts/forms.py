@@ -11,6 +11,7 @@ from .referentiels import (
     MARQUES
 )
 
+# === CLASSES CSS COMMUNES ===
 BASE_INPUT_CLASS = (
     'w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-900 text-gray-100 '
     'focus:border-green-500 focus:outline-none transition-all duration-300'
@@ -22,103 +23,79 @@ LARGE_INPUT_CLASS = (
 )
 
 
+# === CLIENT FORM ===
 class ClientForm(forms.ModelForm):
     class Meta:
         model = Client
         fields = ['prenom', 'nom', 'telephone', 'adresse']
         labels = {
-            'prenom': 'Prénom',
-            'nom': 'Nom',
-            'telephone': 'Téléphone',
-            'adresse': 'Adresse'
+            'prenom': 'Prénom', 'nom': 'Nom',
+            'telephone': 'Téléphone', 'adresse': 'Adresse'
         }
         widgets = {
             'prenom': forms.TextInput(attrs={
-                'class': BASE_INPUT_CLASS,
-                'placeholder': 'Prénom du client',
-                'autocomplete': 'given-name',
-                'required': True
+                'class': BASE_INPUT_CLASS, 'placeholder': 'Prénom du client',
+                'autocomplete': 'given-name', 'required': True
             }),
             'nom': forms.TextInput(attrs={
-                'class': BASE_INPUT_CLASS,
-                'placeholder': 'Nom du client',
-                'autocomplete': 'family-name',
-                'required': True
+                'class': BASE_INPUT_CLASS, 'placeholder': 'Nom du client',
+                'autocomplete': 'family-name', 'required': True
             }),
             'telephone': forms.TextInput(attrs={
-                'class': BASE_INPUT_CLASS,
-                'placeholder': '77XXXXXXX',
-                'autocomplete': 'tel',
-                'pattern': '[0-9]{9}',
-                'inputmode': 'numeric',
-                'maxlength': '9',
-                'required': True
+                'class': BASE_INPUT_CLASS, 'placeholder': '77XXXXXXX',
+                'autocomplete': 'tel', 'pattern': '[0-9]{9}', 'inputmode': 'numeric',
+                'maxlength': '9', 'required': True
             }),
             'adresse': forms.Textarea(attrs={
-                'class': BASE_INPUT_CLASS,
-                'placeholder': 'Adresse complète',
-                'rows': 2,
-                'autocomplete': 'street-address',
-                'required': True
+                'class': BASE_INPUT_CLASS, 'placeholder': 'Adresse complète',
+                'rows': 2, 'autocomplete': 'street-address', 'required': True
             }),
         }
 
+    # Validations propres
     def clean_telephone(self):
-        """Valide et normalise le numéro de téléphone"""
         tel_raw = self.cleaned_data.get('telephone', '').strip()
         if not tel_raw:
             raise ValidationError("Le numéro de téléphone est obligatoire")
-
-        # Extraction des chiffres uniquement
         tel = ''.join(filter(str.isdigit, tel_raw))
-
         if len(tel) != 9:
             raise ValidationError("Le numéro doit contenir exactement 9 chiffres")
-
         PREFIXES_VALIDES = ('70', '75', '76', '77', '78', '30', '33', '34')
         if not tel.startswith(PREFIXES_VALIDES):
-            raise ValidationError(
-                f"Préfixe invalide. Préfixes acceptés : {', '.join(PREFIXES_VALIDES)}"
-            )
-
+            raise ValidationError(f"Préfixes valides : {', '.join(PREFIXES_VALIDES)}")
         return tel
 
     def clean_prenom(self):
-        """Normalise le prénom en majuscules"""
-        prenom = self.cleaned_data.get('prenom', '').strip()
-        if not prenom:
-            raise ValidationError("Le prénom est obligatoire")
-        if len(prenom) < 2:
-            raise ValidationError("Le prénom doit contenir au moins 2 caractères")
-        return prenom.upper()
+        p = self.cleaned_data.get('prenom', '').strip().upper()
+        if len(p) < 2:
+            raise ValidationError("Prénom trop court")
+        return p
 
     def clean_nom(self):
-        """Normalise le nom en majuscules"""
-        nom = self.cleaned_data.get('nom', '').strip()
-        if not nom:
-            raise ValidationError("Le nom est obligatoire")
-        if len(nom) < 2:
-            raise ValidationError("Le nom doit contenir au moins 2 caractères")
-        return nom.upper()
+        n = self.cleaned_data.get('nom', '').strip().upper()
+        if len(n) < 2:
+            raise ValidationError("Nom trop court")
+        return n
 
     def clean_adresse(self):
-        """Valide l'adresse"""
-        adresse = self.cleaned_data.get('adresse', '').strip()
-        if not adresse:
-            raise ValidationError("L'adresse est obligatoire")
-        if len(adresse) < 10:
-            raise ValidationError("L'adresse doit contenir au moins 10 caractères")
-        return adresse
+        a = self.cleaned_data.get('adresse', '').strip()
+        if len(a) < 10:
+            raise ValidationError("Adresse trop courte (10 caractères minimum)")
+        return a
 
 
+# === VÉHICULE FORM ===
 class VehiculeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Normalisation de l'immatriculation dans les données POST
+        # Valeurs par défaut
+        self.fields['charge_utile'].initial = 0
+
+        # Normalisation immatriculation
         if self.data:
             data = self.data.copy()
-            if 'immatriculation' in data and data['immatriculation']:
+            if 'immatriculation' in data:
                 data['immatriculation'] = (
                     data['immatriculation']
                     .upper()
@@ -128,6 +105,7 @@ class VehiculeForm(forms.ModelForm):
                 )
             self.data = data
 
+    # === CHAMPS DÉCLARÉS MANUELLEMENT ===
     immatriculation = forms.CharField(
         label="Immatriculation",
         validators=Vehicule.immat_validators,
@@ -136,7 +114,7 @@ class VehiculeForm(forms.ModelForm):
             'placeholder': 'AA-123-AA',
             'style': 'text-transform: uppercase;',
             'hx-get': '/contracts/check-immatriculation/',
-            'hx-trigger': 'blur changed',
+            'hx-trigger': 'blur, change',
             'hx-target': '#immat-error',
             'hx-indicator': '#immat-loading',
             'required': True,
@@ -154,31 +132,31 @@ class VehiculeForm(forms.ModelForm):
         })
     )
 
-    marque_label = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput(attrs={'id': 'marque_label'})
-    )
-
     categorie = forms.ChoiceField(
         label="Catégorie",
         choices=[('', '-- Sélectionner --')] + list(CATEGORIES),
         widget=forms.Select(attrs={
             'class': BASE_SELECT_CLASS,
             'id': 'id_categorie',
-            'required': True
+            'required': True,
+            'hx-get': '/contracts/load-sous-categories/',
+            'hx-target': '#sous-categorie-wrapper',
+            'hx-trigger': 'change, load',  # load = déclenche en édition
+            'hx-swap': 'outerHTML',
+            'hx-indicator': '#sc-loading',
         })
     )
 
-    # Fusion des choix pour permettre la validation des deux types
-    ALL_SOUS_CATEGORIES = list(dict.fromkeys(SOUS_CATEGORIES_520 + SOUS_CATEGORIES_550))
-
+    # Sous-catégorie : caché + désactivé par défaut
     sous_categorie = forms.ChoiceField(
         label="Genre / Sous-catégorie",
         required=False,
-        choices=[('', '-- Sélectionner --')] + ALL_SOUS_CATEGORIES,
+        choices=[('', '-- Sélectionner --')],
         widget=forms.Select(attrs={
             'class': BASE_SELECT_CLASS,
-            'id': 'id_sous_categorie'
+            'id': 'id_sous_categorie',
+            'disabled': True,
+            'style': 'display: none;'  # caché au départ
         })
     )
 
@@ -196,7 +174,6 @@ class VehiculeForm(forms.ModelForm):
         required=False,
         widget=forms.HiddenInput(attrs={'id': 'id_valeur_neuve'})
     )
-
     valeur_venale = forms.DecimalField(
         required=False,
         widget=forms.HiddenInput(attrs={'id': 'id_valeur_venale'})
@@ -214,7 +191,6 @@ class VehiculeForm(forms.ModelForm):
             'charge_utile': 'Charge utile (kg)',
             'puissance_fiscale': 'Puissance fiscale (CV)',
             'nombre_places': 'Nombre de places',
-            'sous_categorie': 'Genre / Sous-catégorie',
         }
         widgets = {
             'modele': forms.TextInput(attrs={
@@ -222,102 +198,80 @@ class VehiculeForm(forms.ModelForm):
                 'placeholder': 'Modèle du véhicule',
                 'required': True
             }),
-            'charge_utile': forms.HiddenInput(attrs={'id': 'id_charge_utile'}),
+            'charge_utile': forms.HiddenInput(),
             'puissance_fiscale': forms.NumberInput(attrs={
-                'class': BASE_INPUT_CLASS,
-                'placeholder': 'Puissance (CV)',
-                'min': '1',
-                'max': '50',
-                'required': True
+                'class': BASE_INPUT_CLASS, 'min': 1, 'max': 50,
+                'placeholder': 'Puissance (CV)', 'required': True
             }),
             'nombre_places': forms.NumberInput(attrs={
-                'class': BASE_INPUT_CLASS,
-                'placeholder': 'Nombre de places',
-                'min': '1',
-                'max': '100',
-                'required': True
+                'class': BASE_INPUT_CLASS, 'min': 1, 'max': 100,
+                'placeholder': 'Nombre de places', 'required': True
             }),
         }
 
+    # === VALIDATIONS ===
     def clean_modele(self):
-        """Normalise le modèle en majuscules"""
-        modele = self.cleaned_data.get('modele', '').strip()
-        if not modele:
-            raise ValidationError("Le modèle est obligatoire")
-        if len(modele) < 2:
-            raise ValidationError("Le modèle doit contenir au moins 2 caractères")
-        return modele.upper()
+        m = self.cleaned_data.get('modele', '').strip().upper()
+        if len(m) < 2:
+            raise ValidationError("Modèle trop court")
+        return m
 
     def clean_puissance_fiscale(self):
-        """Valide la puissance fiscale"""
         pf = self.cleaned_data.get('puissance_fiscale')
-        if pf is None:
-            raise ValidationError("La puissance fiscale est obligatoire")
-        if not (1 <= pf <= 50):
-            raise ValidationError("La puissance fiscale doit être entre 1 et 50 CV")
+        if not pf or not (1 <= pf <= 50):
+            raise ValidationError("Puissance entre 1 et 50 CV")
         return pf
 
     def clean_nombre_places(self):
-        """Valide le nombre de places"""
         n = self.cleaned_data.get('nombre_places')
-        if n is None:
-            raise ValidationError("Le nombre de places est obligatoire")
-        if not (1 <= n <= 100):
-            raise ValidationError("Le nombre de places doit être entre 1 et 100")
+        if not n or not (1 <= n <= 100):
+            raise ValidationError("Nombre de places entre 1 et 100")
         return n
 
     def clean_categorie(self):
-        """Valide la catégorie"""
-        categorie = self.cleaned_data.get('categorie')
-        if not categorie:
-            raise ValidationError("La catégorie est obligatoire")
-        return categorie
+        cat = self.cleaned_data.get('categorie')
+        if not cat:
+            raise ValidationError("Catégorie obligatoire")
+        return cat
 
-    def clean_marque(self):
-        """Valide la marque"""
-        marque = self.cleaned_data.get('marque')
-        if not marque:
-            raise ValidationError("La marque est obligatoire")
-        return marque
+    def clean_sous_categorie(self):
+        sc = self.cleaned_data.get('sous_categorie') or ''
+        cat = self.cleaned_data.get('categorie')
 
-    def clean_carburant(self):
-        """Valide le carburant"""
-        carburant = self.cleaned_data.get('carburant')
-        if not carburant:
-            raise ValidationError("Le carburant est obligatoire")
-        return carburant
+        if cat in ('520', '550') and not sc:
+            raise ValidationError("Sous-catégorie obligatoire pour TPC et Moto")
+
+        valid_520 = dict(SOUS_CATEGORIES_520)
+        valid_550 = dict(SOUS_CATEGORIES_550)
+
+        if cat == '520' and sc not in valid_520:
+            raise ValidationError("Sous-catégorie invalide pour TPC")
+        if cat == '550' and sc not in valid_550:
+            raise ValidationError("Sous-catégorie invalide pour Moto")
+
+        return sc
 
     def clean(self):
-        """Validation globale du formulaire"""
         cleaned_data = super().clean()
-        categorie = cleaned_data.get('categorie')
-        sous_categorie = cleaned_data.get('sous_categorie')
-        charge_utile = cleaned_data.get('charge_utile')
+        cat = cleaned_data.get('categorie')
+        sc = cleaned_data.get('sous_categorie')
+        cu = cleaned_data.get('charge_utile', 0)
 
-        # Validation conditionnelle de la sous-catégorie
-        if categorie in ['520', '550']:  # TPC ou Moto
-            if not sous_categorie:
-                self.add_error(
-                    'sous_categorie',
-                    "La sous-catégorie est obligatoire pour cette catégorie"
-                )
-
-        # Validation de la charge utile pour les TPC
-        if categorie == '520':  # TPC
-            if not charge_utile or charge_utile <= 0:
-                cleaned_data['charge_utile'] = 3500
-            elif charge_utile > 10000:
-                self.add_error(
-                    'charge_utile',
-                    "La charge utile ne peut pas dépasser 10000 kg"
-                )
+        if cat == '520':  # TPC
+            if not sc:
+                self.add_error('sous_categorie', "Obligatoire pour TPC")
+            cleaned_data['charge_utile'] = max(3500, min(cu, 10000))
+        elif cat == '550':  # Moto
+            if not sc:
+                self.add_error('sous_categorie', "Obligatoire pour Moto")
+            cleaned_data['charge_utile'] = 0
         else:
-            # Pour les autres catégories, charge utile = 0
             cleaned_data['charge_utile'] = 0
 
         return cleaned_data
 
 
+# === SIMULATION FORM ===
 class ContratSimulationForm(forms.Form):
     duree = forms.ChoiceField(
         choices=DUREE_CHOICES,
@@ -338,43 +292,15 @@ class ContratSimulationForm(forms.Form):
             'id': 'id_date_effet',
             'placeholder': 'JJ/MM/AAAA',
             'readonly': 'readonly',
-            'autocomplete': 'off',
             'required': True
         })
     )
 
-    def clean_duree(self):
-        """Valide la durée du contrat"""
-        duree = self.cleaned_data.get('duree')
-        if not duree:
-            raise ValidationError("La durée du contrat est obligatoire")
-
-        # Vérification que la valeur existe dans les choix
-        durees_valides = [str(choice[0]) for choice in DUREE_CHOICES]
-        if duree not in durees_valides:
-            raise ValidationError("Durée de contrat invalide")
-
-        return duree
-
     def clean_date_effet(self):
-        """Valide la date d'effet du contrat"""
-        d = self.cleaned_data.get('date_effet')
-
-        if not d:
-            raise ValidationError("La date d'effet est obligatoire")
-
+        d = self.cleaned_data['date_effet']
         today = date.today()
-
-        # Vérification date passée
         if d < today:
-            raise ValidationError("La date d'effet ne peut pas être dans le passé")
-
-        # Vérification limite 60 jours
-        max_date = today + timedelta(days=60)
-        if d > max_date:
-            raise ValidationError(
-                f"La date d'effet ne peut pas dépasser 60 jours "
-                f"(maximum : {max_date.strftime('%d/%m/%Y')})"
-            )
-
+            raise ValidationError("Date dans le passé interdite")
+        if d > today + timedelta(days=60):
+            raise ValidationError("Maximum 60 jours à l’avance")
         return d

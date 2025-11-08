@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from dateutil.relativedelta import relativedelta
 from .api_client import askia_client
-from .forms import ClientForm, VehiculeForm, ContratSimulationForm
+from .forms import ClientForm, VehiculeForm, ContratSimulationForm, BASE_SELECT_CLASS
 from .models import Client, Vehicule, Contrat
 from .referentiels import SOUS_CATEGORIES_520, SOUS_CATEGORIES_550
 
@@ -419,33 +419,41 @@ def check_client(request):
         return render(request, "contracts/partials/client_exists.html", {"client": client})
     except Client.DoesNotExist:
         return JsonResponse({"exists": False})
-
 @login_required
 @require_http_methods(["GET"])
 def load_sous_categories(request):
     categorie = request.GET.get('categorie')
-    form = VehiculeForm()
 
-    context = {
-        'field': form['sous_categorie'],
-        'required': False,
-        'label': 'Genre / Sous-catégorie'
-    }
-
-    if categorie == '520':  # TPC
-        form.fields['sous_categorie'].choices = SOUS_CATEGORIES_520  # <--- Charge la liste TPC
-        context['required'] = True
-        context['label'] = 'Sous-catégorie (TPC)'
-
-    elif categorie == '550':  # 2 ROUES
-        form.fields['sous_categorie'].choices = SOUS_CATEGORIES_550  # <--- Charge la liste 2 roues
-        context['required'] = True
-        context['label'] = 'Genre (2 Roues)'
-
-    else:
+    if categorie not in ['520', '550']:
         return HttpResponse("")
 
-    return render(request, "contracts/partials/_sous_categories_select.html", context)
+    form = VehiculeForm()
+    required = False
+    label = 'Genre / Sous-catégorie'
+    choices = []
+
+    if categorie == '520':
+        choices = SOUS_CATEGORIES_520
+        required = True
+        label = 'Sous-catégorie (TPC)'
+    elif categorie == '550':
+        choices = SOUS_CATEGORIES_550
+        required = True
+        label = 'Genre (2 Roues)'
+
+    form.fields['sous_categorie'].choices = [('', '-- Sélectionner --')] + choices
+    form.fields['sous_categorie'].required = required
+    form.fields['sous_categorie'].widget.attrs.update({
+        'class': BASE_SELECT_CLASS,
+        'id': 'id_sous_categorie',
+        'name': 'sous_categorie',
+    })
+
+    return render(request, "contracts/partials/_sous_categories_select.html", {
+        'field': form['sous_categorie'],
+        'required': required,
+        'label': label,
+    })
 @login_required
 def telecharger_documents(request, pk):
     """Génère un PDF de synthèse locale."""

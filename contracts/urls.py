@@ -22,6 +22,6 @@ urlpatterns = [
     # HTMX endpoints
     path('check-immatriculation/', views.check_immatriculation, name='check_immatriculation'),
     path('check-client/', views.check_client, name='check_client'),
-    path("load-sous-categories/", views.load_sous_categories, name="load_sous_categorie"),
+    path("load-sous-categories/", views.load_sous_categories, name="load_sous_categories"),
 
 ]

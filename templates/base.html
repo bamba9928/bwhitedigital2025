@@ -13,25 +13,29 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      theme: { extend: { colors: { 'primary-green': '#00FF00' } } }
+      theme: {
+        extend: {
+          colors: { 'primary-green': '#00FF00' },
+          fontFamily: {
+            inter: ['Inter','ui-sans-serif','system-ui','Segoe UI','Roboto','Helvetica Neue','Arial']
+          }
+        }
+      }
     }
   </script>
 
   <style>
     [x-cloak]{display:none !important;}
-
     .mobile-menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;}
     .mobile-sidebar{position:fixed;top:0;bottom:0;left:0;width:16rem;z-index:40;overflow-y:auto;transform:translateX(-100%);}
     .mobile-sidebar.open{transform:translateX(0);}
     .sidebar-transition{transition:transform .3s ease-in-out;}
-
     .btn-primary-modern{position:relative;overflow:hidden;transition:all .3s cubic-bezier(.4,0,.2,1);}
     .btn-primary-modern::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
       background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transition:left .5s;}
     .btn-primary-modern:hover::before{left:100%;}
     .btn-primary-modern:hover{transform:translateY(-2px);}
     .btn-primary-modern:active{transform:translateY(0);}
-
     .ripple{position:relative;overflow:hidden;}
     .ripple::after{content:'';position:absolute;top:50%;left:50%;width:0;height:0;border-radius:50%;
       background:rgba(255,255,255,.3);transform:translate(-50%,-50%);transition:width .6s,height .6s;}
@@ -104,12 +108,10 @@
         </a>
 
         <script>
-          document.addEventListener('DOMContentLoaded', function(){
+          document.addEventListener('DOMContentLoaded',function(){
             const logo=document.getElementById('nav-main-logo');
             const fb=document.getElementById('nav-fallback-icon');
-            if(logo && fb){
-              logo.onerror=function(){ this.classList.add('hidden'); fb.classList.remove('hidden'); fb.classList.add('flex'); };
-            }
+            if(logo&&fb){ logo.onerror=function(){ this.classList.add('hidden'); fb.classList.remove('hidden'); fb.classList.add('flex'); }; }
           });
         </script>
 
@@ -183,9 +185,9 @@
       <div class="space-y-2">
         {% for message in messages %}
           <div class="text-sm px-3 py-2 rounded border flex items-center justify-between
-            {% if message.tags == 'success' %} text-green-300 border-green-700 bg-green-900/20
-            {% elif message.tags == 'warning' %} text-yellow-300 border-yellow-700 bg-yellow-900/20
-            {% elif message.tags == 'danger' or message.tags == 'error' %} text-red-300 border-red-700 bg-red-900/20
+            {% if 'success' in message.tags %} text-green-300 border-green-700 bg-green-900/20
+            {% elif 'warning' in message.tags %} text-yellow-300 border-yellow-700 bg-yellow-900/20
+            {% elif 'danger' in message.tags or 'error' in message.tags %} text-red-300 border-red-700 bg-red-900/20
             {% else %} text-gray-300 border-gray-600 bg-gray-700/30 {% endif %}">
             <span>{{ message }}</span>
             <button onclick="this.parentElement.style.display='none';" class="ml-4 opacity-75 hover:opacity-100 text-lg" aria-label="Fermer la notification">&times;</button>
@@ -338,42 +340,13 @@
 
   <!-- Helpers côté client -->
   <script>
-    // Valeur booléenne fiable côté client
     const IS_AUTH = {% if user.is_authenticated %}true{% else %}false{% endif %};
-  </script>
-
-  <!-- Auto-déconnexion -->
-  <script>
-    (function(){
-      function getCookie(name){
-        const m=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
-        return m ? m.pop() : '';
-      }
-      if (!IS_AUTH) return;
-      const logoutAfter = 10 * 60 * 1000; // 10 minutes
-      let timer;
-      function reset(){
-        clearTimeout(timer);
-        timer=setTimeout(()=>{
-          const form=document.createElement('form');
-          form.method='POST';
-          form.action="{% url 'accounts:logout' %}";
-          const csrf=document.createElement('input');
-          csrf.type='hidden'; csrf.name='csrfmiddlewaretoken'; csrf.value=getCookie('csrftoken')||'';
-          form.appendChild(csrf); document.body.appendChild(form); form.submit();
-        }, logoutAfter);
-      }
-      window.addEventListener('load',reset);
-      ['mousemove','keypress','click','scroll','touchstart'].forEach(e=>document.addEventListener(e,reset));
-    })();
   </script>
 
   <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator){
-      // Idéal si /sw.js est servi à la racine pour couvrir tout le scope
       navigator.serviceWorker.register('/sw.js').catch(()=>{
-        // Fallback si tu stockes dans /static/
         navigator.serviceWorker.register("{% static 'sw.js' %}");
       });
     }

@@ -7,7 +7,7 @@ DUREE_CHOICES = [
     (12, "12 mois"),
 ]
 
-REGION_PREFIXES = ("AB","AC","DK","TH","SL","DB","LG","TC","KL","KD","ZG","FK","KF","KG","MT","SD")
+REGION_PREFIXES = ("AB","AB","AC","DK","TH","SL","DB","LG","TC","KL","KD","ZG","FK","KF","KG","MT","SD")
 CATEGORIES = [
     ('', 'Sélectionner une catégorie'),
     ("510", "VP"),
