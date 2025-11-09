@@ -6,8 +6,10 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q, Count
+import re
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -17,6 +19,7 @@ from .api_client import askia_client
 from .forms import ClientForm, VehiculeForm, ContratSimulationForm, BASE_SELECT_CLASS
 from .models import Client, Vehicule, Contrat
 from .referentiels import SOUS_CATEGORIES_520, SOUS_CATEGORIES_550
+from .validators import validate_immatriculation, normalize_immat_for_storage
 
 logger = logging.getLogger(__name__)
 # =========================
@@ -43,6 +46,26 @@ def _render_error(request, message: str, redirect_name: str = "contracts:nouveau
         return render(request, "contracts/partials/error.html", {"error": message})
     messages.error(request, message)
     return redirect(redirect_name)
+# --- Téléphone SN ---
+PHONE_RE = re.compile(r'^(70|71|75|76|77|78|30|33|34)\d{7}$')
+
+def _phone_normalize(s: str) -> str:
+    """Garde uniquement les chiffres, retire indicatif SN, retourne 9 chiffres."""
+    if not isinstance(s, str):
+        return ""
+    digits = re.sub(r"\D", "", s)           # supprime espaces, +, -, etc.
+    digits = re.sub(r"^(00221|221)", "", digits)  # retire 00221 ou 221
+    return digits
+
+def _phone_validate_or_err(raw: str) -> str:
+    """Retourne le numéro normalisé si valide, sinon lève ValueError."""
+    num = _phone_normalize(raw)
+    if not PHONE_RE.fullmatch(num):
+        raise ValueError(
+            "Téléphone invalide. Format attendu Sénégal sans indicatif, ex: 77XXXXXXX."
+        )
+    return num
+
 # =========================
 # Vues Contrats
 # =========================
@@ -58,37 +81,76 @@ def nouveau_contrat(request):
         "sous_categories_550": SOUS_CATEGORIES_550,  # AJOUTÉ
     }
     return render(request, "contracts/nouveau_contrat.html", context)
+LABELS = {
+    "categorie": "Catégorie",
+    "carburant": "Carburant",
+    "puissance_fiscale": "Puissance fiscale",
+    "nombre_places": "Nombre de places",
+    "marque": "Marque",
+    "modele": "Modèle",
+    "prenom": "Prénom",
+    "nom": "Nom",
+    "telephone": "Téléphone",
+    "adresse": "Adresse",
+    "date_effet": "Date d'effet",
+}
+def _g(req, key, default=""):
+    v = req.POST.get(key, default)
+    return v.strip() if isinstance(v, str) else v
+
+def _parse_date(value: str) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)  # AAAA-MM-JJ
+    except ValueError:
+        for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+    return None
 @login_required
 @require_http_methods(["POST"])
 def simuler_tarif(request):
     """Vue HTMX pour simuler un tarif automobile."""
     try:
-        # Champs requis côté formulaire
-        required_fields = ["categorie", "carburant", "puissance_fiscale",
-                           "nombre_places", "marque", "modele"]
-        missing = [f for f in required_fields if not request.POST.get(f)]
-        if missing:
-            return _render_error(request, f"Champs manquants : {', '.join(missing)}")
+        # 0) Champs requis client + véhicule
+        required_fields = [
+            "categorie", "carburant", "puissance_fiscale",
+            "nombre_places", "marque", "modele",
+            "prenom", "nom", "telephone", "adresse",
+        ]
+        missing_keys = [k for k in required_fields if not _g(request, k)]
+        if missing_keys:
+            return _render_error(
+                request,
+                "Champs manquants : " + ", ".join(LABELS.get(k, k) for k in missing_keys)
+            )
 
-        date_effet_str = request.POST.get("date_effet")
-        if not date_effet_str:
-            return _render_error(request, "La date d'effet est obligatoire pour émettre.")
-
+        # 1) Téléphone: normalisation + validation stricte
         try:
-            date_effet = datetime.strptime(date_effet_str, "%Y-%m-%d").date()
-        except ValueError:
-            return _render_error(request, "Date d'effet invalide")
+            tel_norm = _phone_validate_or_err(_g(request, "telephone"))
+        except ValueError as e:
+            return _render_error(request, str(e))
 
-        today = datetime.now().date()
+        # 2) Date d'effet valide et non passée
+        date_effet_str = _g(request, "date_effet")
+        date_effet = _parse_date(date_effet_str)
+        if not date_effet:
+            return _render_error(request, "Date d'effet invalide. Formats: AAAA-MM-JJ ou JJ/MM/AAAA.")
+        today = timezone.localdate()
         if date_effet < today:
             return _render_error(
                 request,
-                f"La date d'effet ne peut pas être dans le passé "
-                f"(fournie: {date_effet.strftime('%d/%m/%Y')}, "
-                f"aujourd'hui: {today.strftime('%d/%m/%Y')})"
+                (
+                    "La date d'effet ne peut pas être dans le passé "
+                    f"(fournie: {date_effet.strftime('%d/%m/%Y')}, "
+                    f"aujourd'hui: {today.strftime('%d/%m/%Y')})."
+                )
             )
 
-        # Catégorie & champs dépendants
+        # 3) Catégorie & champs dépendants
         categorie = request.POST.get("categorie")
         if categorie == "520":  # TPC
             sous_categorie = request.POST.get("sous_categorie") or "002"
@@ -100,6 +162,7 @@ def simuler_tarif(request):
             sous_categorie = "000"
             charge_utile = None
 
+        # 4) Données véhicule
         vehicule_data = {
             "categorie": categorie,
             "sous_categorie": sous_categorie,
@@ -109,8 +172,8 @@ def simuler_tarif(request):
             "modele": (request.POST.get("modele") or "").upper(),
             "puissance_fiscale": max(1, int(request.POST.get("puissance_fiscale") or 1)),
             "nombre_places": max(1, int(request.POST.get("nombre_places") or 1)),
-            "valeur_neuve": Decimal(request.POST.get("valeur_neuve") or 0),
-            "valeur_venale": Decimal(request.POST.get("valeur_venale") or 0),
+            "valeur_neuve": Decimal(str(request.POST.get("valeur_neuve") or 0)),
+            "valeur_venale": Decimal(str(request.POST.get("valeur_venale") or 0)),
             "recour": int(request.POST.get("recour", 0)),
             "avr": int(request.POST.get("avr", 0)),
             "vol": int(request.POST.get("vol", 0)),
@@ -124,10 +187,11 @@ def simuler_tarif(request):
 
         duree = int(request.POST.get("duree", 12))
 
+        # 5) Données client + affichage véhicule
         client_data = {
             "prenom": (request.POST.get("prenom") or "").upper().strip(),
             "nom": (request.POST.get("nom") or "").upper().strip(),
-            "telephone": (request.POST.get("telephone") or "").strip(),
+            "telephone": tel_norm,
             "adresse": (request.POST.get("adresse") or "").upper().strip(),
         }
         vehicule_display = {
@@ -136,7 +200,7 @@ def simuler_tarif(request):
             "modele": (request.POST.get("modele") or "").upper(),
         }
 
-        # Appel Askia simulation
+        # 6) Appel Askia simulation
         try:
             simulation = askia_client.get_simulation_auto(vehicule_data, duree)
         except Exception as e:
@@ -149,21 +213,22 @@ def simuler_tarif(request):
         fga = Decimal(str(simulation.get("fga", 0)))
         taxes = Decimal(str(simulation.get("taxes", 0)))
 
+        # 7) Commissions via le modèle
         temp_contrat = Contrat(
             prime_nette=prime_nette,
             prime_ttc=prime_ttc,
             apporteur=request.user,
             duree=duree,
-            date_effet=date_effet
+            date_effet=date_effet,
         )
         temp_contrat.calculate_commission()
 
-        # On récupère les valeurs calculées par le modèle
         commission_askia_bwhite = temp_contrat.commission_askia
         commission_apporteur = temp_contrat.commission_apporteur
         commission_bwhite_profit = temp_contrat.commission_bwhite
         net_a_reverser_askia = temp_contrat.net_a_reverser
-        # Stockage session
+
+        # 8) Session
         request.session["simulation_data"] = to_jsonable({
             "vehicule": vehicule_data,
             "duree": duree,
@@ -174,17 +239,17 @@ def simuler_tarif(request):
                 "fga": fga,
                 "taxes": taxes,
                 "prime_ttc": prime_ttc,
-                "commission_askia": commission_askia_bwhite,  # Total BWHITE
-                "commission_apporteur": commission_apporteur,  # Dû à l'apporteur
-                "commission_bwhite": commission_bwhite_profit,  # Profit BWHITE
-                "net_a_reverser": net_a_reverser_askia,  # Dû à Askia
+                "commission_askia": commission_askia_bwhite,
+                "commission_apporteur": commission_apporteur,
+                "commission_bwhite": commission_bwhite_profit,
+                "net_a_reverser": net_a_reverser_askia,
             },
             "id_saisie": simulation.get("id_saisie"),
             "client": client_data,
             "vehicule_display": vehicule_display,
         })
 
-        # Rendu partiel
+        # 9) Rendu partiel
         context = {
             "simulation": {
                 "prime_nette": prime_nette,
@@ -194,11 +259,11 @@ def simuler_tarif(request):
                 "prime_ttc": prime_ttc,
                 "commission": simulation.get("commission", 0),
             },
-            "commission": commission_apporteur,  # Ce que l'apporteur voit
-            "net_a_reverser": net_a_reverser_askia,  # Ce que BWHITE doit à Askia
+            "commission": commission_apporteur,
+            "net_a_reverser": net_a_reverser_askia,
             "duree": duree,
             "date_effet": date_effet,
-            "is_apporteur": request.user.role == "APPORTEUR",
+            "is_apporteur": getattr(request.user, "role", "") == "APPORTEUR",
         }
         return render(request, "contracts/partials/simulation_result.html", context)
 
@@ -214,51 +279,71 @@ def emettre_contrat(request):
         simulation_data = request.session.get("simulation_data")
         if not simulation_data:
             return _render_error(request, "Aucune simulation en cours. Veuillez refaire la simulation.")
-
-        # ---------- CLIENT ----------
+        # 1. Extraire les données brutes de la session
         client_data = simulation_data.get("client")
-        if not all([client_data.get("prenom"), client_data.get("nom"),
-                    client_data.get("telephone"), client_data.get("adresse")]):
-            return _render_error(request, "Veuillez remplir toutes les informations du client.")
+        vehicule_data_api = simulation_data.get("vehicule")  # Données brutes pour l'API
+        vehicule_display = simulation_data.get("vehicule_display", {})
 
+        # 2. Reconstruire les dictionnaires pour les formulaires
+        vehicule_form_data = {
+            "immatriculation": vehicule_display.get("immatriculation"),
+            "marque": vehicule_data_api.get("marque"),
+            "modele": vehicule_data_api.get("modele"),
+            "categorie": vehicule_data_api.get("categorie"),
+            "sous_categorie": vehicule_data_api.get("sous_categorie"),
+            "charge_utile": vehicule_data_api.get("charge_utile") or 0,
+            "puissance_fiscale": vehicule_data_api.get("puissance_fiscale"),
+            "nombre_places": vehicule_data_api.get("nombre_places"),
+            "carburant": vehicule_data_api.get("carburant"),
+            "valeur_neuve": vehicule_data_api.get("valeur_neuve") or 0,
+            "valeur_venale": vehicule_data_api.get("valeur_venale") or 0,
+        }
+
+        # 3. Instancier et valider les formulaires
+        client_form = ClientForm(client_data)
+        vehicule_form = VehiculeForm(vehicule_form_data)
+
+        if not client_form.is_valid():
+            # Renvoyer la première erreur trouvée
+            first_error = list(client_form.errors.values())[0][0]
+            logger.warning(f"Échec validation client: {first_error}")
+            return _render_error(request, f"Client invalide: {first_error}")
+
+        if not vehicule_form.is_valid():
+            # Renvoyer la première erreur trouvée
+            first_error = list(vehicule_form.errors.values())[0][0]
+            logger.warning(f"Échec validation véhicule: {first_error}")
+            return _render_error(request, f"Véhicule invalide: {first_error}")
+
+        # 4. Si la validation réussit, utiliser les données nettoyées
+        client_cleaned_data = client_form.cleaned_data
+        vehicule_cleaned_data = vehicule_form.cleaned_data
+
+        # ---------- CLIENT (utilise les données nettoyées) ----------
         client, _ = Client.objects.get_or_create(
-            telephone=client_data["telephone"],
+            telephone=client_cleaned_data["telephone"],  # Champ unique nettoyé
             defaults={
-                "prenom": client_data["prenom"],
-                "nom": client_data["nom"],
-                "adresse": client_data["adresse"],
+                "prenom": client_cleaned_data["prenom"],
+                "nom": client_cleaned_data["nom"],
+                "adresse": client_cleaned_data["adresse"],
                 "created_by": request.user,
             },
         )
         if not client.code_askia:
             try:
+                # L'API Askia attend les données brutes (non-capitalisées, etc.)
                 client.code_askia = askia_client.create_client(client_data)
                 client.save(update_fields=["code_askia"])
             except Exception as e:
                 logger.error("Échec création client | Tel=%s | %s", client_data["telephone"], e)
                 return _render_error(request, f"Erreur création client ASKIA : {str(e)}")
 
-        # ---------- VÉHICULE ----------
-        vehicule_data = simulation_data["vehicule"]
-        vehicule_display = simulation_data.get("vehicule_display", {})
-        immat = vehicule_display.get("immatriculation")
-        if not immat:
-            return _render_error(request, "Immatriculation manquante.")
+        # ---------- VÉHICULE (utilise les données nettoyées) ----------
+        immat = vehicule_cleaned_data["immatriculation"]  # Déjà normalisé par le formulaire
 
         vehicule, _ = Vehicule.objects.get_or_create(
-            immatriculation=immat,  # Le modèle clean() gère la normalisation
-            defaults={
-                "marque": vehicule_data["marque"],
-                "modele": vehicule_data["modele"],
-                "categorie": vehicule_data["categorie"],
-                "sous_categorie": vehicule_data.get("sous_categorie"),
-                "charge_utile": vehicule_data.get("charge_utile") or 0,
-                "puissance_fiscale": vehicule_data["puissance_fiscale"],
-                "nombre_places": vehicule_data["nombre_places"],
-                "carburant": vehicule_data["carburant"],
-                "valeur_neuve": Decimal(str(vehicule_data.get("valeur_neuve") or 0)),
-                "valeur_venale": Decimal(str(vehicule_data.get("valeur_venale") or 0)),
-            },
+            immatriculation=immat,
+            defaults=vehicule_cleaned_data  # Passe toutes les données nettoyées
         )
 
         # ---------- DATES ----------
@@ -276,15 +361,15 @@ def emettre_contrat(request):
             "client_code": client.code_askia,
             "date_effet": date_effet,
             "duree": duree,
-            "immatriculation": immat,
+            "immatriculation": immat,  # Utilise l'immatriculation nettoyée
             "id_saisie": simulation_data.get("id_saisie"),
-            **vehicule_data  # Transmet toutes les données véhicule
+            **vehicule_data_api  # Transmet les données d'origine (attendues par l'API)
         }
 
         try:
             result = askia_client.create_contrat_auto(contrat_data)
         except Exception as api_error:
-            # ... (gestion des erreurs
+
             error_msg = str(api_error)
             if "contrat en cours" in error_msg.lower() or "contrat existant" in error_msg.lower():
                 msg = (f"Un contrat actif existe déjà pour le véhicule {immat}. "
@@ -317,11 +402,11 @@ def emettre_contrat(request):
         # ---------- PERSISTANCE LOCALE ----------
         tarif = simulation_data["tarif"]
         contrat = Contrat.objects.create(
-            client=client,
-            vehicule=vehicule,
+            client=client,  # Objet Client validé
+            vehicule=vehicule,  # Objet Véhicule validé
             apporteur=request.user,
             numero_police=numero_police,
-            numero_facture=numero_facture,  # AJOUTÉ
+            numero_facture=numero_facture,
             duree=duree,
             date_effet=date_effet,
             date_echeance=date_echeance,
@@ -374,6 +459,8 @@ def detail_contrat(request, pk):
         "contrat": contrat,
         "title": f"Contrat {contrat.numero_police}",
     })
+
+
 @require_http_methods(["GET"])
 def check_immatriculation(request):
     """Validation instantanée de l'immatriculation (HTMX)."""
@@ -381,21 +468,19 @@ def check_immatriculation(request):
     if not immat:
         return HttpResponse("")
 
-    immat_norm = immat.replace("-", "").replace(" ", "")
-
-    # Valider le format avec le validateur
+    # Valider le format avec le nouveau validateur
     try:
-        from django.core.exceptions import ValidationError
-        validator = Vehicule.immat_validators[0]
-        validator(immat)
-    except ValidationError:
+
+        validate_immatriculation(immat)
+
+    except ValidationError as e:
         return HttpResponse(
-            '<span class="text-orange-400 text-xs"><i class="fas fa-exclamation-triangle mr-1"></i>'
-            "Format invalide</span>"
+            f'<span class="text-orange-400 text-xs"><i class="fas fa-exclamation-triangle mr-1"></i>'
+            f"{e.message}</span>"
         )
 
-    # Vérifier si l'immatriculation existe déjà
-    # On vérifie la version normalisée (sans tirets)
+    immat_norm = normalize_immat_for_storage(immat)
+
     exists = Vehicule.objects.filter(immatriculation=immat_norm).exists()
     if exists:
         return HttpResponse(
@@ -424,11 +509,9 @@ def check_client(request):
 def load_sous_categories(request):
     categorie = request.GET.get('categorie', '').strip()
 
-    # Si pas TPC ou MOTO, retourne vide pour cacher le wrapper
     if categorie not in ['520', '550']:
         return HttpResponse("")
 
-    # Créer un formulaire propre à chaque fois
     form = VehiculeForm()
     required = True
     label = 'Genre / Sous-catégorie'
@@ -441,7 +524,6 @@ def load_sous_categories(request):
         choices = SOUS_CATEGORIES_550
         label = 'Genre (2 Roues)'
 
-    # Configuration du champ
     form.fields['sous_categorie'].choices = [('', '-- Sélectionner --')] + choices
     form.fields['sous_categorie'].required = required
     form.fields['sous_categorie'].widget.attrs.update({
@@ -450,8 +532,6 @@ def load_sous_categories(request):
         'name': 'sous_categorie',
         'required': 'required'
     })
-
-    # IMPORTANT : Enlever les attributs qui cachent le champ
     form.fields['sous_categorie'].widget.attrs.pop('disabled', None)
     form.fields['sous_categorie'].widget.attrs.pop('style', None)
 
@@ -460,150 +540,6 @@ def load_sous_categories(request):
         'required': required,
         'label': label,
     })
-@login_required
-def telecharger_documents(request, pk):
-    """Génère un PDF de synthèse locale."""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import cm
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
-    import io as _io
-
-    contrat = get_object_or_404(Contrat, pk=pk)
-    if getattr(request.user, "role", "") == "APPORTEUR" and contrat.apporteur != request.user:
-        messages.error(request, "Vous n'avez pas accès à ce contrat.")
-        return redirect("dashboard:home")
-
-    def format_date(d: date | None) -> str:
-        return d.strftime("%d/%m/%Y") if d else "Non définie"
-
-    def format_montant(m: Decimal | None) -> str:
-        if m is None:
-            return "0"
-        s = f"{m:,.0f}".replace(",", " ")
-        return s
-
-    buffer = _io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, pagesize=A4,
-        rightMargin=2 * cm, leftMargin=2 * cm, topMargin=2 * cm, bottomMargin=2 * cm
-    )
-    styles = getSampleStyleSheet()
-    style_titre = ParagraphStyle(
-        "CustomTitle", parent=styles["Heading1"], fontSize=22,
-        textColor=colors.HexColor("#1e40af"), spaceAfter=30, alignment=TA_CENTER, fontName="Helvetica-Bold"
-    )
-    style_sous_titre = ParagraphStyle(
-        "CustomSubTitle", parent=styles["Heading2"], fontSize=16,
-        textColor=colors.HexColor("#3b82f6"), spaceAfter=20, alignment=TA_CENTER, fontName="Helvetica-Bold"
-    )
-    style_section = ParagraphStyle(
-        "SectionTitle", parent=styles["Heading3"], fontSize=12,
-        textColor=colors.HexColor("#1e40af"), spaceAfter=10, fontName="Helvetica-Bold",
-        backColor=colors.HexColor("#eff6ff"), padding=5
-    )
-    style_normal = ParagraphStyle("CustomNormal", parent=styles["Normal"], fontSize=10, leading=14)
-    style_footer = ParagraphStyle(
-        "Footer", parent=styles["Normal"], fontSize=8,
-        textColor=colors.HexColor("#64748b"), alignment=TA_CENTER
-    )
-
-    elements = [
-        Paragraph("BWHITE DIGITAL", style_titre),
-        Paragraph("Détail du contrat", style_sous_titre),
-        Spacer(1, 0.5 * cm),
-    ]
-
-    # En-tête police
-    data_police = [[Paragraph(f"<b>Police N° :</b> {contrat.numero_police or 'N/A'}", style_normal)]]
-    table_police = Table(data_police, colWidths=[17 * cm])
-    table_police.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#dbeafe")),
-        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1e40af")),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 12),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-        ("TOPPADDING", (0, 0), (-1, -1), 12),
-        ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#3b82f6")),
-    ]))
-    elements += [table_police, Spacer(1, 0.8 * cm)]
-
-    # Assuré
-    elements.append(Paragraph("ASSURÉ", style_section))
-    elements.append(Spacer(1, 0.3 * cm))
-    data_assure = [
-        ["Nom complet:", contrat.client.nom_complet if contrat.client else "Non renseigné"],
-        ["Téléphone:", contrat.client.telephone if contrat.client else "Non renseigné"],
-        ["Adresse:", getattr(contrat.client, "adresse", "Non renseignée") if contrat.client else "Non renseignée"],
-    ]
-    table_assure = Table(data_assure, colWidths=[5 * cm, 12 * cm])
-    table_assure.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f8fafc")),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-    ]))
-    elements += [table_assure, Spacer(1, 0.8 * cm)]
-
-    # Véhicule
-    elements.append(Paragraph("VÉHICULE ASSURÉ", style_section))
-    elements.append(Spacer(1, 0.3 * cm))
-    v = contrat.vehicule
-    data_vehicule = [
-        ["Immatriculation:", v.immatriculation_formatted if v else "N/A"],
-        ["Marque:", v.get_marque_display() if v and hasattr(v, "get_marque_display") else "N/A"],
-        ["Modèle:", v.modele if v else "N/A"],
-        ["Catégorie:", v.get_categorie_display() if v else "N/A"],
-        ["Puissance:", f"{v.puissance_fiscale} CV" if v else "N/A"],
-        ["Places:", v.nombre_places if v else "N/A"],
-    ]
-    table_vehicule = Table(data_vehicule, colWidths=[5 * cm, 12 * cm])
-    table_vehicule.setStyle(table_assure.getStyle())
-    elements += [table_vehicule, Spacer(1, 0.8 * cm)]
-
-    # Période
-    elements.append(Paragraph("PÉRIODE DE GARANTIE", style_section))
-    elements.append(Spacer(1, 0.3 * cm))
-    data_garantie = [
-        ["Date d'effet:", format_date(contrat.date_effet)],
-        ["Date d'échéance:", format_date(contrat.date_echeance)],
-        ["Durée:", f"{contrat.duree} mois"],
-        ["Type de garantie:", contrat.type_garantie],
-    ]
-    table_garantie = Table(data_garantie, colWidths=[5 * cm, 12 * cm])
-    table_garantie.setStyle(table_assure.getStyle())
-    elements += [table_garantie, Spacer(1, 0.8 * cm)]
-
-    # Prime TTC
-    prime_text = f"<b>PRIME TTC :</b> {format_montant(contrat.prime_ttc)} FCFA"
-    table_prime = Table([[Paragraph(prime_text, style_normal)]], colWidths=[17 * cm])
-    table_prime.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#dcfce7")),
-        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#166534")),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 14),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-        ("TOPPADDING", (0, 0), (-1, -1), 12),
-        ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#22c55e")),
-    ]))
-    elements += [table_prime, Spacer(1, 1.5 * cm)]
-
-    now_str = timezone.localtime().strftime("%d/%m/%Y à %H:%M")
-    elements.append(Paragraph(f"Document généré le {now_str}", style_footer))
-    elements.append(Paragraph("Valable si les informations sont exactes et la prime payée.", style_footer))
-
-    doc.build(elements)
-    buffer.seek(0)
-    response = HttpResponse(buffer, content_type="application/pdf")
-    filename = f'attestation_{contrat.numero_police or "contrat"}.pdf'
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
-
 @login_required
 def liste_contrats(request):
     """Liste les contrats (filtrables), visibles uniquement s'ils disposent de documents (via emis_avec_doc)."""

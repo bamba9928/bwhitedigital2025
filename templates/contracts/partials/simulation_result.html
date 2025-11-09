@@ -18,7 +18,6 @@
       </span>
     {% endif %}
   </div>
-
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
     <div class="bg-gray-700 p-4 rounded-lg">
       <p class="text-gray-300 text-sm">Prime nette</p>
@@ -26,35 +25,30 @@
         {{ simulation.prime_nette|default_if_none:0|floatformat:0|intcomma }} FCFA
       </p>
     </div>
-
     <div class="bg-gray-700 p-4 rounded-lg">
       <p class="text-gray-300 text-sm">Accessoires</p>
       <p class="text-xl font-bold text-purple-400">
         {{ simulation.accessoires|default_if_none:0|floatformat:0|intcomma }} FCFA
       </p>
     </div>
-
     <div class="bg-gray-700 p-4 rounded-lg">
       <p class="text-gray-300 text-sm">FGA</p>
       <p class="text-xl font-bold text-indigo-400">
         {{ simulation.fga|default_if_none:0|floatformat:0|intcomma }} FCFA
       </p>
     </div>
-
     <div class="bg-gray-700 p-4 rounded-lg">
       <p class="text-gray-300 text-sm">Taxes</p>
       <p class="text-xl font-bold text-red-400">
         {{ simulation.taxes|default_if_none:0|floatformat:0|intcomma }} FCFA
       </p>
     </div>
-
     <div class="bg-gradient-to-br from-yellow-600 to-yellow-700 p-4 rounded-lg col-span-1 md:col-span-2 border border-yellow-500">
       <p class="text-yellow-100 text-sm font-semibold">Prime TTC</p>
       <p class="text-3xl font-bold text-white">
         {{ simulation.prime_ttc|default_if_none:0|floatformat:0|intcomma }} FCFA
       </p>
     </div>
-
     {% if is_apporteur %}
       <div class="bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
         <p class="text-gray-300 text-sm">Ma Commission</p>
@@ -62,7 +56,6 @@
           {{ commission|default_if_none:0|floatformat:0|intcomma }} FCFA
         </p>
       </div>
-
       <div class="bg-gradient-to-br from-orange-600 to-orange-700 p-4 rounded-lg col-span-1 md:col-span-2 border border-orange-500">
         <p class="text-orange-100 text-sm font-semibold">Net à reverser</p>
         <p class="text-2xl font-bold text-white">
@@ -71,13 +64,12 @@
       </div>
     {% endif %}
   </div>
-
   <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-    <button type="button" id="btn-modifier-contrat"
-            onclick="window.location.reload()"
+
+    <button type="button" id="btn-modifier-simulation"
             class="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg flex items-center justify-center space-x-2 transition">
       <i class="fas fa-edit"></i>
-      <span>Modifier les Informations</span>
+      <span>Modifier</span>
     </button>
 
     <div class="w-full sm:w-auto flex items-center justify-center">
@@ -106,6 +98,27 @@
 
 <script>
 (function() {
+
+  // --- NOUVELLE LOGIQUE pour le bouton "Modifier" ---
+  const modBtn = document.getElementById('btn-modifier-simulation');
+  if (modBtn) {
+    modBtn.addEventListener('click', function() {
+      const simResult = document.getElementById('simulation-result');
+      const formWrapper = document.getElementById('contrat-form-wrapper');
+
+      if (simResult) {
+        simResult.classList.add('hidden'); // Cache ce bloc de résultat
+        simResult.innerHTML = ''; // Vide le contenu pour être propre
+      }
+      if (formWrapper) {
+        formWrapper.classList.remove('hidden'); // Ré-affiche le formulaire
+        // Fait remonter l'utilisateur en haut du formulaire
+        formWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  // --- Votre script existant pour le bouton "Envoyer" ---
   const emitBtn = document.getElementById('btn-emettre-contrat');
   const btnText = document.getElementById('btn-text');
   if (!emitBtn) return;

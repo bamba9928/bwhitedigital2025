@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 from contracts.referentiels import MARQUES, CATEGORIES, CARBURANTS
 from django.utils import timezone
+from .validators import SENEGAL_PHONE_VALIDATOR, validate_immatriculation, normalize_immat_for_storage
 
 
 # =========================
@@ -15,14 +16,10 @@ from django.utils import timezone
 # =========================
 class Client(models.Model):
     """Modèle Client"""
-    phone_regex = RegexValidator(
-        regex=r'^(70|71|75|76|77|78|30|33|34)\d{7}$',
-        message="Le numéro doit être au format sénégalais (70,71,75,76,77,78,30,33,34)"
-    )
     prenom = models.CharField(max_length=100, verbose_name='Prénom')
     nom = models.CharField(max_length=100, verbose_name='Nom')
     telephone = models.CharField(
-        validators=[phone_regex],
+        validators=[SENEGAL_PHONE_VALIDATOR],
         max_length=9,
         unique=True,
         verbose_name='Téléphone'
@@ -64,43 +61,10 @@ class Client(models.Model):
 # =========================
 class Vehicule(models.Model):
     """Modèle Véhicule"""
-
-    immat_validators = [
-        RegexValidator(
-            regex=(
-                r'^('
-                r'(AB|AC|DK|TH|SL|DB|LG|TC|KL|KD|ZG|FK|KF|KG|MT|SD)-?\d{4}-?[A-Z]{1,2}'
-                r'|'
-                r'[A-Z]{2}-?\d{3}-?[A-Z]{2}'
-                r'|'
-                r'AD-?\d{4}'
-                r'|'
-                r'\d{4}-?EX'
-                r'|'
-                r'\d{4}-?EP\d{2}'
-                r'|'
-                r'\d{3}-?AP-?\d{4}'
-                r'|'
-                r'\d{4}-?TT-?[A-Z]'
-                r'|'
-                r'AD\d{4}-?TT-?[A-Z]'
-                r'|'
-                r'CH-?\d{6}'
-                r')$'
-            ),
-            message=(
-                "Format d'immatriculation invalide. Formats acceptés : "
-                "Régional (DK-0001-BB), Ancien (AA-001-AA), Diplomatique (AD-0001), "
-                "Export (0001EX, 0001EP01), Apporteur (001AP0001), "
-                "Transport temporaire (0001-TT-A, AD0001TTA), Étranger (CH-000001)"
-            )
-        )
-    ]
-
     immatriculation = models.CharField(
         max_length=20,
         unique=True,
-        validators=immat_validators,
+        validators=[validate_immatriculation], # ✅ Parfait
         verbose_name='Immatriculation',
         help_text="Formats valides : DK-0000-H, DK-0000-HA, AA-001-AA, AD-0001, 0001EX, 0001EP01, 001AP0001, 0001-TT-A, CH-000001"
     )
@@ -153,31 +117,18 @@ class Vehicule(models.Model):
             ),
         ]
 
-    @staticmethod
-    def normalize_immat(immat: str) -> str:
-        """Uppercase + suppression espaces/tirets."""
-        if not immat:
-            return ""
-        return immat.upper().replace(" ", "").replace("-", "").strip()
-
-    def __str__(self):
-        return f"{self.immatriculation_formatted} - {self.get_marque_display()} {self.modele}"
-
     def clean(self):
         errors = {}
 
         # Normalisation + validation immatriculation
         if self.immatriculation:
-            raw = self.immatriculation
-            immat_normalized = Vehicule.normalize_immat(raw)
-            validator = self.immat_validators[0]
             try:
-                validator(immat_normalized)
+                # Valide une dernière fois (le validateur sur le champ s'exécute en premier)
+                validate_immatriculation(self.immatriculation)
+                # Stocke la version normalisée (sans tirets) pour la DB
+                self.immatriculation = normalize_immat_for_storage(self.immatriculation)
             except ValidationError as e:
-                errors['immatriculation'] = [f"Format invalide : '{raw}'. {e.message}"]
-            else:
-                # Stockage sans tirets
-                self.immatriculation = immat_normalized
+                errors['immatriculation'] = e
 
         # Règles par catégorie
         if self.categorie == "520":
@@ -212,6 +163,7 @@ class Vehicule(models.Model):
     @property
     def immatriculation_formatted(self) -> str:
         """Formate l’immatriculation à l’affichage depuis la valeur stockée sans tirets."""
+        # (Votre logique ici est parfaite et n'a pas besoin de changer)
         if not self.immatriculation:
             return ""
         immat = self.immatriculation.upper()
@@ -295,7 +247,7 @@ class ContratManager(Manager):
         return self.get_queryset().emis_avec_doc()
 
     def due_today(self):
-        """Contrats arrivant à échéance aujourd'hui."""
+        """Contrats arrivant à échéance aujourd'Vhui."""
         return self.get_queryset().due_today()
 
 

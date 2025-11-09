@@ -4,17 +4,17 @@ import re
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 from typing import Dict, Any, Optional, List, Tuple, Union
-
 import requests
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
-
 # -------------------------------------------------------------------
 # Immatriculation SN : normalisation et validation
 # -------------------------------------------------------------------
-
-REGION_PREFIXES = ("AB", "AC", "DK", "TH", "SL", "DB", "LG", "TC", "KL", "KD", "ZG", "FK", "KF", "KG", "MT", "SD", "DL")
+REGION_PREFIXES = (
+    "AB", "AC", "DK", "TH", "SL", "DB", "LG", "TC", "KL", "KD", "ZG",
+    "FK", "KF", "KG", "MT", "SD", "DL"
+)
 
 PATTERNS = {
     "REGIONAL": re.compile(rf"^({'|'.join(REGION_PREFIXES)})-?\d{{4}}-?[A-Z]{{1,2}}$"),
@@ -26,9 +26,8 @@ PATTERNS = {
     "TT":       re.compile(r"^\d{4}-?TT-?[A-Z]$"),
     "AD_TT":    re.compile(r"^AD\d{4}-?TT-?[A-Z]$"),
     "CH":       re.compile(r"^CH-?\d{6}$"),
+    "EP_EX":    re.compile(r"^\d{4}-?EP\d{2}-?EX$"),
 }
-
-
 def _canon_immat(s: str) -> str:
     s = (s or "").upper()
     s = s.replace("–", "-").replace("—", "-")
@@ -36,15 +35,11 @@ def _canon_immat(s: str) -> str:
     if re.search(r"[^A-Z0-9\-]", s):
         raise ValueError("Caractères non autorisés dans l'immatriculation")
     return s
-
-
 def _detect_immat_type(v: str) -> Optional[str]:
     for typ, rx in PATTERNS.items():
         if rx.fullmatch(v):
             return typ
     return None
-
-
 def _format_immat_for_askia(v: str, typ: str) -> str:
     raw = v.replace("-", "")
     if typ == "REGIONAL":   # AB0000CD -> AB-0000-CD
@@ -56,7 +51,14 @@ def _format_immat_for_askia(v: str, typ: str) -> str:
     if typ == "EX":         # 0001EX -> 0001-EX
         return f"{raw[:4]}-EX"
     if typ == "EP":         # 0001EP01 -> 0001-EP01
-        return f"{raw[:4]}-EP{raw[6:]}" if "-" in v else f"{raw[:4]}-{raw[4:]}"
+
+        if "-" in v:
+             # Ex: 0001-EP01 -> 0001-EP01
+            parts = v.split('-')
+            return f"{parts[0]}-{parts[1]}"
+        else:
+             # Ex: 0001EP01 -> 0001-EP01
+            return f"{raw[:4]}-{raw[4:]}"
     if typ == "AP":         # 001AP0001 -> 001-AP-0001
         return f"{raw[:3]}-AP-{raw[5:]}"
     if typ == "TT":         # 0001TTA -> 0001-TT-A
@@ -65,8 +67,9 @@ def _format_immat_for_askia(v: str, typ: str) -> str:
         return f"{raw[:6]}-TT-{raw[-1]}"
     if typ == "CH":         # CH000001 -> CH-000001
         return f"{raw[:2]}-{raw[2:]}"
+    if typ == "EP_EX":
+        return f"{raw[:4]}-{raw[4:6]}-EX"
     return v
-
 
 def _validate_immatriculation(immat: str) -> str:
     if not immat:
@@ -77,15 +80,12 @@ def _validate_immatriculation(immat: str) -> str:
         raise ValueError(
             f"Format d'immatriculation invalide: '{immat}'. "
             "Formats acceptés: DK-0001-BB, AA-001-AA, AD-0001, 0001-EX, 0001-EP01, "
-            "001-AP-0001, 0001-TT-A, AD0001-TT-A, CH-000001"
+            "001-AP-0001, 0001-TT-A, AD0001-TT-A, CH-000001, 0001-EP01-EX"
         )
     return _format_immat_for_askia(v, typ)
-
-
 # -------------------------------------------------------------------
 # Client API Askia
 # -------------------------------------------------------------------
-
 class AskiaAPIClient:
     """Client pour l'API ASKIA."""
 

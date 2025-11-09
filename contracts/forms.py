@@ -10,8 +10,11 @@ from .referentiels import (
     CARBURANTS,
     MARQUES
 )
-
-# === CLASSES CSS COMMUNES ===
+from .validators import (
+    validate_immatriculation,
+    SENEGAL_PHONE_VALIDATOR,
+    normalize_phone_for_storage,
+)
 BASE_INPUT_CLASS = (
     'w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-900 text-gray-100 '
     'focus:border-green-500 focus:outline-none transition-all duration-300'
@@ -21,7 +24,6 @@ LARGE_INPUT_CLASS = (
     'w-full px-4 py-3 border-2 border-gray-600 rounded-lg bg-gray-900 text-gray-100 '
     'focus:border-green-500 focus:outline-none text-lg font-medium transition-all duration-300'
 )
-
 
 # === CLIENT FORM ===
 class ClientForm(forms.ModelForm):
@@ -35,55 +37,69 @@ class ClientForm(forms.ModelForm):
         widgets = {
             'prenom': forms.TextInput(attrs={
                 'class': BASE_INPUT_CLASS, 'placeholder': 'Prénom du client',
-                'autocomplete': 'given-name', 'required': True
+                'autocomplete': 'given-name', 'required': 'required'
             }),
             'nom': forms.TextInput(attrs={
                 'class': BASE_INPUT_CLASS, 'placeholder': 'Nom du client',
-                'autocomplete': 'family-name', 'required': True
+                'autocomplete': 'family-name', 'required': 'required'
             }),
             'telephone': forms.TextInput(attrs={
-                'class': BASE_INPUT_CLASS, 'placeholder': '77XXXXXXX',
-                'autocomplete': 'tel', 'pattern': '[0-9]{9}', 'inputmode': 'numeric',
-                'maxlength': '9', 'required': True
+                'class': BASE_INPUT_CLASS,
+                'placeholder': '77XXXXXXX',
+                'autocomplete': 'tel',
+                # pattern aligné sur les préfixes SN
+                'pattern': r'^(70|71|75|76|77|78|30|33|34)\d{7}$',
+                'inputmode': 'numeric',
+                'maxlength': '9',
+                'required': 'required',
             }),
             'adresse': forms.Textarea(attrs={
                 'class': BASE_INPUT_CLASS, 'placeholder': 'Adresse complète',
-                'rows': 2, 'autocomplete': 'street-address', 'required': True
+                'rows': 2, 'autocomplete': 'street-address', 'required': 'required'
             }),
         }
 
-    # Validations propres
     def clean_telephone(self):
-        tel_raw = self.cleaned_data.get('telephone', '').strip()
-        if not tel_raw:
-            raise ValidationError("Le numéro de téléphone est obligatoire")
-        tel = ''.join(filter(str.isdigit, tel_raw))
+        tel_raw = (self.cleaned_data.get('telephone') or '').strip()
+        # 1) normaliser pour stockage: retirer 00221/221 et non-chiffres
+        tel = normalize_phone_for_storage(tel_raw)
+
+        # 2) longueur exacte
         if len(tel) != 9:
-            raise ValidationError("Le numéro doit contenir exactement 9 chiffres")
-        PREFIXES_VALIDES = ('70', '75', '76', '77', '78', '30', '33', '34')
-        if not tel.startswith(PREFIXES_VALIDES):
-            raise ValidationError(f"Préfixes valides : {', '.join(PREFIXES_VALIDES)}")
+            raise ValidationError("Le numéro de téléphone doit contenir exactement 9 chiffres.")
+
+        # 3) préfixes valides
+        try:
+            SENEGAL_PHONE_VALIDATOR(tel)
+        except ValidationError:
+            raise ValidationError("Préfixe invalide. Autorisés: 70, 71, 75, 76, 77, 78, 30, 33, 34.")
+
+        # 4) unicité, en excluant l'instance en cours d’édition
+        qs = Client.objects.filter(telephone=tel)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("Ce numéro de téléphone est déjà utilisé.")
+
         return tel
 
     def clean_prenom(self):
-        p = self.cleaned_data.get('prenom', '').strip().upper()
+        p = (self.cleaned_data.get('prenom') or '').strip().upper()
         if len(p) < 2:
             raise ValidationError("Prénom trop court")
         return p
 
     def clean_nom(self):
-        n = self.cleaned_data.get('nom', '').strip().upper()
+        n = (self.cleaned_data.get('nom') or '').strip().upper()
         if len(n) < 2:
             raise ValidationError("Nom trop court")
         return n
 
     def clean_adresse(self):
-        a = self.cleaned_data.get('adresse', '').strip()
+        a = (self.cleaned_data.get('adresse') or '').strip()
         if len(a) < 10:
             raise ValidationError("Adresse trop courte (10 caractères minimum)")
         return a
-
-
 # === VÉHICULE FORM ===
 class VehiculeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -105,10 +121,9 @@ class VehiculeForm(forms.ModelForm):
                 )
             self.data = data
 
-    # === CHAMPS DÉCLARÉS MANUELLEMENT ===
     immatriculation = forms.CharField(
         label="Immatriculation",
-        validators=Vehicule.immat_validators,
+        validators=[validate_immatriculation],
         widget=forms.TextInput(attrs={
             'class': BASE_INPUT_CLASS,
             'placeholder': 'AA-123-AA',
@@ -121,7 +136,6 @@ class VehiculeForm(forms.ModelForm):
             'autocomplete': 'off'
         })
     )
-
     marque = forms.ChoiceField(
         label="Marque",
         choices=[('', '-- Sélectionner --')] + list(MARQUES),
@@ -233,23 +247,6 @@ class VehiculeForm(forms.ModelForm):
             raise ValidationError("Catégorie obligatoire")
         return cat
 
-    def clean_sous_categorie(self):
-        sc = self.cleaned_data.get('sous_categorie') or ''
-        cat = self.cleaned_data.get('categorie')
-
-        if cat in ('520', '550') and not sc:
-            raise ValidationError("Sous-catégorie obligatoire pour TPC et Moto")
-
-        valid_520 = dict(SOUS_CATEGORIES_520)
-        valid_550 = dict(SOUS_CATEGORIES_550)
-
-        if cat == '520' and sc not in valid_520:
-            raise ValidationError("Sous-catégorie invalide pour TPC")
-        if cat == '550' and sc not in valid_550:
-            raise ValidationError("Sous-catégorie invalide pour Moto")
-
-        return sc
-
     def clean(self):
         cleaned_data = super().clean()
         cat = cleaned_data.get('categorie')
@@ -268,7 +265,6 @@ class VehiculeForm(forms.ModelForm):
             cleaned_data['charge_utile'] = 0
 
         return cleaned_data
-
 
 # === SIMULATION FORM ===
 class ContratSimulationForm(forms.Form):

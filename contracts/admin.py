@@ -20,13 +20,24 @@ class ClientAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('created_at', 'updated_at', 'code_askia')
 
+    def save_model(self, request, obj, form, change):
 
+        if not obj.pk:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 @admin.register(Vehicule)
 class VehiculeAdmin(admin.ModelAdmin):
     list_display = ('immatriculation', 'marque', 'modele', 'categorie', 'carburant', 'puissance_fiscale')
     search_fields = ('immatriculation', 'modele')
     list_filter = ('categorie', 'carburant', 'marque')
     ordering = ('-created_at',)
+
+    @admin.display(description='Immatriculation', ordering='immatriculation')
+    def display_immat(self, obj):
+
+        if obj:
+            return obj.immatriculation_formatted
+        return '-'
 
     fieldsets = (
         ('Identification', {
@@ -40,8 +51,6 @@ class VehiculeAdmin(admin.ModelAdmin):
         }),
     )
     readonly_fields = ('created_at',)
-
-
 @admin.register(Contrat)
 class ContratAdmin(admin.ModelAdmin):
     list_display = ('numero_police', 'client', 'vehicule', 'apporteur', 'prime_ttc', 'status', 'date_effet')
@@ -49,6 +58,7 @@ class ContratAdmin(admin.ModelAdmin):
     list_filter = ('status', 'apporteur', 'date_effet', 'duree')
     ordering = ('-created_at',)
     date_hierarchy = 'date_effet'
+    autocomplete_fields = ['client', 'vehicule', 'apporteur']
 
     fieldsets = (
         ('Informations principales', {

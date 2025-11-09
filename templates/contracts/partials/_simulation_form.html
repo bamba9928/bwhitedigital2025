@@ -32,40 +32,84 @@
       </p>
     </div>
   </div>
+</div>
 
-  <div class="mt-8 flex flex-col items-center">
-    <button id="btn-calculer-tarif" type="button"
+<!-- Section Actions centrée -->
+<div class="form-section mt-6">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-center gap-3">
+    <button type="button"
+            id="btn-retour-dashboard"
+            class="btn btn-secondary flex items-center justify-center space-x-2">
+      <i class="fas fa-arrow-left"></i>
+      <span>Retour</span>
+    </button>
+
+    <button id="btn-calculer-tarif"
+            type="submit"
             hx-post="{% url 'contracts:simuler_tarif' %}"
             hx-target="#simulation-result"
             hx-swap="innerHTML"
             hx-include="#contrat-form"
             hx-indicator="#sim-indicator"
             hx-timeout="15000"
-            class="btn btn-primary flex items-center space-x-2">
-      <i class="fas fa-calculator"></i>
+            class="btn btn-primary flex items-center justify-center space-x-2">
+
       <span>Envoyer</span>
     </button>
+  </div>
 
-    <!-- Indicateur unique, caché hors requête -->
-    <div id="sim-indicator" class="htmx-indicator hidden mt-3 text-sm text-blue-300">
-      <i class="fas fa-circle-notch fa-spin mr-2"></i> patientez…
-    </div>
+  <!-- Indicateur unique et correctement placé -->
+  <div id="sim-indicator" class="htmx-indicator hidden mt-4 text-center text-sm text-blue-300">
+    <i class="fas fa-circle-notch fa-spin mr-2"></i>
+    <span>Calcul en cours, veuillez patienter...</span>
   </div>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  // Configuration date minimum (aujourd'hui)
   const dateEffet = document.getElementById("id_date_effet");
   if (dateEffet && dateEffet.type === "date") {
-    const t = new Date(), pad = n => String(n).padStart(2,"0");
-    const iso = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
-    dateEffet.setAttribute("min", iso);
+    const today = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    const minDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+    dateEffet.setAttribute("min", minDate);
   }
 
-  document.addEventListener('htmx:afterOnLoad', function (e) {
-    if (e.target && e.target.id === 'simulation-result') {
+  // Gestion du bouton retour : efface le formulaire et redirige
+  const btnRetour = document.getElementById("btn-retour-dashboard");
+  if (btnRetour) {
+    btnRetour.addEventListener("click", function() {
+      // Réinitialiser le formulaire
+      const form = document.getElementById("contrat-form");
+      if (form) {
+        form.reset();
+      }
+
+      // Effacer les résultats de simulation
+      const simulationResult = document.getElementById("simulation-result");
+      if (simulationResult) {
+        simulationResult.innerHTML = "";
+      }
+
+      // Désactiver le bouton d'émission si présent
+      const emitBtn = document.getElementById("btn-emettre-contrat");
+      if (emitBtn) {
+        emitBtn.setAttribute("disabled", "disabled");
+      }
+
+      // Redirection immédiate vers le dashboard
+      window.location.href = "{% url 'dashboard:home' %}";
+    });
+  }
+
+  // Activation du bouton d'émission après succès de la simulation
+  document.body.addEventListener('htmx:afterOnLoad', function (evt) {
+    if (evt.detail.target && evt.detail.target.id === 'simulation-result') {
       const emitBtn = document.getElementById('btn-emettre-contrat');
-      if (emitBtn) emitBtn.removeAttribute('disabled');
+      if (emitBtn) {
+        emitBtn.removeAttribute('disabled');
+      }
     }
   });
 });

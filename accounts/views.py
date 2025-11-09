@@ -542,7 +542,8 @@ def _get_user_stats(user):
         }
 
     return {}
-
+@staff_member_required
+@require_POST
 def _get_apporteur_detailed_stats(apporteur):
     today = timezone.now().date()
     first_day = today.replace(day=1)

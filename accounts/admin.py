@@ -18,7 +18,7 @@ class UserAdmin(BaseUserAdmin):
     ordering = ("-created_at",)
 
     # Champs en lecture seule
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_by", "created_at", "updated_at")
 
     # Organisation des fieldsets
     fieldsets = (
@@ -82,10 +82,18 @@ class UserAdmin(BaseUserAdmin):
         self.message_user(request, f"{queryset.count()} utilisateur(s) réinitialisé(s) (grade supprimé).")
     reset_grade.short_description = "Réinitialiser le grade"
 
+    def get_fieldsets(self, request, obj=None):
 
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
+        fieldsets = super().get_fieldsets(request, obj)
+
         if obj and obj.role == "ADMIN":
-            if "grade" in form.base_fields:
-                form.base_fields.pop("grade")
-        return form
+            new_fieldsets = list(fieldsets)
+
+            for i, (title, options) in enumerate(new_fieldsets):
+                if title == _("Grade (apporteur uniquement)"):
+                    new_fieldsets.pop(i)
+                    break
+
+            return tuple(new_fieldsets)
+
+        return fieldsets
