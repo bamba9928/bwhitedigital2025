@@ -50,7 +50,7 @@ def mes_paiements(request):
         .order_by("-created_at")
 
     status = request.GET.get("status", "").upper()
-    if status in {"EN_ATTENTE", "PAYE"}:
+    if status in {"EN_ATTENTE", "PAYE", "ANNULE"}:
         qs = qs.filter(status=status)
 
     paginator = Paginator(qs, 25)
@@ -121,7 +121,7 @@ def liste_encaissements(request):
     ).order_by("-created_at")
 
     st = request.GET.get("status", "")
-    if st in {"EN_ATTENTE", "PAYE"}:
+    if st in {"EN_ATTENTE", "PAYE", "ANNULE"}:
         qs = qs.filter(status=st)
 
     apporteur_id = request.GET.get("apporteur")
@@ -140,6 +140,7 @@ def liste_encaissements(request):
 
     total_attente = qs.filter(status="EN_ATTENTE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
     total_paye = qs.filter(status="PAYE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+    total_annule = qs.filter(status="ANNULE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
 
     paginator = Paginator(qs, 50)
     page = paginator.get_page(request.GET.get("page"))
@@ -150,6 +151,7 @@ def liste_encaissements(request):
         "paiements": page,
         "total_attente": total_attente,
         "total_paye": total_paye,
+        "total_annule": total_annule,
         "filter_status": st,
         "query": q,
         "apporteur_id": apporteur_id,

@@ -121,11 +121,11 @@ def simuler_tarif(request):
             "nombre_places", "marque", "modele",
             "prenom", "nom", "telephone", "adresse",
         ]
-        missing_keys = [k for k in required_fields if not _g(request, k)]
-        if missing_keys:
+        missing = [k for k in required_fields if not _g(request, k)]
+        if missing:
             return _render_error(
                 request,
-                "Champs manquants : " + ", ".join(LABELS.get(k, k) for k in missing_keys)
+                "Champs manquants : " + ", ".join(LABELS.get(k, k) for k in missing)
             )
 
         # 1) Téléphone: normalisation + validation stricte
@@ -134,7 +134,7 @@ def simuler_tarif(request):
         except ValueError as e:
             return _render_error(request, str(e))
 
-        # 2) Date d'effet valide et non passée
+        # 2) Date d'effet valide, non passée, <= 60 jours
         date_effet_str = _g(request, "date_effet")
         date_effet = _parse_date(date_effet_str)
         if not date_effet:
@@ -143,12 +143,10 @@ def simuler_tarif(request):
         if date_effet < today:
             return _render_error(
                 request,
-                (
-                    "La date d'effet ne peut pas être dans le passé "
-                    f"(fournie: {date_effet.strftime('%d/%m/%Y')}, "
-                    f"aujourd'hui: {today.strftime('%d/%m/%Y')})."
-                )
+                f"La date d'effet ne peut pas être dans le passé (fourni: {date_effet:%d/%m/%Y}, aujourd'hui: {today:%d/%m/%Y})."
             )
+        if date_effet > today + timedelta(days=60):
+            return _render_error(request, "La date d'effet ne peut pas dépasser 60 jours.")
 
         # 3) Catégorie & champs dépendants
         categorie = request.POST.get("categorie")
@@ -158,11 +156,11 @@ def simuler_tarif(request):
         elif categorie == "550":  # 2 ROUES
             sous_categorie = request.POST.get("sous_categorie") or "009"
             charge_utile = None
-        else:  # VP
+        else:  # VP et autres
             sous_categorie = "000"
             charge_utile = None
 
-        # 4) Données véhicule
+        # 4) Données véhicule (payload API)
         vehicule_data = {
             "categorie": categorie,
             "sous_categorie": sous_categorie,
@@ -192,7 +190,7 @@ def simuler_tarif(request):
             "prenom": (request.POST.get("prenom") or "").upper().strip(),
             "nom": (request.POST.get("nom") or "").upper().strip(),
             "telephone": tel_norm,
-            "adresse": (request.POST.get("adresse") or "").upper().strip(),
+            "adresse": (request.POST.get("adresse") or "").strip(),
         }
         vehicule_display = {
             "immatriculation": (request.POST.get("immatriculation") or "").upper().strip(),
@@ -208,25 +206,20 @@ def simuler_tarif(request):
             return _render_error(request, f"Erreur API Askia : {str(e)}")
 
         prime_nette = Decimal(str(simulation["prime_nette"]))
-        prime_ttc = Decimal(str(simulation["prime_ttc"]))
+        prime_ttc   = Decimal(str(simulation["prime_ttc"]))
         accessoires = Decimal(str(simulation.get("accessoires", 0)))
-        fga = Decimal(str(simulation.get("fga", 0)))
-        taxes = Decimal(str(simulation.get("taxes", 0)))
+        fga         = Decimal(str(simulation.get("fga", 0)))
+        taxes       = Decimal(str(simulation.get("taxes", 0)))
 
         # 7) Commissions via le modèle
-        temp_contrat = Contrat(
+        temp = Contrat(
             prime_nette=prime_nette,
             prime_ttc=prime_ttc,
             apporteur=request.user,
             duree=duree,
             date_effet=date_effet,
         )
-        temp_contrat.calculate_commission()
-
-        commission_askia_bwhite = temp_contrat.commission_askia
-        commission_apporteur = temp_contrat.commission_apporteur
-        commission_bwhite_profit = temp_contrat.commission_bwhite
-        net_a_reverser_askia = temp_contrat.net_a_reverser
+        temp.calculate_commission()
 
         # 8) Session
         request.session["simulation_data"] = to_jsonable({
@@ -239,10 +232,10 @@ def simuler_tarif(request):
                 "fga": fga,
                 "taxes": taxes,
                 "prime_ttc": prime_ttc,
-                "commission_askia": commission_askia_bwhite,
-                "commission_apporteur": commission_apporteur,
-                "commission_bwhite": commission_bwhite_profit,
-                "net_a_reverser": net_a_reverser_askia,
+                "commission_askia": temp.commission_askia,
+                "commission_apporteur": temp.commission_apporteur,
+                "commission_bwhite": temp.commission_bwhite,
+                "net_a_reverser": temp.net_a_reverser,
             },
             "id_saisie": simulation.get("id_saisie"),
             "client": client_data,
@@ -259,8 +252,8 @@ def simuler_tarif(request):
                 "prime_ttc": prime_ttc,
                 "commission": simulation.get("commission", 0),
             },
-            "commission": commission_apporteur,
-            "net_a_reverser": net_a_reverser_askia,
+            "commission": temp.commission_apporteur,
+            "net_a_reverser": temp.net_a_reverser,
             "duree": duree,
             "date_effet": date_effet,
             "is_apporteur": getattr(request.user, "role", "") == "APPORTEUR",
@@ -270,85 +263,85 @@ def simuler_tarif(request):
     except Exception as e:
         logger.error("Erreur inattendue simuler_tarif | %s", str(e), exc_info=True)
         return _render_error(request, f"Erreur inattendue: {str(e)}")
+
 @login_required
 @require_http_methods(["POST"])
 @transaction.atomic
 def emettre_contrat(request):
-    """Émet le contrat à partir de la simulation stockée en session."""
+    """Émet le contrat à partir de la simulation stockée en session, avec récupération robuste en cas d'erreur Askia."""
     try:
         simulation_data = request.session.get("simulation_data")
         if not simulation_data:
             return _render_error(request, "Aucune simulation en cours. Veuillez refaire la simulation.")
-        # 1. Extraire les données brutes de la session
-        client_data = simulation_data.get("client")
-        vehicule_data_api = simulation_data.get("vehicule")  # Données brutes pour l'API
-        vehicule_display = simulation_data.get("vehicule_display", {})
 
-        # 2. Reconstruire les dictionnaires pour les formulaires
+        # 1) Extraire données session
+        client_data = simulation_data.get("client") or {}
+        vehicule_data_api = simulation_data.get("vehicule") or {}
+        vehicule_display = simulation_data.get("vehicule_display") or {}
+
+        # 2) Reconstruire payloads formulaires pour revalidation serveur
         vehicule_form_data = {
             "immatriculation": vehicule_display.get("immatriculation"),
-            "marque": vehicule_data_api.get("marque"),
-            "modele": vehicule_data_api.get("modele"),
-            "categorie": vehicule_data_api.get("categorie"),
+            "marque":         vehicule_data_api.get("marque"),
+            "modele":         vehicule_data_api.get("modele"),
+            "categorie":      vehicule_data_api.get("categorie"),
             "sous_categorie": vehicule_data_api.get("sous_categorie"),
-            "charge_utile": vehicule_data_api.get("charge_utile") or 0,
+            "charge_utile":   vehicule_data_api.get("charge_utile") or 0,
             "puissance_fiscale": vehicule_data_api.get("puissance_fiscale"),
-            "nombre_places": vehicule_data_api.get("nombre_places"),
-            "carburant": vehicule_data_api.get("carburant"),
-            "valeur_neuve": vehicule_data_api.get("valeur_neuve") or 0,
-            "valeur_venale": vehicule_data_api.get("valeur_venale") or 0,
+            "nombre_places":     vehicule_data_api.get("nombre_places"),
+            "carburant":         vehicule_data_api.get("carburant"),
+            "valeur_neuve":      vehicule_data_api.get("valeur_neuve") or 0,
+            "valeur_venale":     vehicule_data_api.get("valeur_venale") or 0,
         }
 
-        # 3. Instancier et valider les formulaires
         client_form = ClientForm(client_data)
+        if vehicule_form_data.get("categorie") not in ("520", "550"):
+            vehicule_form_data["sous_categorie"] = ""
         vehicule_form = VehiculeForm(vehicule_form_data)
 
         if not client_form.is_valid():
-            # Renvoyer la première erreur trouvée
             first_error = list(client_form.errors.values())[0][0]
-            logger.warning(f"Échec validation client: {first_error}")
+            logger.warning("Échec validation client: %s", first_error)
             return _render_error(request, f"Client invalide: {first_error}")
 
         if not vehicule_form.is_valid():
-            # Renvoyer la première erreur trouvée
             first_error = list(vehicule_form.errors.values())[0][0]
-            logger.warning(f"Échec validation véhicule: {first_error}")
+            logger.warning("Échec validation véhicule: %s", first_error)
             return _render_error(request, f"Véhicule invalide: {first_error}")
 
-        # 4. Si la validation réussit, utiliser les données nettoyées
-        client_cleaned_data = client_form.cleaned_data
-        vehicule_cleaned_data = vehicule_form.cleaned_data
+        # 3) Données nettoyées
+        client_clean = client_form.cleaned_data
+        vehicule_clean = vehicule_form.cleaned_data
 
-        # ---------- CLIENT (utilise les données nettoyées) ----------
+        # ---------- CLIENT ----------
         client, _ = Client.objects.get_or_create(
-            telephone=client_cleaned_data["telephone"],  # Champ unique nettoyé
+            telephone=client_clean["telephone"],
             defaults={
-                "prenom": client_cleaned_data["prenom"],
-                "nom": client_cleaned_data["nom"],
-                "adresse": client_cleaned_data["adresse"],
+                "prenom": client_clean["prenom"],
+                "nom": client_clean["nom"],
+                "adresse": client_clean["adresse"],
                 "created_by": request.user,
             },
         )
         if not client.code_askia:
             try:
-                # L'API Askia attend les données brutes (non-capitalisées, etc.)
-                client.code_askia = askia_client.create_client(client_data)
+                client.code_askia = askia_client.create_client(client_data)  # données d’origine côté API
                 client.save(update_fields=["code_askia"])
             except Exception as e:
-                logger.error("Échec création client | Tel=%s | %s", client_data["telephone"], e)
+                logger.error("Échec création client | Tel=%s | %s", client_data.get("telephone"), e)
                 return _render_error(request, f"Erreur création client ASKIA : {str(e)}")
 
-        # ---------- VÉHICULE (utilise les données nettoyées) ----------
-        immat = vehicule_cleaned_data["immatriculation"]  # Déjà normalisé par le formulaire
-
+        # ---------- VÉHICULE ----------
+        immat = vehicule_clean["immatriculation"]  # déjà normalisée par le form
         vehicule, _ = Vehicule.objects.get_or_create(
             immatriculation=immat,
-            defaults=vehicule_cleaned_data  # Passe toutes les données nettoyées
+            defaults=vehicule_clean
         )
 
         # ---------- DATES ----------
         date_effet = simulation_data["date_effet"]
         if isinstance(date_effet, str):
+            # ISO "YYYY-MM-DD" car stocké via to_jsonable
             date_effet = datetime.strptime(date_effet, "%Y-%m-%d").date()
         if not isinstance(date_effet, date):
             return _render_error(request, "Date d'effet invalide.")
@@ -357,53 +350,78 @@ def emettre_contrat(request):
         date_echeance = date_effet + relativedelta(months=duree) - timedelta(days=1)
 
         # ---------- ÉMISSION ASKIA ----------
-        contrat_data = {
+        contrat_payload = {
             "client_code": client.code_askia,
             "date_effet": date_effet,
             "duree": duree,
-            "immatriculation": immat,  # Utilise l'immatriculation nettoyée
+            "immatriculation": immat,
             "id_saisie": simulation_data.get("id_saisie"),
-            **vehicule_data_api  # Transmet les données d'origine (attendues par l'API)
+            **vehicule_data_api,  # valeurs d’origine attendues par l’API
         }
 
+        result = {}
+        numero_police = None
+        numero_facture = None
+
         try:
-            result = askia_client.create_contrat_auto(contrat_data)
+            logger.info("Tentative émission contrat | Client=%s | Immat=%s | IdSaisie=%s",
+                        client.code_askia, immat, contrat_payload.get("id_saisie"))
+            result = askia_client.create_contrat_auto(contrat_payload)
+            numero_police = result.get("numero_police") or result.get("numeroPolice")
+            numero_facture = result.get("numero_facture") or result.get("numeroFacture")
+
         except Exception as api_error:
-
             error_msg = str(api_error)
-            if "contrat en cours" in error_msg.lower() or "contrat existant" in error_msg.lower():
-                msg = (f"Un contrat actif existe déjà pour le véhicule {immat}. "
-                       f"Vérifiez les contrats existants ou contactez le support.")
-            elif any(k in error_msg.lower() for k in ["timeout", "délai", "attente"]):
-                msg = ("Le serveur ASKIA met trop de temps à répondre. Réessayez. "
-                       "Vérifiez d'abord si le contrat n'a pas été créé dans la liste des contrats.")
-            elif any(k in error_msg.lower() for k in ["réseau", "network"]):
-                msg = "Problème de connexion au serveur ASKIA. Vérifiez votre connexion et réessayez."
-            else:
-                msg = f"Erreur lors de l'émission du contrat : {error_msg}"
-            logger.error("Échec émission contrat | Client=%s | Immat=%s | Erreur=%s",
-                         client.code_askia, immat, error_msg)
-            return _render_error(request, msg)
+            id_saisie = simulation_data.get("id_saisie")
 
-        numero_police = result.get("numero_police")
-        numero_facture = result.get("numero_facture")
-        if not numero_police:
-            return _render_error(request, "Échec émission : pas de numéro de police ASKIA.")
+            # Récupération si Askia a émis malgré l’exception (timeout/500)
+            if id_saisie:
+                for nf in (f"{datetime.now().year}{id_saisie}", id_saisie):
+                    existing = askia_client.verify_contrat_exists(nf)
+                    if existing and existing.get("numeroPolice"):
+                        liens = existing.get("lien", {}) or {}
+                        numero_police = existing.get("numeroPolice")
+                        numero_facture = existing.get("numeroFacture")
+                        result = {
+                            "numeroPolice": numero_police,
+                            "numeroFacture": numero_facture,
+                            "numeroClient": existing.get("numeroClient"),
+                            "primettc": existing.get("primettc"),
+                            "lien": liens,
+                            "raw_response": existing,
+                            "recovered_after_error": True,
+                        }
+                        break
+
+            if not result or not numero_police or not numero_facture:
+                logger.error("Émission KO et aucune récupération possible | %s", error_msg)
+                return _render_error(request, f"Erreur API Askia lors de l'émission : {error_msg}")
 
         # ---------- DOCUMENTS ----------
-        attestation = result.get("attestation", "")
-        carte_brune = result.get("carte_brune", "")
+        attestation = ""
+        carte_brune = ""
+
+        if isinstance(result, dict):
+            liens_directs = result.get("lien") or {}
+            attestation = liens_directs.get("linkAttestation", "") or attestation
+            carte_brune = liens_directs.get("linkCarteBrune", "") or carte_brune
+
         if not (attestation or carte_brune):
-            logger.warning(
-                "⚠️ Contrat émis sans documents | Police=%s | Facture=%s",
-                numero_police, numero_facture
-            )
+            try:
+                docs = askia_client.get_documents(numero_facture)
+                attestation = docs.get("attestation", "") or attestation
+                carte_brune = docs.get("carte_brune", "") or carte_brune
+            except Exception as e:
+                logger.warning("Échec récupération documents (non bloquant) | %s", e)
+
+        if not (attestation or carte_brune):
+            logger.warning("Contrat émis sans documents | Police=%s | Facture=%s", numero_police, numero_facture)
 
         # ---------- PERSISTANCE LOCALE ----------
         tarif = simulation_data["tarif"]
         contrat = Contrat.objects.create(
-            client=client,  # Objet Client validé
-            vehicule=vehicule,  # Objet Véhicule validé
+            client=client,
+            vehicule=vehicule,
             apporteur=request.user,
             numero_police=numero_police,
             numero_facture=numero_facture,
@@ -416,7 +434,6 @@ def emettre_contrat(request):
             taxes=Decimal(str(tarif["taxes"])),
             prime_ttc=Decimal(str(tarif["prime_ttc"])),
 
-            # NOUVELLE LOGIQUE COMMISSION
             commission_askia=Decimal(str(tarif.get("commission_askia", 0))),
             commission_apporteur=Decimal(str(tarif.get("commission_apporteur", 0))),
             commission_bwhite=Decimal(str(tarif.get("commission_bwhite", 0))),
@@ -430,24 +447,26 @@ def emettre_contrat(request):
             link_carte_brune=carte_brune,
         )
 
-        # (Le signal post_save s'occupera de créer le PaiementApporteur)
-
+        # Nettoyage session
         request.session.pop("simulation_data", None)
-        logger.info("✅ Contrat créé | Police=%s | Client=%s | Apporteur=%s",
+
+        logger.info("Contrat créé | Police=%s | Client=%s | Apporteur=%s",
                     numero_police, client.nom_complet, request.user.username)
 
-        # Réponse
+        # ---------- Rendu ----------
         if _is_hx(request):
             return render(request, "contracts/partials/emission_success.html", {
                 "contrat": contrat,
                 "success_message": f"Contrat {contrat.numero_police} émis avec succès !",
             })
+
         messages.success(request, f"Contrat {contrat.numero_police} émis avec succès !")
         return redirect("contracts:detail_contrat", pk=contrat.pk)
 
     except Exception as e:
         logger.error("Erreur inattendue émission contrat | %s", e, exc_info=True)
         return _render_error(request, f"Erreur inattendue lors de l'émission : {str(e)}")
+
 @login_required
 def detail_contrat(request, pk):
     """Vue détaillée d'un contrat."""

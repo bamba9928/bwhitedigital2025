@@ -3,6 +3,7 @@ from django.db import models
 from django.core.validators import RegexValidator
 from django.utils import timezone
 from decimal import Decimal
+from contracts.validators import SENEGAL_PHONE_VALIDATOR
 
 
 class User(AbstractUser):
@@ -17,11 +18,6 @@ class User(AbstractUser):
         ('PLATINE', 'Platine - 18% + 2000 FCFA'),
         ('FREEMIUM', 'Freemium - 10% + 1800 FCFA'),
     ]
-
-    phone_regex = RegexValidator(
-        regex=r'^(77|78|76|70|75)\d{7}$',
-        message="Le numéro doit être au format sénégalais (77/78/76/70/75 suivi de 7 chiffres)"
-    )
 
     # Champs personnalisés
     role = models.CharField(
@@ -41,7 +37,7 @@ class User(AbstractUser):
     )
 
     phone = models.CharField(
-        validators=[phone_regex],
+        validators=[SENEGAL_PHONE_VALIDATOR],
         max_length=12,
         unique=True,
         verbose_name='Téléphone'
@@ -91,9 +87,6 @@ class User(AbstractUser):
     def get_full_name(self):
         """Retourne le nom complet"""
         return f"{self.first_name} {self.last_name}".strip() or self.username
-
-    # --- LOGIQUE COMMISSION SUPPRIMÉE ---
-    # La logique est maintenant dans contracts/models.py
 
     @property
     def is_admin(self):

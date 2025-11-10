@@ -148,18 +148,26 @@ class AskiaAPIClient:
                         json=params,
                         timeout=timeout,
                     )
-                break
             except requests.exceptions.Timeout as e:
                 if attempt < retries:
-                    wait = (attempt + 1) * 2
+                    wait = 2 * (attempt + 1)
                     logger.warning("Timeout API %s (%d/%d). Retry dans %ss", endpoint, attempt + 1, retries + 1, wait)
                     time.sleep(wait)
-                else:
-                    logger.error("Timeout API %s après %d tentatives | %s | params=%s", endpoint, retries + 1, e, safe)
-                    raise Exception(f"Délai d'attente dépassé pour {endpoint}")
+                    continue
+                logger.error("Timeout API %s après %d tentatives | %s | params=%s", endpoint, retries + 1, e, safe)
+                raise Exception(f"Délai d'attente dépassé pour {endpoint}")
             except requests.exceptions.RequestException as e:
                 logger.error("Erreur réseau API %s | %s | params=%s", endpoint, e, safe)
                 raise Exception(f"Erreur réseau vers l'API Askia: {e}")
+
+            # ici on a une réponse HTTP
+            if 500 <= resp.status_code < 600 and attempt < retries:
+                wait = 0.6 * (attempt + 1)
+                logger.warning("HTTP %s %s (%d/%d). Retry dans %.1fs | params=%s",
+                               resp.status_code, endpoint, attempt + 1, retries + 1, wait, safe)
+                time.sleep(wait)
+                continue
+            break
 
         assert resp is not None
         try:
@@ -266,6 +274,11 @@ class AskiaAPIClient:
         }
         if vehicule_data["categorie"] == "520":
             params["chrgUtil"] = int(vehicule_data.get("charge_utile") or 3500)
+
+        sc = params.get("scatCode")
+        if sc in (None, "", " "):
+            # par convention VP chez Askia: '000'
+            params["scatCode"] = "000"
 
         result = self._make_request("srwb/automobile", params=params)
         return {
@@ -427,27 +440,29 @@ class AskiaAPIClient:
             params["idSaisie"] = id_saisie
 
         try:
-            logger.info("Tentative création contrat | Client=%s | Immat=%s | IdSaisie=%s", contrat_data["client_code"], immat, id_saisie)
-            result = self._make_request("srwbauto/create", method="GET", params=params, timeout=90, allow_retry=False)
+            result = self._make_request(
+                "srwbauto/create", method="GET", params=params, timeout=90, allow_retry=False
+            )
         except Exception as e:
-            if "timeout" in str(e).lower() and id_saisie and possible_factures:
-                logger.warning("Timeout détecté | Vérification création dans 10s...")
-                time.sleep(10)
-                for nf in possible_factures:
-                    existing = self.verify_contrat_exists(nf)
-                    if existing:
-                        liens = existing.get("lien", {}) or {}
-                        return {
-                            "numero_police": existing.get("numeroPolice"),
-                            "numero_facture": existing.get("numeroFacture"),
-                            "numero_client": existing.get("numeroClient"),
-                            "prime_ttc": self._safe_decimal(existing.get("primettc")),
-                            "attestation": liens.get("linkAttestation", ""),
-                            "carte_brune": liens.get("linkCarteBrune", ""),
-                            "raw_response": existing,
-                            "recovered_after_timeout": True,
-                        }
-                logger.error("Timeout confirmé sans création | Immat=%s", immat)
+            # ✅ récupération proposée pour TOUTE erreur si id_saisie connu
+            if id_saisie:
+                possible_factures = [f"{datetime.now().year}{id_saisie}", id_saisie]
+                for _ in range(3):  # 3 tentatives légères
+                    for nf in possible_factures:
+                        existing = self.verify_contrat_exists(nf)
+                        if existing:
+                            liens = existing.get("lien", {}) or {}
+                            return {
+                                "numero_police": existing.get("numeroPolice"),
+                                "numero_facture": existing.get("numeroFacture"),
+                                "numero_client": existing.get("numeroClient"),
+                                "prime_ttc": self._safe_decimal(existing.get("primettc")),
+                                "attestation": liens.get("linkAttestation", ""),
+                                "carte_brune": liens.get("linkCarteBrune", ""),
+                                "raw_response": existing,
+                                "recovered_after_error": True,
+                            }
+                    time.sleep(5)
             raise
 
         if not isinstance(result, dict):
@@ -557,6 +572,24 @@ class AskiaAPIClient:
             return [("07", "Berline")]
 
     # ---------------- Documents ----------------
+    def get_quittance_json(self, numero_facture: str) -> Optional[Dict[str, Any]]:
+        try:
+            r = requests.get(
+                f"{self.base_url}/quittance/getfacture",
+                headers={**self.headers, "Accept": "application/json"},
+                params={"numeroFacture": numero_facture},
+                timeout=15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception:
+            return None
+
+    def verify_contrat_exists(self, numero_facture: str) -> Optional[Dict[str, Any]]:
+        data = self.get_quittance_json(numero_facture)
+        if data and isinstance(data, dict) and data.get("numeroPolice"):
+            return data
+        return None
 
     def get_documents(self, numero_facture: str) -> Dict[str, str]:
         data = self._make_request("quittance/getfacture", params={"numeroFacture": numero_facture})

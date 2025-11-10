@@ -12,19 +12,21 @@ Notes :
 - Utilisez des fichiers .env séparés pour dev / staging / prod.
 - Réglez DJANGO_SETTINGS_MODULE pour cibler le bon module de settings.
 """
+from decimal import Decimal
 from pathlib import Path
 from decouple import config, Csv
+from dotenv import load_dotenv
 import os
 from django.contrib.messages import constants as messages
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / ".env")
 # ==============================
 # Sécurité
 # ==============================
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
 # ==============================
 # Applications
@@ -36,28 +38,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Third-party
     'widget_tweaks',
     'django_htmx',
     'django.contrib.humanize',
-
-    # Local apps
     'accounts.apps.AccountsConfig',
     'contracts.apps.ContractsConfig',
     'payments.apps.PaymentsConfig',
     'dashboard.apps.DashboardConfig',
 ]
-
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_htmx.middleware.HtmxMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = 'askia_insurance.urls'
@@ -83,17 +79,37 @@ WSGI_APPLICATION = 'askia_insurance.wsgi.application'
 # ==============================
 # Base de données
 # ==============================
-DATABASES = {
-    'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
-        'NAME': config('DB_NAME', default=BASE_DIR / 'db.sqlite3'),
-        'USER': config('DB_USER', default=''),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default=''),
-        'PORT': config('DB_PORT', default=''),
-    }
-}
+DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3").strip()
+DB_NAME   = os.getenv("DB_NAME", "").strip()
+DB_USER   = os.getenv("DB_USER", "").strip()
+DB_PWD    = os.getenv("DB_PASSWORD", "").strip()
+DB_HOST   = os.getenv("DB_HOST", "").strip()
+DB_PORT   = os.getenv("DB_PORT", "").strip()
 
+if DB_ENGINE == "django.db.backends.sqlite3":
+    # Toujours un chemin absolu
+    NAME = str((BASE_DIR / (DB_NAME or "db.sqlite3")).resolve())
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": NAME,
+        }
+    }
+else:
+    # PostgreSQL
+    if not (DB_NAME and DB_USER):
+        raise RuntimeError("DB_NAME et DB_USER requis pour PostgreSQL")
+    DATABASES = {
+        "default": {
+            "ENGINE": DB_ENGINE,
+            "NAME": DB_NAME,
+            "USER": DB_USER,
+            "PASSWORD": DB_PWD,
+            "HOST": DB_HOST or "127.0.0.1",
+            "PORT": DB_PORT or "5432",
+            "CONN_MAX_AGE": 60,
+        }
+    }
 # ==============================
 # Authentification
 # ==============================
@@ -121,6 +137,11 @@ USE_TZ = True
 # ==============================
 # Fichiers statiques et médias
 # ==============================
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+}
+
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -143,7 +164,7 @@ ASKIA_BR_CODE = config('ASKIA_BR_CODE')
 # ==============================
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='')
-EMAIL_PORT = config('EMAIL_PORT', default=0, cast=int)
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
@@ -175,8 +196,15 @@ LOGGING = {
     },
     'handlers': {
         'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
-        'file': {'class': 'logging.FileHandler', 'filename': LOG_DIR / 'contracts.log', 'formatter': 'verbose'},
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOG_DIR / 'contracts.log'),
+            'formatter': 'verbose',
+            'maxBytes': 5_000_000,
+            'backupCount': 3,
+        },
     },
+
     'root': {'handlers': ['console'], 'level': 'WARNING'},
     'loggers': {
             'django': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
@@ -199,21 +227,25 @@ LOGGING = {
 # Déconnecte l’utilisateur si le navigateur est fermé
 #SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-
+# CSRF pour domaines HTTPS (prod)
+#CSRF_TRUSTED_ORIGINS = config(
+#    'CSRF_TRUSTED_ORIGINS',
+#    default='',
+#    cast=Csv()
+#)
 # ==========================
 # 🔒 CONFIGURATION SSL / COOKIES (ACTIVER EN PROD SEULEMENT)
 # ==========================
-
 # ⚠️ Active uniquement si le site est servi en HTTPS (production)
-# CSRF_COOKIE_SECURE = True          # Le cookie CSRF est transmis seulement via HTTPS
-# SESSION_COOKIE_SECURE = True       # Le cookie de session est transmis seulement via HTTPS
-# SECURE_BROWSER_XSS_FILTER = True   # Active la protection XSS dans les navigateurs modernes
-# SECURE_CONTENT_TYPE_NOSNIFF = True # Empêche le mime-type sniffing
-# SECURE_SSL_REDIRECT = True         # Force la redirection de tout le trafic en HTTPS
-# SECURE_HSTS_SECONDS = 31536000     # HSTS : force le HTTPS pendant 1 an
-# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-# SECURE_HSTS_PRELOAD = True
-
+#if not DEBUG:
+#SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+#CSRF_COOKIE_SECURE = True
+#SESSION_COOKIE_SECURE = True
+#SECURE_CONTENT_TYPE_NOSNIFF = True
+#SECURE_SSL_REDIRECT = True
+#SECURE_HSTS_SECONDS = 31536000
+#SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#SECURE_HSTS_PRELOAD = True
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -224,12 +256,27 @@ CACHES = {
 # COMMISSIONS & TARIFS
 # ==============================
 # Taux Askia (fixe)
-COMMISSION_ASKIA_TAUX = config('COMMISSION_ASKIA_TAUX', default=0.20, cast=float)
-COMMISSION_ASKIA_FIXE = config('COMMISSION_ASKIA_FIXE', default=3000, cast=int)
+COMMISSION_ASKIA_TAUX = config('COMMISSION_ASKIA_TAUX', default='0.20', cast=Decimal)
+COMMISSION_ASKIA_FIXE = config('COMMISSION_ASKIA_FIXE', default='3000', cast=Decimal)
 
 # Taux Apporteurs
-COMMISSION_PLATINE_TAUX = config('COMMISSION_PLATINE_TAUX', default=0.18, cast=float)
-COMMISSION_PLATINE_FIXE = config('COMMISSION_PLATINE_FIXE', default=2000, cast=int)
+COMMISSION_PLATINE_TAUX = config('COMMISSION_PLATINE_TAUX', default='0.18', cast=Decimal)
+COMMISSION_PLATINE_FIXE = config('COMMISSION_PLATINE_FIXE', default='2000', cast=Decimal)
 
-COMMISSION_FREEMIUM_TAUX = config('COMMISSION_FREEMIUM_TAUX', default=0.10, cast=float)
-COMMISSION_FREEMIUM_FIXE = config('COMMISSION_FREEMIUM_FIXE', default=1800, cast=int)
+COMMISSION_FREEMIUM_TAUX = config('COMMISSION_FREEMIUM_TAUX', default='0.10', cast=Decimal)
+COMMISSION_FREEMIUM_FIXE = config('COMMISSION_FREEMIUM_FIXE', default='1800', cast=Decimal)
+
+COMMISSION_ADMIN_TAUX = COMMISSION_ASKIA_TAUX - COMMISSION_PLATINE_TAUX  # attendu 0.02
+COMMISSION_ADMIN_FIXE = COMMISSION_ASKIA_FIXE - COMMISSION_PLATINE_FIXE  # attendu 1000
+# Garde-fous
+if COMMISSION_ADMIN_TAUX < 0 or COMMISSION_ADMIN_FIXE < 0:
+    raise ValueError("Paramétrage commissions incohérent: admin < 0")
+
+FEATURES = {
+    "QUOTE_FLOW": True, "DEADLINES": True, "ASKIA_DOCS": True,
+    "BANNER": True, "BROKER_ONBOARDING": True, "TWO_WHEELS": True,
+}
+BUSINESS = {
+    "SERVICE_PHONE": "780103636",
+}
+

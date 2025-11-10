@@ -1,18 +1,19 @@
-from django.db import models
+from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
-from decimal import Decimal
+from django.db import models
 
 
 class PaiementApporteur(models.Model):
     """
     Encaissement du net à reverser par l'apporteur vers l'admin BWHITE.
-    Créé automatiquement pour un Contrat valide (attestation ou carte brune présente).
+    Créé automatiquement pour un Contrat valide.
     """
 
     STATUS = [
         ("EN_ATTENTE", "En attente"),
         ("PAYE", "Payé"),
+        ("ANNULE", "Annulé"),
     ]
 
     METHODE = [
@@ -29,13 +30,15 @@ class PaiementApporteur(models.Model):
 
     # Sommes
     montant_a_payer = models.DecimalField(
-        max_digits=10, decimal_places=2,
+        max_digits=10,
+        decimal_places=2,
         default=Decimal("0.00"),
         validators=[MinValueValidator(Decimal("0.00"))],
         help_text="Montant dû par l'apporteur à BWHITE (Prime TTC - sa commission)",
         verbose_name="Montant à payer",
     )
 
+    # Statut et déclaration
     status = models.CharField(
         max_length=12,
         choices=STATUS,
@@ -69,8 +72,12 @@ class PaiementApporteur(models.Model):
         verbose_name = "Encaissement apporteur"
         verbose_name_plural = "Encaissements apporteurs"
         ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["status"]),
+        indexes = [models.Index(fields=["status"])]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(montant_a_payer__gte=Decimal("0.00")),
+                name="paiement_montant_non_negatif",
+            ),
         ]
 
     def __str__(self):
@@ -81,16 +88,26 @@ class PaiementApporteur(models.Model):
     def est_paye(self) -> bool:
         return self.status == "PAYE"
 
-    # --- MÉTHODE MISE À JOUR ---
+    @property
+    def est_en_attente(self) -> bool:
+        return self.status == "EN_ATTENTE"
+
+    # --- Transitions d’état ---
     def marquer_comme_paye(self, methode: str, reference: str, validated_by=None):
         """
         Validation côté admin: marque l'encaissement comme PAYE.
         """
+        if self.status == "PAYE":
+            raise ValueError("Déjà marqué comme PAYE.")
+        if self.status == "ANNULE":
+            raise ValueError("Encaissement annulé. Impossible de valider.")
         if methode not in dict(self.METHODE):
-            raise ValueError("Méthode de paiement invalide")
+            raise ValueError("Méthode de paiement invalide.")
+        if not reference or len(reference.strip()) < 6:
+            raise ValueError("Référence transaction invalide.")
 
         self.methode_paiement = methode
-        self.reference_transaction = reference or ""
+        self.reference_transaction = reference.strip()
         self.status = "PAYE"
         self.save(update_fields=[
             "methode_paiement",
@@ -103,14 +120,31 @@ class PaiementApporteur(models.Model):
             paiement=self,
             action="VALIDATION",
             effectue_par=validated_by,
-            details=f"Paiement validé via {self.get_methode_paiement_display()} | Ref={self.reference_transaction}",
+            details=(
+                f"Paiement validé via {self.get_methode_paiement_display()} "
+                f"| Ref={self.reference_transaction}"
+            ),
         )
-    # ---------------------------
+
+    def annuler(self, reason: str = "", by=None):
+        if self.status == "PAYE":
+            raise ValueError("Déjà payé. Annulation interdite.")
+        if self.status == "ANNULE":
+            return
+        self.status = "ANNULE"
+        self.save(update_fields=["status", "updated_at"])
+        HistoriquePaiement.objects.create(
+            paiement=self,
+            action="STATUS_CHANGE",
+            effectue_par=by,
+            details=f"Statut -> ANNULE. {reason}".strip(),
+        )
+
+
 class HistoriquePaiement(models.Model):
     """
     Journal des actions sur un encaissement (création, changements de statut, validation, etc.).
     """
-
     ACTIONS = [
         ("CREATION", "Création"),
         ("STATUS_CHANGE", "Changement de statut"),

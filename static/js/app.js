@@ -1,4 +1,3 @@
-/* static/js/app.js - Version unifiée HTMX + gestion formulaire contrat */
 (() => {
   'use strict';
 
@@ -18,7 +17,7 @@
 
     init() {
       this.detectContext();
-      this.bindGlobalEvents();
+      this.bindGlobalEvents(); // L'ordre est important
       this.initInactivity();
     }
 
@@ -48,17 +47,6 @@
         el.addEventListener('change', () => this.validate(false), { signal: this.ac.signal });
       });
 
-      const calcBtn = document.querySelector('#btn-calculer-tarif');
-      if (calcBtn) {
-        calcBtn.addEventListener('click', (e) => {
-          this.clearDebounce(DEBOUNCE_KEY);
-          if (!this.validate(true)) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.toast('Veuillez remplir tous les champs obligatoires', 'error', 4000);
-          }
-        }, { signal: this.ac.signal });
-      }
     }
 
     validate(showErrors = false) {
@@ -73,6 +61,7 @@
       let ok = true;
       for (const id of requiredIds) {
         const el = get(id);
+        // 'offsetParent === null' vérifie si l'élément est caché (ex: sous-catégorie)
         if (!el || el.offsetParent === null || el.disabled) continue;
 
         const empty = !String(el.value ?? '').trim();
@@ -94,6 +83,7 @@
     }
 
     // -------- Utilitaires
+    // ... (debounce, clearDebounce, clearCache, toast, escape )
     debounce(key, cb, delay = 300) {
       this.clearDebounce(key);
       const t = setTimeout(cb, delay);
@@ -138,6 +128,7 @@
 
     escape(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
 
+
     // -------- HTMX global + Spinner
     bindGlobalEvents() {
       const signal = this.ac.signal;
@@ -164,7 +155,26 @@
         }, { signal });
       });
 
-      document.body.addEventListener('htmx:beforeRequest', () => this.showSpinner(), { signal });
+      document.body.addEventListener('htmx:beforeRequest', (evt) => {
+
+        // Est-ce la requête de simulation ?
+        const elt = evt.detail.elt;
+        if (elt && elt.id === 'btn-calculer-tarif') {
+          this.clearDebounce('form-validation');
+
+          // Exécute la validation
+          if (!this.validate(true)) {
+            evt.preventDefault(); // <-- Ceci BLOQUE la requête HTMX
+            this.toast('Veuillez remplir tous les champs obligatoires', 'error', 4000);
+            return; // Annule l'affichage du spinner
+          }
+        }
+
+        // Si la validation passe (ou si ce n'est pas le bouton de calcul), on montre le spinner
+        this.showSpinner();
+      }, { signal });
+
+
       document.body.addEventListener('htmx:afterRequest', () => this.hideSpinner(), { signal });
     }
 
@@ -258,7 +268,6 @@
   }
 
   // ======================================
-  // === CONTRACT FORM MANAGER (UNIFIÉ) ===
   // ======================================
   class ContractFormManager {
     constructor(app, signal) {
@@ -294,9 +303,7 @@
       ];
       const sc = document.getElementById('id_sous_categorie');
       if (sc && !sc.disabled && sc.offsetParent !== null) base.push('id_sous_categorie');
-      // const cu = document.getElementById('id_charge_utile'); // <-- CORRIGÉ (Supprimé)
-      // const cat = document.getElementById('id_categorie')?.value; // <-- CORRIGÉ (Supprimé)
-      // if (cu && cat === '520') base.push('id_charge_utile'); // <-- CORRIGÉ (Supprimé)
+
       return base;
     }
     enforceRequired() {
@@ -359,7 +366,7 @@
     // -------- Pont Select2 → événements natifs pour HTMX
     bindSelect2Bridge() {
       if (typeof $ === 'undefined' || !$.fn?.select2) return;
-      // <-- CORRIGÉ : Ajout de #id_sous_categorie
+
       $('#id_categorie, #id_marque, #id_carburant, #id_duree, #id_modele, #id_sous_categorie').on(
         'select2:select select2:clear select2:unselect',
         (e) => e.target.dispatchEvent(new Event('change', { bubbles:true }))

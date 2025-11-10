@@ -1,5 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
+
+from . import api_client
 from .models import Client, Vehicule
 from datetime import date, timedelta
 from .referentiels import (
@@ -54,9 +56,15 @@ class ClientForm(forms.ModelForm):
                 'required': 'required',
             }),
             'adresse': forms.Textarea(attrs={
-                'class': BASE_INPUT_CLASS, 'placeholder': 'Adresse complète',
-                'rows': 2, 'autocomplete': 'street-address', 'required': 'required'
+                'class': BASE_INPUT_CLASS,
+                'placeholder': 'Adresse complète',
+                'rows': 2,
+                'autocomplete': 'street-address',
+                'required': 'required',
+                'minlength': '2',
+                'maxlength': '255',
             }),
+
         }
 
     def clean_telephone(self):
@@ -96,10 +104,12 @@ class ClientForm(forms.ModelForm):
         return n
 
     def clean_adresse(self):
-        a = (self.cleaned_data.get('adresse') or '').strip()
-        if len(a) < 10:
-            raise ValidationError("Adresse trop courte (10 caractères minimum)")
-        return a
+        adr = (self.cleaned_data.get('adresse') or '').strip()
+        if len(adr) < 2:
+            raise forms.ValidationError("Adresse trop courte (2 caractères minimum)")
+        return adr
+
+
 # === VÉHICULE FORM ===
 class VehiculeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -262,6 +272,8 @@ class VehiculeForm(forms.ModelForm):
                 self.add_error('sous_categorie', "Obligatoire pour Moto")
             cleaned_data['charge_utile'] = 0
         else:
+            # VP et autres catégories : pas de sous-catégorie
+            cleaned_data['sous_categorie'] = ''
             cleaned_data['charge_utile'] = 0
 
         return cleaned_data
@@ -299,3 +311,38 @@ class ContratSimulationForm(forms.Form):
         if d > today + timedelta(days=60):
             raise ValidationError("Maximum 60 jours à l’avance")
         return d
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        cat = None
+        if hasattr(self, "data") and self.data:
+            cat = self.data.get("categorie") or self.data.get("vehicule-categorie")
+        if not cat:
+            cat = (self.initial or {}).get("categorie") or (getattr(self.instance, "categorie", None))
+
+        # Valeurs par défaut prudentes
+        required = False
+        choices = [("", "-- Sélectionner --")]
+
+        if cat in ("520", "550"):
+            # Tente l’API, sinon fallback constants
+            api_choices = []
+            try:
+                api_choices = api_client.get_referentiel_sous_categories(cat)  # -> List[Tuple[code, libelle]]
+            except Exception:
+                api_choices = []
+
+            if not api_choices:
+                api_choices = SOUS_CATEGORIES_520 if cat == "520" else SOUS_CATEGORIES_550
+
+            # Normalise et applique
+            norm = [(str(code).zfill(3), lib) for code, lib in api_choices]
+            choices = [("", "-- Sélectionner --")] + norm
+            required = True
+
+        field = self.fields["sous_categorie"]
+        field.required = required
+        field.choices = choices
+        # styling conservé si tu en as
+        field.widget.attrs.update({"id": "id_sous_categorie", "name": "sous_categorie"})

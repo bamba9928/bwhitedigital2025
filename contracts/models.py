@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator, MinLengthValidator
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Manager
@@ -24,7 +24,11 @@ class Client(models.Model):
         unique=True,
         verbose_name='Téléphone'
     )
-    adresse = models.TextField(verbose_name='Adresse')
+    adresse = models.CharField(
+                max_length = 255,
+            verbose_name = 'Adresse',
+            validators = [MinLengthValidator(2, message="Adresse trop courte (2 caractères minimum)")]
+                            )
     email = models.EmailField(blank=True, null=True, verbose_name='Email')
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -375,14 +379,14 @@ class Contrat(models.Model):
         Calcule TOUTES les commissions (Askia, Apporteur, BWHITE) et le Net à Reverser.
         """
         # Constantes paramétrables avec valeurs par défaut sûres
-        ASKIA_TAUX = Decimal(str(getattr(settings, 'COMMISSION_ASKIA_TAUX', '0.20')))
-        ASKIA_ACCESSOIRES = Decimal(str(getattr(settings, 'COMMISSION_ASKIA_FIXE', '3000')))
+        ASKIA_TAUX = getattr(settings, 'COMMISSION_ASKIA_TAUX', Decimal('0.20'))
+        ASKIA_ACCESSOIRES = getattr(settings, 'COMMISSION_ASKIA_FIXE', Decimal('3000'))
 
-        PL_TAUX = Decimal(str(getattr(settings, 'COMMISSION_PLATINE_TAUX', '0.18')))
-        PL_FIXE = Decimal(str(getattr(settings, 'COMMISSION_PLATINE_FIXE', '2000')))
+        PL_TAUX = getattr(settings, 'COMMISSION_PLATINE_TAUX', Decimal('0.18'))
+        PL_FIXE = getattr(settings, 'COMMISSION_PLATINE_FIXE', Decimal('2000'))
 
-        FR_TAUX = Decimal(str(getattr(settings, 'COMMISSION_FREEMIUM_TAUX', '0.10')))
-        FR_FIXE = Decimal(str(getattr(settings, 'COMMISSION_FREEMIUM_FIXE', '1800')))
+        FR_TAUX = getattr(settings, 'COMMISSION_FREEMIUM_TAUX', Decimal('0.10'))
+        FR_FIXE = getattr(settings, 'COMMISSION_FREEMIUM_FIXE', Decimal('1800'))
 
         # 1. Commission totale versée par Askia à BWHITE
         self.commission_askia = (self.prime_nette * ASKIA_TAUX) + ASKIA_ACCESSOIRES
