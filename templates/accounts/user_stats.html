@@ -1,64 +1,61 @@
 {% extends "base.html" %}
 {% load humanize %}
-
 {% block title %}Mes Statistiques{% endblock %}
-
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
-  <h1 class="text-2xl font-bold text-white">Mes Statistiques</h1>
-
-  {% if request.user.role == "APPORTEUR" %}
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Contrats totaux</p>
-      <p class="text-3xl font-bold text-white">{{ stats.total_contrats|default:0 }}</p>
+    <div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <h1 class="text-2xl font-bold text-white">Mes Statistiques</h1>
+        {% if request.user.role == "APPORTEUR" %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Contrats totaux</p>
+                    <p class="text-3xl font-bold text-white">{{ stats.total_contrats|default:0 }}</p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Contrats ce mois</p>
+                    <p class="text-3xl font-bold text-white">{{ stats.contrats_mois|default:0 }}</p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Commissions totales</p>
+                    <p class="text-3xl font-bold text-green-400">{{ stats.total_commissions|default:0|floatformat:0|intcomma }} F</p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Commissions ce mois</p>
+                    <p class="text-3xl font-bold text-green-400">{{ stats.commissions_mois|default:0|floatformat:0|intcomma }} F</p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Payées</p>
+                    <p class="text-3xl font-bold text-blue-400">{{ stats.commissions_payees|default:0|floatformat:0|intcomma }} F</p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">En attente</p>
+                    <p class="text-3xl font-bold text-yellow-400">{{ stats.commissions_attente|default:0|floatformat:0|intcomma }} F</p>
+                </div>
+            </div>
+        {% elif request.user.role == "ADMIN" %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Apporteurs totaux</p>
+                    <p class="text-3xl font-bold text-white">{{ stats.apporteurs_total|default:0 }}</p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Apporteurs actifs</p>
+                    <p class="text-3xl font-bold text-white">{{ stats.apporteurs_actifs|default:0 }}</p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Contrats totaux</p>
+                    <p class="text-3xl font-bold text-white">{{ stats.contrats_total|default:0 }}</p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                    <p class="text-sm text-gray-400">Commissions totales</p>
+                    <p class="text-3xl font-bold text-green-400">{{ stats.commissions_total|default:0|floatformat:0|intcomma }} F</p>
+                </div>
+            </div>
+        {% endif %}
+        <div>
+            <a href="{% url 'accounts:profile' %}"
+               class="inline-block px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700">
+                Retour au profil
+            </a>
+        </div>
     </div>
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Contrats ce mois</p>
-      <p class="text-3xl font-bold text-white">{{ stats.contrats_mois|default:0 }}</p>
-    </div>
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Commissions totales</p>
-      <p class="text-3xl font-bold text-green-400">{{ stats.total_commissions|default:0|floatformat:0|intcomma }} F</p>
-    </div>
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Commissions ce mois</p>
-      <p class="text-3xl font-bold text-green-400">{{ stats.commissions_mois|default:0|floatformat:0|intcomma }} F</p>
-    </div>
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Payées</p>
-      <p class="text-3xl font-bold text-blue-400">{{ stats.commissions_payees|default:0|floatformat:0|intcomma }} F</p>
-    </div>
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">En attente</p>
-      <p class="text-3xl font-bold text-yellow-400">{{ stats.commissions_attente|default:0|floatformat:0|intcomma }} F</p>
-    </div>
-  </div>
-  {% elif request.user.role == "ADMIN" %}
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Apporteurs totaux</p>
-      <p class="text-3xl font-bold text-white">{{ stats.apporteurs_total|default:0 }}</p>
-    </div>
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Apporteurs actifs</p>
-      <p class="text-3xl font-bold text-white">{{ stats.apporteurs_actifs|default:0 }}</p>
-    </div>
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Contrats totaux</p>
-      <p class="text-3xl font-bold text-white">{{ stats.contrats_total|default:0 }}</p>
-    </div>
-    <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
-      <p class="text-sm text-gray-400">Commissions totales</p>
-      <p class="text-3xl font-bold text-green-400">{{ stats.commissions_total|default:0|floatformat:0|intcomma }} F</p>
-    </div>
-  </div>
-  {% endif %}
-
-  <div>
-    <a href="{% url 'accounts:profile' %}" class="inline-block px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700">
-      Retour au profil
-    </a>
-  </div>
-</div>
 {% endblock %}

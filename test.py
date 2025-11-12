@@ -9,21 +9,40 @@ from typing import Dict, Any, Optional, List, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
-REGION_PREFIXES = ("AB","AC","DK","TH","SL","DB","LG","TC","KL","KD","ZG","FK","KF","KG","MT","SD","DL")
+REGION_PREFIXES = (
+    "AB",
+    "AC",
+    "DK",
+    "TH",
+    "SL",
+    "DB",
+    "LG",
+    "TC",
+    "KL",
+    "KD",
+    "ZG",
+    "FK",
+    "KF",
+    "KG",
+    "MT",
+    "SD",
+    "DL",
+)
 
 r"^(" + "|".join(REGION_PREFIXES) + r")-?\d{4}-?[A-Z]{2}$"
 
 PATTERNS = {
-    "REGIONAL": re.compile(rf"^({'|'.join(REGION_PREFIXES)})-?\d{{4}}-?[A-Z]{{1,2}}$"),
-    "ANCIEN":   re.compile(r"^[A-Z]{2}-?\d{3}-?[A-Z]{2}$"),
-    "AD":       re.compile(r"^AD-?\d{4}$"),
-    "EX":       re.compile(r"^\d{4}-?EX$"),
-    "EP":       re.compile(r"^\d{4}-?EP\d{2}$"),
-    "AP":       re.compile(r"^\d{3}-?AP-?\d{4}$"),
-    "TT":       re.compile(r"^\d{4}-?TT-?[A-Z]$"),
-    "AD_TT":    re.compile(r"^AD\d{4}-?TT-?[A-Z]$"),
-    "CH":       re.compile(r"^CH-?\d{6}$"),
+    "REGIONAL": re.compile("^({'|'.join(REGION_PREFIXES)})-?\d{{4}}-?[A-Z]{{1,2}}$"),
+    "ANCIEN": re.compile(r"^[A-Z]{2}-?\d{3}-?[A-Z]{2}$"),
+    "AD": re.compile(r"^AD-?\d{4}$"),
+    "EX": re.compile(r"^\d{4}-?EX$"),
+    "EP": re.compile(r"^\d{4}-?EP\d{2}$"),
+    "AP": re.compile(r"^\d{3}-?AP-?\d{4}$"),
+    "TT": re.compile(r"^\d{4}-?TT-?[A-Z]$"),
+    "AD_TT": re.compile(r"^AD\d{4}-?TT-?[A-Z]$"),
+    "CH": re.compile(r"^CH-?\d{6}$"),
 }
+
 
 def _canon_immat(s: str) -> str:
     s = (s or "").upper()
@@ -33,33 +52,36 @@ def _canon_immat(s: str) -> str:
         raise ValueError("Caractères non autorisés dans l'immatriculation")
     return s
 
+
 def _format_immat_for_askia(v: str, typ: str) -> str:
     raw = v.replace("-", "")
-    if typ == "REGIONAL":   # AB0000CD -> AB-0000-CD
-        return f"{raw[:2]}-{raw[2:6]}-{raw[6:]}"
-    if typ == "ANCIEN":     # AA001BB -> AA-001-BB
-        return f"{raw[:2]}-{raw[2:5]}-{raw[5:]}"
-    if typ == "AD":         # AD0001 -> AD-0001
-        return f"{raw[:2]}-{raw[2:]}"
-    if typ == "EX":         # 0001EX -> 0001-EX
-        return f"{raw[:4]}-EX"
-    if typ == "EP":         # 0001EP01 -> 0001-EP01
-        return f"{raw[:4]}-EP{raw[6:]}" if "-" in v else f"{raw[:4]}-{raw[4:]}"
-    if typ == "AP":         # 001AP0001 -> 001-AP-0001
-        return f"{raw[:3]}-AP-{raw[5:]}"
-    if typ == "TT":         # 0001TTA -> 0001-TT-A
-        return f"{raw[:4]}-TT-{raw[-1]}"
-    if typ == "AD_TT":      # AD0001TTA -> AD0001-TT-A
-        return f"{raw[:6]}-TT-{raw[-1]}"
-    if typ == "CH":         # CH000001 -> CH-000001
-        return f"{raw[:2]}-{raw[2:]}"
+    if typ == "REGIONAL":  # AB0000CD -> AB-0000-CD
+        return "{raw[:2]}-{raw[2:6]}-{raw[6:]}"
+    if typ == "ANCIEN":  # AA001BB -> AA-001-BB
+        return "{raw[:2]}-{raw[2:5]}-{raw[5:]}"
+    if typ == "AD":  # AD0001 -> AD-0001
+        return "{raw[:2]}-{raw[2:]}"
+    if typ == "EX":  # 0001EX -> 0001-EX
+        return "{raw[:4]}-EX"
+    if typ == "EP":  # 0001EP01 -> 0001-EP01
+        return "{raw[:4]}-EP{raw[6:]}" if "-" in v else "{raw[:4]}-{raw[4:]}"
+    if typ == "AP":  # 001AP0001 -> 001-AP-0001
+        return "{raw[:3]}-AP-{raw[5:]}"
+    if typ == "TT":  # 0001TTA -> 0001-TT-A
+        return "{raw[:4]}-TT-{raw[-1]}"
+    if typ == "AD_TT":  # AD0001TTA -> AD0001-TT-A
+        return "{raw[:6]}-TT-{raw[-1]}"
+    if typ == "CH":  # CH000001 -> CH-000001
+        return "{raw[:2]}-{raw[2:]}"
     return v  # fallback
 
-def _detect_immat_type(v: str) -> Optional[str]:
+
+def _detect_immat_type(v: str) -> str | None:
     for typ, rx in PATTERNS.items():
         if rx.fullmatch(v):
             return typ
     return None
+
 
 # Remplace la méthode existante
 def _validate_immatriculation(self, immat: str) -> str:
@@ -74,11 +96,12 @@ def _validate_immatriculation(self, immat: str) -> str:
     typ = _detect_immat_type(v)
     if not typ:
         raise ValueError(
-            f"Format d'immatriculation invalide: '{immat}'. "
+            "Format d'immatriculation invalide: '{immat}'. "
             "Formats acceptés: DK-0001-BB, AA-001-AA, AD-0001, 0001-EX, 0001-EP01, "
             "001-AP-0001, 0001-TT-A, AD0001-TT-A, CH-000001"
         )
     return _format_immat_for_askia(v, typ)
+
 
 class AskiaAPIClient:
     """Client pour communiquer avec l'API ASKIA."""
@@ -92,7 +115,7 @@ class AskiaAPIClient:
         self.pv_code = str(settings.ASKIA_PV_CODE)
         self.br_code = str(settings.ASKIA_BR_CODE)
 
-    def _mask_sensitive_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _mask_sensitive_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """Masque les données sensibles dans un dictionnaire (récursif)."""
         if not isinstance(data, dict):
             return data
@@ -115,19 +138,19 @@ class AskiaAPIClient:
 
         return masked
 
-    def _clean_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _clean_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Nettoie les paramètres en retirant les valeurs None."""
         return {k: v for k, v in params.items() if v is not None}
 
     def _make_request(
-            self,
-            endpoint: str,
-            method: str = "GET",
-            params: Optional[Dict[str, Any]] = None,
-            timeout: int = 30,
-            max_retries: int = 2,
-            allow_retry: bool = True,
-    ) -> Dict[str, Any]:
+        self,
+        endpoint: str,
+        method: str = "GET",
+        params: dict[str, Any] | None = None,
+        timeout: int = 30,
+        max_retries: int = 2,
+        allow_retry: bool = True,
+    ) -> dict[str, Any]:
         """
         Appel API ASKIA avec gestion robuste des erreurs réseau et métier.
 
@@ -145,7 +168,7 @@ class AskiaAPIClient:
         Raises:
             Exception: En cas d'erreur réseau, HTTP ou métier.
         """
-        url = f"{self.base_url}/{endpoint}"
+        url = "{self.base_url}/{endpoint}"
         method = (method or "GET").upper()
 
         # Nettoyage des paramètres
@@ -187,13 +210,16 @@ class AskiaAPIClient:
                         safe_params,
                     )
                     raise Exception(
-                        f"Délai d'attente dépassé pour l'API Askia après {retries + 1} tentatives"
+                        "Délai d'attente dépassé pour l'API Askia après {retries + 1} tentatives"
                     )
             except requests.exceptions.RequestException as e:
                 logger.error(
-                    "Erreur réseau API Askia %s | %s | params=%s", endpoint, e, safe_params
+                    "Erreur réseau API Askia %s | %s | params=%s",
+                    endpoint,
+                    e,
+                    safe_params,
                 )
-                raise Exception(f"Erreur réseau vers l'API Askia: {e}")
+                raise Exception("Erreur réseau vers l'API Askia: {e}")
 
         # Vérification du statut HTTP
         try:
@@ -210,15 +236,13 @@ class AskiaAPIClient:
                 preview,
                 safe_params,
             )
-            raise Exception(f"Erreur HTTP Askia {resp.status_code}")
+            raise Exception("Erreur HTTP Askia {resp.status_code}")
 
         # Parsing JSON
         try:
             data = resp.json()
         except ValueError:
-            logger.error(
-                "Réponse non-JSON sur %s | body=%s", endpoint, resp.text[:400]
-            )
+            logger.error("Réponse non-JSON sur %s | body=%s", endpoint, resp.text[:400])
             raise Exception("Réponse API Askia invalide (non JSON)")
 
         # Détection d'erreurs métier
@@ -235,24 +259,27 @@ class AskiaAPIClient:
                     message,
                     safe_params,
                 )
-                raise Exception(f"Contrat existant : {message}")
+                raise Exception("Contrat existant : {message}")
 
             flags_false = (
-                    data.get("success") is False
-                    or data.get("statut") is False
-                    or status_raw in {"KO", "ERROR", "NOK", "FAIL"}
-                    or (isinstance(error_val, (str, int)) and str(error_val) not in {"", "0", "None"})
+                data.get("success") is False
+                or data.get("statut") is False
+                or status_raw in {"KO", "ERROR", "NOK", "FAIL"}
+                or (
+                    isinstance(error_val, (str, int))
+                    and str(error_val) not in {"", "0", "None"}
+                )
             )
             code_bad = (code_raw is not None) and (
-                    str(code_raw).strip() not in {"", "0", "None", "OK", "SUCCESS"}
+                str(code_raw).strip() not in {"", "0", "None", "OK", "SUCCESS"}
             )
 
             if flags_false or code_bad:
                 msg = (
-                        message
-                        or (error_val if isinstance(error_val, str) and error_val else None)
-                        or data.get("detail")
-                        or "Erreur métier Askia"
+                    message
+                    or (error_val if isinstance(error_val, str) and error_val else None)
+                    or data.get("detail")
+                    or "Erreur métier Askia"
                 )
                 logger.error(
                     "Erreur métier Askia sur %s | msg=%s | data=%s | params=%s",
@@ -261,7 +288,7 @@ class AskiaAPIClient:
                     self._mask_sensitive_data(data),
                     safe_params,
                 )
-                raise Exception(f"Erreur métier Askia : {msg}")
+                raise Exception("Erreur métier Askia : {msg}")
 
         return data
 
@@ -279,8 +306,8 @@ class AskiaAPIClient:
     # Simulation Automobile
     # --------------------------
     def get_simulation_auto(
-            self, vehicule_data: Dict[str, Any], duree: int
-    ) -> Dict[str, Union[Decimal, str]]:
+        self, vehicule_data: dict[str, Any], duree: int
+    ) -> dict[str, Decimal | str]:
         """
         Obtient une simulation tarifaire pour un véhicule.
 
@@ -341,7 +368,7 @@ class AskiaAPIClient:
     # --------------------------
     # Client
     # --------------------------
-    def create_client(self, client_data: Dict[str, Any]) -> str:
+    def create_client(self, client_data: dict[str, Any]) -> str:
         """
         Crée un client dans le système ASKIA et retourne son code.
 
@@ -388,7 +415,7 @@ class AskiaAPIClient:
         )
         return cli_code
 
-    def get_client(self, client_code: str) -> Dict[str, Any]:
+    def get_client(self, client_code: str) -> dict[str, Any]:
         """
         Récupère les informations d'un client depuis ASKIA.
 
@@ -405,8 +432,7 @@ class AskiaAPIClient:
     # Contrat Automobile
     # --------------------------
 
-
-    def verify_contrat_exists(self, numero_facture: str) -> Optional[Dict[str, Any]]:
+    def verify_contrat_exists(self, numero_facture: str) -> dict[str, Any] | None:
         """
         Vérifie si un contrat existe déjà dans Askia.
 
@@ -418,13 +444,13 @@ class AskiaAPIClient:
                 "quittance/getfacture",
                 params={"numeroFacture": numero_facture},
                 timeout=10,
-                allow_retry=False
+                allow_retry=False,
             )
             if result and result.get("numeroPolice"):
                 logger.info(
                     "Contrat existant détecté | Facture=%s | Police=%s",
                     numero_facture,
-                    result.get("numeroPolice")
+                    result.get("numeroPolice"),
                 )
                 return result
             return None
@@ -433,8 +459,8 @@ class AskiaAPIClient:
             return None
 
     def create_contrat_auto(
-            self, contrat_data: Dict[str, Any]
-    ) -> Dict[str, Union[str, Decimal]]:
+        self, contrat_data: dict[str, Any]
+    ) -> dict[str, str | Decimal]:
         """
         Crée un contrat automobile dans ASKIA et récupère aussi ses documents.
 
@@ -461,7 +487,7 @@ class AskiaAPIClient:
         ]
         for field in required_fields:
             if not contrat_data.get(field):
-                raise ValueError(f"Champ requis manquant : {field}")
+                raise ValueError("Champ requis manquant : {field}")
 
         # Validation de l'immatriculation
         try:
@@ -478,33 +504,35 @@ class AskiaAPIClient:
             elif isinstance(effet_raw, str):
                 effet = datetime.strptime(effet_raw, "%Y-%m-%d").date()
             else:
-                raise ValueError(f"Type de date non supporté: {type(effet_raw).__name__}")
+                raise ValueError(
+                    "Type de date non supporté: {type(effet_raw).__name__}"
+                )
         except (ValueError, AttributeError) as e:
             logger.error(
                 "Format date_effet invalide | Valeur=%s | Type=%s | Erreur=%s",
                 effet_raw,
                 type(effet_raw),
-                e
+                e,
             )
             raise ValueError(
-                f"date_effet doit être une date valide au format YYYY-MM-DD ou un objet date Python "
-                f"(reçu: {type(effet_raw).__name__})"
+                "date_effet doit être une date valide au format YYYY-MM-DD ou un objet date Python "
+                "(reçu: {type(effet_raw).__name__})"
             )
 
         # Vérification que la date n'est pas dans le passé
         aujourd_hui = datetime.now().date()
         if effet < aujourd_hui:
             raise ValueError(
-                f"La date d'effet ne peut pas être dans le passé. "
-                f"Date fournie: {effet.strftime('%d/%m/%Y')}, "
-                f"Date actuelle: {aujourd_hui.strftime('%d/%m/%Y')}"
+                "La date d'effet ne peut pas être dans le passé. "
+                "Date fournie: {effet.strftime('%d/%m/%Y')}, "
+                "Date actuelle: {aujourd_hui.strftime('%d/%m/%Y')}"
             )
 
         # Vérification préventive si id_saisie existe
         id_saisie = contrat_data.get("id_saisie")
         if id_saisie:
             possible_factures = [
-                f"{datetime.now().year}{id_saisie}",
+                "{datetime.now().year}{id_saisie}",
                 id_saisie,
             ]
 
@@ -514,7 +542,7 @@ class AskiaAPIClient:
                     logger.warning(
                         "Contrat déjà créé | Facture=%s | Police=%s",
                         existing.get("numeroFacture"),
-                        existing.get("numeroPolice")
+                        existing.get("numeroPolice"),
                     )
                     liens = existing.get("lien", {}) or {}
                     return {
@@ -565,7 +593,7 @@ class AskiaAPIClient:
                 "Tentative création contrat | Client=%s | Immat=%s | IdSaisie=%s",
                 contrat_data["client_code"],
                 immat,
-                id_saisie
+                id_saisie,
             )
 
             result = self._make_request(
@@ -587,7 +615,7 @@ class AskiaAPIClient:
                     if existing:
                         logger.info(
                             "✅ Contrat créé malgré timeout | Facture=%s",
-                            existing.get("numeroFacture")
+                            existing.get("numeroFacture"),
                         )
                         liens = existing.get("lien", {}) or {}
                         return {
@@ -624,8 +652,9 @@ class AskiaAPIClient:
                 result,
             )
             raise Exception(
-                result.get("message") or result.get("msg") or
-                "Échec émission: police/facture manquant"
+                result.get("message")
+                or result.get("msg")
+                or "Échec émission: police/facture manquant"
             )
 
         logger.info(
@@ -650,9 +679,7 @@ class AskiaAPIClient:
                 attestation = docs.get("attestation", "")
                 carte_brune = docs.get("carte_brune", "")
             except Exception as e:
-                logger.warning(
-                    "Échec récupération documents (non bloquant) | %s", e
-                )
+                logger.warning("Échec récupération documents (non bloquant) | %s", e)
 
         return {
             "numero_police": numero_police,
@@ -667,16 +694,17 @@ class AskiaAPIClient:
     # --------------------------
     # Référentiels
     # --------------------------
-    def get_referentiel_marques(self) -> List[Tuple[str, str]]:
+    def get_referentiel_marques(self) -> list[tuple[str, str]]:
         """Retourne la liste des marques de véhicules."""
         try:
             result = self._make_request("referentiel/marques")
             return [(m["code"], m["libelle"]) for m in result]
         except Exception:
             from contracts.referentiels import MARQUES
+
             return MARQUES
 
-    def get_referentiel_categories(self) -> List[Tuple[str, str]]:
+    def get_referentiel_categories(self) -> list[tuple[str, str]]:
         """Retourne la liste des catégories de véhicules."""
         params = {"brCode": self.br_code}
         try:
@@ -684,11 +712,12 @@ class AskiaAPIClient:
             return [(c["code"], c["libelle"]) for c in result]
         except Exception:
             from contracts.referentiels import CATEGORIES
+
             return CATEGORIES
 
     def get_referentiel_sous_categories(
-            self, categorie_code: str
-    ) -> List[Tuple[str, str]]:
+        self, categorie_code: str
+    ) -> list[tuple[str, str]]:
         """Retourne la liste des sous-catégories pour une catégorie donnée."""
         params = {"catCode": categorie_code}
         try:
@@ -697,12 +726,13 @@ class AskiaAPIClient:
         except Exception:
             if categorie_code == "520":
                 from contracts.referentiels import SOUS_CATEGORIES_520
+
                 return SOUS_CATEGORIES_520
             return []
 
     def get_referentiel_carrosseries(
-            self, sous_categorie_code: str = "000"
-    ) -> List[Tuple[str, str]]:
+        self, sous_categorie_code: str = "000"
+    ) -> list[tuple[str, str]]:
         """Retourne la liste des carrosseries selon la doc API."""
         params = {"scatCode": sous_categorie_code}
         try:
@@ -715,7 +745,7 @@ class AskiaAPIClient:
     # --------------------------
     # Documents
     # --------------------------
-    def get_documents(self, numero_facture: str) -> Dict[str, str]:
+    def get_documents(self, numero_facture: str) -> dict[str, str]:
         """Retourne les liens d'attestation et de carte brune."""
         params = {"numeroFacture": numero_facture}
         result = self._make_request("quittance/getfacture", params=params)
@@ -726,12 +756,12 @@ class AskiaAPIClient:
             "raw_response": result,
         }
 
-    def get_quittance(self, numero_facture: str) -> Dict[str, Any]:
+    def get_quittance(self, numero_facture: str) -> dict[str, Any]:
         """Retourne les informations de quittance pour une facture."""
         params = {"numeroFacture": numero_facture}
         return self._make_request("quittance/getfacture", params=params)
 
-    def get_carte_grise(self, numero_facture: str) -> Dict[str, Any]:
+    def get_carte_grise(self, numero_facture: str) -> dict[str, Any]:
         """Retourne les informations de carte grise pour une facture."""
         params = {"numeroFacture": numero_facture}
         return self._make_request("quittance/getcartegrise", params=params)
@@ -740,20 +770,21 @@ class AskiaAPIClient:
 # Instance singleton
 askia_client = AskiaAPIClient()
 
+
 def askia_auto_renouveler(
     *,
     cli_code: str,
     numero_police: str,
     dure: int,
     effet: str,  # 'dd/mm/YYYY'
-    vaf: Union[int, str] = 0,
-    vvn: Union[int, str] = 0,
+    vaf: int | str = 0,
+    vvn: int | str = 0,
     recour: int = 0,
     vol: int = 0,
     inc: int = 0,
     pt: int = 0,
     gb: int = 0,
-) -> Tuple[bool, Union[Dict[str, Any], str]]:
+) -> tuple[bool, dict[str, Any] | str]:
     """
     Wrapper de compatibilité si des vues importent encore la fonction.
     Délègue à askia_client.renew_contrat_auto(...).

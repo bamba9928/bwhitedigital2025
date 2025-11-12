@@ -81,8 +81,8 @@ class PaiementApporteur(models.Model):
         ]
 
     def __str__(self):
-        ref = self.contrat.numero_police or f"Contrat#{self.contrat_id}"
-        return f"Encaissement {ref} - {self.get_status_display()}"
+        ref = self.contrat.numero_police or "Contrat#{self.contrat_id}"
+        return "Encaissement {ref} - {self.get_status_display()}"
 
     @property
     def est_paye(self) -> bool:
@@ -109,20 +109,22 @@ class PaiementApporteur(models.Model):
         self.methode_paiement = methode
         self.reference_transaction = reference.strip()
         self.status = "PAYE"
-        self.save(update_fields=[
-            "methode_paiement",
-            "reference_transaction",
-            "status",
-            "updated_at",
-        ])
+        self.save(
+            update_fields=[
+                "methode_paiement",
+                "reference_transaction",
+                "status",
+                "updated_at",
+            ]
+        )
 
         HistoriquePaiement.objects.create(
             paiement=self,
             action="VALIDATION",
             effectue_par=validated_by,
             details=(
-                f"Paiement validé via {self.get_methode_paiement_display()} "
-                f"| Ref={self.reference_transaction}"
+                "Paiement validé via {self.get_methode_paiement_display()} "
+                "| Ref={self.reference_transaction}"
             ),
         )
 
@@ -137,7 +139,7 @@ class PaiementApporteur(models.Model):
             paiement=self,
             action="STATUS_CHANGE",
             effectue_par=by,
-            details=f"Statut -> ANNULE. {reason}".strip(),
+            details="Statut -> ANNULE. {reason}".strip(),
         )
 
 
@@ -145,6 +147,7 @@ class HistoriquePaiement(models.Model):
     """
     Journal des actions sur un encaissement (création, changements de statut, validation, etc.).
     """
+
     ACTIONS = [
         ("CREATION", "Création"),
         ("STATUS_CHANGE", "Changement de statut"),
@@ -175,4 +178,4 @@ class HistoriquePaiement(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.get_action_display()} • {self.created_at:%Y-%m-%d %H:%M}"
+        return "{self.get_action_display()} • {self.created_at:%Y-%m-%d %H:%M}"

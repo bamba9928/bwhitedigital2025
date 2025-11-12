@@ -1,158 +1,142 @@
 {% extends 'base.html' %}
 {% load humanize %}
-
 {% block title %}Encaissements apporteurs{% endblock %}
-
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
-
-  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-    <h1 class="text-3xl font-bold text-white flex items-center gap-3">
-      <i class="fas fa-money-check-alt text-primary-green"></i>
-      <span>Encaissements apporteurs</span>
-    </h1>
-  </div>
-
-  <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-    <form method="get" class="flex flex-col md:flex-row flex-wrap gap-3">
-      <select name="status"
-              class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
-        <option value="">Tous les statuts</option>
-        <option value="EN_ATTENTE" {% if filter_status == "EN_ATTENTE" %}selected{% endif %}>En attente</option>
-        <option value="PAYE" {% if filter_status == "PAYE" %}selected{% endif %}>Payés</option>
-      </select>
-
-      <input type="text" name="q" value="{{ query }}" placeholder="Police, réf. ou client"
-             class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
-
-      <input type="number" name="apporteur" value="{{ apporteur_id }}" placeholder="ID apporteur"
-             class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
-
-      <button type="submit" class="btn btn-primary flex items-center gap-2">
-        <i class="fas fa-filter"></i><span>Filtrer</span>
-      </button>
-
-      {% if filter_status or query or apporteur_id %}
-      <a href="{% url 'payments:liste_encaissements' %}"
-         class="btn bg-red-800 hover:bg-red-700 text-white flex items-center gap-2">
-        <i class="fas fa-times"></i><span>Réinitialiser</span>
-      </a>
-      {% endif %}
-    </form>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-      <p class="text-sm text-gray-400 mb-2">Total éléments</p>
-      <p class="text-3xl font-bold text-white">{{ page_obj.paginator.count|default:0 }}</p>
+    <div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                <i class="fas fa-money-check-alt text-primary-green"></i>
+                <span>Encaissements apporteurs</span>
+            </h1>
+        </div>
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+            <form method="get" class="flex flex-col md:flex-row flex-wrap gap-3">
+                <select name="status"
+                        class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
+                    <option value="">Tous les statuts</option>
+                    <option value="EN_ATTENTE"
+                            {% if filter_status == "EN_ATTENTE" %}selected{% endif %}>En attente</option>
+                    <option value="PAYE" {% if filter_status == "PAYE" %}selected{% endif %}>Payés</option>
+                </select>
+                <input type="text"
+                       name="q"
+                       value="{{ query }}"
+                       placeholder="Police, réf. ou client"
+                       class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
+                <input type="number"
+                       name="apporteur"
+                       value="{{ apporteur_id }}"
+                       placeholder="ID apporteur"
+                       class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
+                <button type="submit" class="btn btn-primary flex items-center gap-2">
+                    <i class="fas fa-filter"></i><span>Filtrer</span>
+                </button>
+                {% if filter_status or query or apporteur_id %}
+                    <a href="{% url 'payments:liste_encaissements' %}"
+                       class="btn bg-red-800 hover:bg-red-700 text-white flex items-center gap-2">
+                        <i class="fas fa-times"></i><span>Réinitialiser</span>
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                <p class="text-sm text-gray-400 mb-2">Total éléments</p>
+                <p class="text-3xl font-bold text-white">{{ page_obj.paginator.count|default:0 }}</p>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-6 border border-yellow-800/50">
+                <div class="flex items-center justify-between mb-1">
+                    <p class="text-sm text-gray-400">Montant en attente</p>
+                    <i class="fas fa-clock text-yellow-400 text-xl"></i>
+                </div>
+                <p class="text-2xl font-bold text-yellow-400">{{ total_attente|default_if_none:0|floatformat:0|intcomma }} F</p>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-6 border border-green-800/50">
+                <div class="flex items-center justify-between mb-1">
+                    <p class="text-sm text-gray-400">Montant payé</p>
+                    <i class="fas fa-check-circle text-green-400 text-xl"></i>
+                </div>
+                <p class="text-2xl font-bold text-green-400">{{ total_paye|default_if_none:0|floatformat:0|intcomma }} F</p>
+            </div>
+        </div>
+        <div class="bg-gray-900 rounded-xl border border-gray-800 shadow-lg overflow-x-auto">
+            <div class="p-6 border-b border-gray-800">
+                <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-list text-primary-green"></i>
+                    Encaissements
+                </h2>
+            </div>
+            <table class="w-full text-sm">
+                <thead class="bg-gray-800 border-b border-gray-700">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-gray-300 font-semibold">Police</th>
+                        <th class="px-4 py-3 text-left text-gray-300 font-semibold">Client</th>
+                        <th class="px-4 py-3 text-left text-gray-300 font-semibold">Apporteur</th>
+                        <th class="px-4 py-3 text-right text-gray-300 font-semibold">À payer</th>
+                        <th class="px-4 py-3 text-right text-gray-300 font-semibold">Payé</th>
+                        <th class="px-4 py-3 text-center text-gray-300 font-semibold">Statut</th>
+                        <th class="px-4 py-3 text-left text-gray-300 font-semibold">Moyen / Réf.</th>
+                        <th class="px-4 py-3 text-left text-gray-300 font-semibold">Maj</th>
+                        <th class="px-4 py-3 text-center text-gray-300 font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for p in paiements %}
+                        <tr class="hover:bg-gray-800/60 transition">
+                            <td class="px-4 py-3">
+                                <a href="{% url 'contracts:detail_contrat' p.contrat.pk %}"
+                                   class="text-blue-400 hover:text-blue-300 font-semibold">
+                                    {{ p.contrat.numero_police|default:"-" }}
+                                </a>
+                            </td>
+                            <td class="px-4 py-3 text-white">{{ p.contrat.client.nom_complet }}</td>
+                            <td class="px-4 py-3 text-gray-300">{{ p.contrat.apporteur.get_full_name }}</td>
+                            <td class="px-4 py-3 text-right">
+                                <span class="text-blue-400 font-semibold">{{ p.montant_a_payer|default_if_none:0|floatformat:0|intcomma }} F</span>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <span class="text-green-400 font-semibold">
+                                    {% if p.status == "PAYE" %}
+                                        {{ p.montant_a_payer|default_if_none:0|floatformat:0|intcomma }} F
+                                    {% else %}
+                                        0 F
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                {% if p.status == "PAYE" %}
+                                    <span class="px-3 py-1 rounded-full bg-green-900/50 text-green-300 text-xs font-semibold">
+                                        <i class="fas fa-check mr-1"></i>Payé
+                                    </span>
+                                {% else %}
+                                    <span class="px-3 py-1 rounded-full bg-yellow-900/50 text-yellow-300 text-xs font-semibold">
+                                        <i class="fas fa-clock mr-1"></i>En attente
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-gray-300">
+                                {{ p.get_methode_paiement_display|default:"-" }}
+                                {% if p.reference_transaction %}• {{ p.reference_transaction }}{% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-gray-400">{{ p.updated_at|date:"d/m/Y H:i" }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <a href="{% url 'payments:detail_encaissement' p.id %}"
+                                   class="text-blue-400 hover:text-blue-300 transition"
+                                   title="Détail / Valider">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-12 text-gray-500">
+                                <i class="fas fa-inbox text-4xl mb-3 block text-gray-700"></i>
+                                <p class="text-lg">Aucun encaissement</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <div class="bg-gray-900 rounded-xl p-6 border border-yellow-800/50">
-      <div class="flex items-center justify-between mb-1">
-        <p class="text-sm text-gray-400">Montant en attente</p>
-        <i class="fas fa-clock text-yellow-400 text-xl"></i>
-      </div>
-      <p class="text-2xl font-bold text-yellow-400">
-        {{ total_attente|default_if_none:0|floatformat:0|intcomma }} F
-      </p>
-    </div>
-
-    <div class="bg-gray-900 rounded-xl p-6 border border-green-800/50">
-      <div class="flex items-center justify-between mb-1">
-        <p class="text-sm text-gray-400">Montant payé</p>
-        <i class="fas fa-check-circle text-green-400 text-xl"></i>
-      </div>
-      <p class="text-2xl font-bold text-green-400">
-        {{ total_paye|default_if_none:0|floatformat:0|intcomma }} F
-      </p>
-    </div>
-  </div>
-
-  <div class="bg-gray-900 rounded-xl border border-gray-800 shadow-lg overflow-x-auto">
-    <div class="p-6 border-b border-gray-800">
-      <h2 class="text-xl font-semibold text-white flex items-center gap-2">
-        <i class="fas fa-list text-primary-green"></i>
-        Encaissements
-      </h2>
-    </div>
-
-    <table class="w-full text-sm">
-      <thead class="bg-gray-800 border-b border-gray-700">
-        <tr>
-          <th class="px-4 py-3 text-left text-gray-300 font-semibold">Police</th>
-          <th class="px-4 py-3 text-left text-gray-300 font-semibold">Client</th>
-          <th class="px-4 py-3 text-left text-gray-300 font-semibold">Apporteur</th>
-          <th class="px-4 py-3 text-right text-gray-300 font-semibold">À payer</th>
-          <th class="px-4 py-3 text-right text-gray-300 font-semibold">Payé</th>
-          <th class="px-4 py-3 text-center text-gray-300 font-semibold">Statut</th>
-          <th class="px-4 py-3 text-left text-gray-300 font-semibold">Moyen / Réf.</th>
-          <th class="px-4 py-3 text-left text-gray-300 font-semibold">Maj</th>
-          <th class="px-4 py-3 text-center text-gray-300 font-semibold">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-800">
-        {% for p in paiements %}
-        <tr class="hover:bg-gray-800/60 transition">
-          <td class="px-4 py-3">
-            <a href="{% url 'contracts:detail_contrat' p.contrat.pk %}"
-               class="text-blue-400 hover:text-blue-300 font-semibold">
-              {{ p.contrat.numero_police|default:"-" }}
-            </a>
-          </td>
-          <td class="px-4 py-3 text-white">
-            {{ p.contrat.client.nom_complet }}
-          </td>
-          <td class="px-4 py-3 text-gray-300">
-            {{ p.contrat.apporteur.get_full_name }}
-          </td>
-          <td class="px-4 py-3 text-right">
-            <span class="text-blue-400 font-semibold">
-              {{ p.montant_a_payer|default_if_none:0|floatformat:0|intcomma }} F
-            </span>
-          </td>
-          <td class="px-4 py-3 text-right">
-            <span class="text-green-400 font-semibold">
-              {% if p.status == "PAYE" %}
-                {{ p.montant_a_payer|default_if_none:0|floatformat:0|intcomma }} F
-              {% else %}
-                0 F
-              {% endif %}
-            </span>
-          </td>
-          <td class="px-4 py-3 text-center">
-            {% if p.status == "PAYE" %}
-              <span class="px-3 py-1 rounded-full bg-green-900/50 text-green-300 text-xs font-semibold">
-                <i class="fas fa-check mr-1"></i>Payé
-              </span>
-            {% else %}
-              <span class="px-3 py-1 rounded-full bg-yellow-900/50 text-yellow-300 text-xs font-semibold">
-                <i class="fas fa-clock mr-1"></i>En attente
-              </span>
-            {% endif %}
-          </td>
-          <td class="px-4 py-3 text-gray-300">
-            {{ p.get_methode_paiement_display|default:"-" }}{% if p.reference_transaction %} • {{ p.reference_transaction }}{% endif %}
-          </td>
-          <td class="px-4 py-3 text-gray-400">
-            {{ p.updated_at|date:"d/m/Y H:i" }}
-          </td>
-          <td class="px-4 py-3 text-center">
-            <a href="{% url 'payments:detail_encaissement' p.id %}"
-               class="text-blue-400 hover:text-blue-300 transition" title="Détail / Valider">
-              <i class="fas fa-eye"></i>
-            </a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="9" class="text-center py-12 text-gray-500">
-            <i class="fas fa-inbox text-4xl mb-3 block text-gray-700"></i>
-            <p class="text-lg">Aucun encaissement</p>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
 {% endblock %}

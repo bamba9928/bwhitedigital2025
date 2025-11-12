@@ -6,6 +6,4 @@
     {{ label }} <span class="text-red-400">*</span>
 </label>
 {{ field }}
-{% if field.errors %}
-    <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
-{% endif %}
+{% if field.errors %}<p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>{% endif %}

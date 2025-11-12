@@ -1,18 +1,18 @@
 <div class="bg-green-900 bg-opacity-50 border border-green-700 rounded-lg p-3 fade-in">
-  <p class="text-green-300 text-sm mb-2">
-    <i class="fas fa-check-circle mr-1"></i> Client existant trouvé
-  </p>
-  <div class="text-white">
-    <strong>{{ client.nom_complet }}</strong><br>
-    <span class="text-gray-300 text-sm">{{ client.adresse }}</span>
-  </div>
-  <button type="button"
-          onclick="fillClientData('{{ client.prenom|escapejs }}', '{{ client.nom|escapejs }}', '{{ client.adresse|escapejs }}')"
-          class="mt-2 bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded transition">
-    Utiliser ces informations
-  </button>
+    <p class="text-green-300 text-sm mb-2">
+        <i class="fas fa-check-circle mr-1"></i> Client existant trouvé
+    </p>
+    <div class="text-white">
+        <strong>{{ client.nom_complet }}</strong>
+        <br>
+        <span class="text-gray-300 text-sm">{{ client.adresse }}</span>
+    </div>
+    <button type="button"
+            onclick="fillClientData('{{ client.prenom|escapejs }}', '{{ client.nom|escapejs }}', '{{ client.adresse|escapejs }}')"
+            class="mt-2 bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded transition">
+        Utiliser ces informations
+    </button>
 </div>
-
 <script>
 function fillClientData(prenom, nom, adresse) {
   document.getElementById('id_prenom').value = prenom;

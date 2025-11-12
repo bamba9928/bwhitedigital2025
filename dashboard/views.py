@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 # ---------- Utilitaires ----------
 
+
 def _safe_sum(qs, field):
     """Somme robuste en Decimal."""
     result = qs.aggregate(total=Sum(field))["total"]
@@ -28,7 +29,9 @@ def _compute_stats(contrats, today, commission_field: str):
     Stats contrats + encaissements sur le même périmètre.
     Prend en paramètre quel champ de commission agréger.
     """
-    contrats_mois = contrats.filter(date_effet__year=today.year, date_effet__month=today.month)
+    contrats_mois = contrats.filter(
+        date_effet__year=today.year, date_effet__month=today.month
+    )
 
     # Encaissements liés aux contrats filtrés
     encaissements = PaiementApporteur.objects.filter(contrat__in=contrats)
@@ -41,13 +44,13 @@ def _compute_stats(contrats, today, commission_field: str):
         "commissions_totales": _safe_sum(contrats, commission_field),
         "total_primes_filtre": _safe_sum(contrats, "prime_ttc"),
         "total_commissions_filtre": _safe_sum(contrats, commission_field),
-        "total_net_filtre": _safe_sum(contrats, "net_a_reverser"),  # Net à reverser à Askia
-
+        "total_net_filtre": _safe_sum(
+            contrats, "net_a_reverser"
+        ),  # Net à reverser à Askia
         # Encaissements (Statut du paiement Apporteur -> BWHITE)
         "nb_encaissements": encaissements.count(),
         "en_attente": enc_attente.count(),
         "payes": enc_payes.count(),
-
         # CORRIGÉ: Utilise 'montant_a_payer' de votre nouveau modèle
         "montant_en_attente": _safe_sum(enc_attente, "montant_a_payer"),
         "montant_paye": _safe_sum(enc_payes, "montant_a_payer"),
@@ -56,6 +59,7 @@ def _compute_stats(contrats, today, commission_field: str):
 
 
 # ---------- Vues ----------
+
 
 @login_required
 def home(request):
@@ -98,9 +102,8 @@ def home(request):
         date_fin = None
 
     # Base queryset + optimisations
-    contrats = (
-        Contrat.objects.emis_avec_doc()
-        .select_related("client", "vehicule", "apporteur")
+    contrats = Contrat.objects.emis_avec_doc().select_related(
+        "client", "vehicule", "apporteur"
     )
 
     # Restrictions rôle
@@ -135,7 +138,9 @@ def home(request):
         encaissements = PaiementApporteur.objects.filter(contrat__in=contrats)
         paiements_attente = encaissements.filter(status="EN_ATTENTE").count()
         # CORRIGÉ: Utilise 'montant_a_payer'
-        montant_attente = _safe_sum(encaissements.filter(status="EN_ATTENTE"), "montant_a_payer")
+        montant_attente = _safe_sum(
+            encaissements.filter(status="EN_ATTENTE"), "montant_a_payer"
+        )
 
         # Contrats créés par l'admin lui-même (BWHITE)
         contrats_admin = contrats.filter(apporteur=request.user)
@@ -154,7 +159,9 @@ def home(request):
             .values("apporteur__id", "apporteur__first_name", "apporteur__last_name")
             .annotate(
                 total_primes=Sum("prime_ttc"),
-                total_commissions=Sum("commission_apporteur"),  # Ce que l'apporteur gagne
+                total_commissions=Sum(
+                    "commission_apporteur"
+                ),  # Ce que l'apporteur gagne
                 total_net=Sum("net_a_reverser"),  # Ce que BWHITE doit à Askia
             )
             .order_by("-total_primes")[:5]
@@ -167,7 +174,9 @@ def home(request):
             .annotate(
                 nb_contrats=Count("id"),
                 total_primes=Sum("prime_ttc"),
-                total_commissions_apporteur=Sum("commission_apporteur"),  # Dû à l'apporteur
+                total_commissions_apporteur=Sum(
+                    "commission_apporteur"
+                ),  # Dû à l'apporteur
                 total_commissions_bwhite=Sum("commission_bwhite"),  # Profit BWHITE
                 total_net=Sum("net_a_reverser"),  # Dû à Askia
             )
@@ -183,10 +192,8 @@ def home(request):
             "paiements_attente": paiements_attente,  # Nbr paiements en attente
             "montant_attente": montant_attente,  # Montant dû par les apporteurs
             "resume_admin": resume_admin,  # Stats des contrats créés par l'admin
-
             # Stats globales (Admin voit son profit 'commission_bwhite')
             **_compute_stats(contrats, today, commission_field="commission_bwhite"),
-
             "top_apporteurs": top_apporteurs,
             "recap_apporteurs": recap_apporteurs,
             "periode": periode,
@@ -197,7 +204,9 @@ def home(request):
                 ("mois", "Mois en cours"),
                 ("annee", "Année en cours"),
             ],
-            "statut_choices": [c for c in Contrat.STATUS_CHOICES if c[0] != "SIMULATION"],
+            "statut_choices": [
+                c for c in Contrat.STATUS_CHOICES if c[0] != "SIMULATION"
+            ],
             "apporteurs": User.objects.filter(role="APPORTEUR"),
             "apporteur_id": apporteur_id,
             "derniers_contrats_affiches": contrats.order_by("-created_at")[:10],
@@ -212,10 +221,8 @@ def home(request):
             "title": "Dashboard Apporteur",
             "today": today,
             "mes_contrats_total": contrats.count(),
-
             # Stats (Apporteur voit sa commission 'commission_apporteur')
             **_compute_stats(contrats, today, commission_field="commission_apporteur"),
-
             "periode": periode,
             "statut": statut,
             "search": search,
@@ -227,7 +234,9 @@ def home(request):
                 ("mois", "Mois en cours"),
                 ("annee", "Année en cours"),
             ],
-            "statut_choices": [c for c in Contrat.STATUS_CHOICES if c[0] != "SIMULATION"],
+            "statut_choices": [
+                c for c in Contrat.STATUS_CHOICES if c[0] != "SIMULATION"
+            ],
             "derniers_contrats_affiches": contrats.order_by("-created_at")[:10],
         }
 
@@ -243,7 +252,9 @@ def get_evolution_data(user):
     today = timezone.now().date()
 
     # Définit quel champ commission utiliser
-    commission_field = "commission_bwhite" if user.role == "ADMIN" else "commission_apporteur"
+    commission_field = (
+        "commission_bwhite" if user.role == "ADMIN" else "commission_apporteur"
+    )
 
     for i in range(12):
         approx = today - timedelta(days=i * 30)
@@ -254,13 +265,15 @@ def get_evolution_data(user):
             mois_fin = mois_debut.replace(month=mois_debut.month + 1, day=1)
 
         # Filtre les contrats
-        contrats_user = user.contrats_apportes.emis_avec_doc() if user.role == "APPORTEUR" else Contrat.objects.emis_avec_doc()
-
-        stats = (
-            contrats_user
-            .filter(created_at__gte=mois_debut, created_at__lt=mois_fin)
-            .aggregate(nombre=Count("id"), commissions=Sum(commission_field))
+        contrats_user = (
+            user.contrats_apportes.emis_avec_doc()
+            if user.role == "APPORTEUR"
+            else Contrat.objects.emis_avec_doc()
         )
+
+        stats = contrats_user.filter(
+            created_at__gte=mois_debut, created_at__lt=mois_fin
+        ).aggregate(nombre=Count("id"), commissions=Sum(commission_field))
 
         data.append(
             {
@@ -307,9 +320,8 @@ def statistiques(request):
     if date_debut and date_fin and date_fin < date_debut:
         date_fin = None
 
-    contrats = (
-        Contrat.objects.emis_avec_doc()
-        .select_related("client", "vehicule", "apporteur")
+    contrats = Contrat.objects.emis_avec_doc().select_related(
+        "client", "vehicule", "apporteur"
     )
 
     commission_field = "commission_bwhite"
@@ -364,6 +376,7 @@ def profile(request):
     # Géré par 'accounts/views.py', mais on garde un fallback si l'URL est ici
     try:
         from accounts.views import profile as accounts_profile
+
         return accounts_profile(request)
     except ImportError:
         logger.error("Impossible d'importer accounts.views.profile")

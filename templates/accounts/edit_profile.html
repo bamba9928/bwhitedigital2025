@@ -1,53 +1,47 @@
 {% extends "base.html" %}
-
 {% block title %}Modifier mon Profil - BWHITE DIGITAL{% endblock %}
-
 {% block content %}
-<div class="max-w-3xl mx-auto px-6 py-8">
-    <h1 class="text-3xl font-bold text-white mb-6">
-        <i class="fas fa-user-edit text-green-400 mr-2"></i>
-        Modifier mon Profil
-    </h1>
-
-    <form method="POST" class="space-y-6 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-            <div class="p-4 mb-4 text-sm text-red-200 bg-red-900 border border-red-700 rounded-lg">
-                <ul class="space-y-1">
-                    {% for error in form.non_field_errors %}
-                        <li><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</li>
-                    {% endfor %}
-                </ul>
+    <div class="max-w-3xl mx-auto px-6 py-8">
+        <h1 class="text-3xl font-bold text-white mb-6">
+            <i class="fas fa-user-edit text-green-400 mr-2"></i>
+            Modifier mon Profil
+        </h1>
+        <form method="POST"
+              class="space-y-6 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="p-4 mb-4 text-sm text-red-200 bg-red-900 border border-red-700 rounded-lg">
+                    <ul class="space-y-1">
+                        {% for error in form.non_field_errors %}
+                            <li>
+                                <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}"
+                           class="block text-gray-300 font-medium mb-1">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <p class="mt-1 text-sm text-red-400">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            {{ field.errors|striptags }}
+                        </p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <div class="flex justify-between">
+                <a href="{% url 'accounts:profile' %}"
+                   class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition">Annuler</a>
+                <button type="submit"
+                        class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg flex items-center space-x-2 transition">
+                    <i class="fas fa-check"></i>
+                    <span>Sauvegarder</span>
+                </button>
             </div>
-        {% endif %}
-
-        {% for field in form %}
-            <div>
-                <label for="{{ field.id_for_label }}" class="block text-gray-300 font-medium mb-1">
-                    {{ field.label }}
-                </label>
-                {{ field }}
-                {% if field.errors %}
-                    <p class="mt-1 text-sm text-red-400">
-                        <i class="fas fa-exclamation-triangle mr-1"></i>
-                        {{ field.errors|striptags }}
-                    </p>
-                {% endif %}
-            </div>
-        {% endfor %}
-
-        <div class="flex justify-between">
-            <a href="{% url 'accounts:profile' %}"
-               class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition">
-               Annuler
-            </a>
-            <button type="submit"
-                class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg flex items-center space-x-2 transition">
-                <i class="fas fa-check"></i>
-                <span>Sauvegarder</span>
-            </button>
-        </div>
-    </form>
-</div>
+        </form>
+    </div>
 {% endblock %}

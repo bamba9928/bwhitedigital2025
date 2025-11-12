@@ -6,11 +6,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Command(BaseCommand):
     help = "Récupère les liens attestation/carte brune pour les contrats en attente"
 
     def handle(self, *args, **opts):
-        qs = Contrat.objects.filter(status="PENDING_DOCS").exclude(numero_facture__isnull=True)
+        qs = Contrat.objects.filter(status="PENDING_DOCS").exclude(
+            numero_facture__isnull=True
+        )
         count = 0
         for c in qs:
             docs = askia_client.get_documents(c.numero_facture)
@@ -20,6 +23,13 @@ class Command(BaseCommand):
                 c.link_carte_brune = cb or c.link_carte_brune
                 c.status = "EMIS"
                 c.updated_at = timezone.now()
-                c.save(update_fields=["link_attestation","link_carte_brune","status","updated_at"])
+                c.save(
+                    update_fields=[
+                        "link_attestation",
+                        "link_carte_brune",
+                        "status",
+                        "updated_at",
+                    ]
+                )
                 count += 1
         logger.info("retry_pending_docs: %d contrat(s) mis à jour", count)

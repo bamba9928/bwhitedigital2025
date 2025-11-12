@@ -1,42 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Échéances aujourd’hui{% endblock %}
 {% block content %}
-<h1 class="text-2xl font-bold text-white mb-4">Contrats à échéance aujourd’hui</h1>
-
-<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-  <table class="min-w-full text-sm">
-    <thead class="bg-gray-800 text-gray-300">
-      <tr>
-        <th class="px-4 py-3 text-left">Police</th>
-        <th class="px-4 py-3 text-left">Client</th>
-        <th class="px-4 py-3">Échéance</th>
-        <th class="px-4 py-3">Action</th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-gray-800 text-gray-200">
-      {% for c in contrats %}
-      <tr>
-        <td class="px-4 py-3 font-mono">{{ c.numero_police }}</td>
-        <td class="px-4 py-3">
-          {{ c.client.nom }} {{ c.client.prenom }}
-        </td>
-        <td class="px-4 py-3">{{ c.date_echeance|date:"d/m/Y H:i" }}</td>
-        <td class="px-4 py-3 text-center">
-          <form method="post" action="{% url 'renouveler_contrat_auto' c.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="dure" value="12">
-            <button class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500">
-              Renouveler
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td class="px-4 py-6 text-center text-gray-400" colspan="4">Aucun contrat aujourd’hui.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+    <h1 class="text-2xl font-bold text-white mb-4">Contrats à échéance aujourd’hui</h1>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-800 text-gray-300">
+                <tr>
+                    <th class="px-4 py-3 text-left">Police</th>
+                    <th class="px-4 py-3 text-left">Client</th>
+                    <th class="px-4 py-3">Échéance</th>
+                    <th class="px-4 py-3">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800 text-gray-200">
+                {% for c in contrats %}
+                    <tr>
+                        <td class="px-4 py-3 font-mono">{{ c.numero_police }}</td>
+                        <td class="px-4 py-3">{{ c.client.nom }} {{ c.client.prenom }}</td>
+                        <td class="px-4 py-3">{{ c.date_echeance|date:"d/m/Y H:i" }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <form method="post" action="{% url 'renouveler_contrat_auto' c.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="dure" value="12">
+                                <button class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500">Renouveler</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="px-4 py-6 text-center text-gray-400" colspan="4">Aucun contrat aujourd’hui.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% endblock %}

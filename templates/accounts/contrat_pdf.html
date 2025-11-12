@@ -1,11 +1,11 @@
-<!doctype html>
+<!DOCTYPE html>
 {% load static humanize %}
 <html lang="fr">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Convention de Mandat BWHITE</title>
-    <style>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Convention de Mandat BWHITE</title>
+        <style>
         /* Toolbar */
         .toolbar {
             position: sticky;
@@ -354,105 +354,91 @@
                 page-break-inside: avoid;
             }
         }
-    </style>
-</head>
-<body>
-    <div class="toolbar">
-        <button type="button"
-                class="btn btn-dark"
-                aria-label="Retour"
-                onclick="(history.length>1) ? history.back() : (window.location.href='{% url 'accounts:apporteur_detail' %}')">
-            ← Retour
-        </button>
-        <a class="btn btn-primary"
-           href="{% url 'accounts:contrat_pdf' %}">
-            Télécharger en PDF
-        </a>
-        <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimer</button>
-    </div>
-    <div class="document">
-        <div class="header">
-            <div class="header-content">
-                <div class="company-name">BWHITE</div>
-                <div class="document-title">Convention de Mandat d'Apporteur d'Affaires</div>
-            </div>
+        </style>
+    </head>
+    <body>
+        <div class="toolbar">
+            <button type="button"
+                    class="btn btn-dark"
+                    aria-label="Retour"
+                    onclick="(history.length>1) ? history.back() : (window.location.href='{% url 'accounts:apporteur_detail' %}')">
+                ← Retour
+            </button>
+            <a class="btn btn-primary" href="{% url 'accounts:contrat_pdf' %}">Télécharger en PDF</a>
+            <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimer</button>
         </div>
-
-        <div class="content">
-            <div class="info-card">
-                <div class="info-card-header">Informations du document</div>
-                <p class="text-muted" style="margin: 0;">
-                    Ce document formalise les termes et conditions du mandat d'apporteur d'affaires
-                    entre BWHITE et l'agent soussigné. Version des conditions :
-                    <span class="badge">v{{ onboarding.version_conditions|default:"1.0" }}</span>
-                </p>
-            </div>
-
-            <div class="convention-box">
-                {% include "accounts/partials/conditions_apporteur_v1.html" with user=user version=onboarding.version_conditions today=onboarding.approuve_at %}
-            </div>
-
-            <div class="signature-section">
-                <div class="signature-header">
-                    Signature de l'agent agréé
+        <div class="document">
+            <div class="header">
+                <div class="header-content">
+                    <div class="company-name">BWHITE</div>
+                    <div class="document-title">Convention de Mandat d'Apporteur d'Affaires</div>
                 </div>
-
-                <div class="signature-container">
-                    {% if onboarding.signature_image %}
-                        <img src="{{ onboarding.signature_image.url }}"
-                             alt="Signature de {{ user.get_full_name|default:user.username }}"
-                             class="signature-image">
-                    {% else %}
-                        <p class="signature-placeholder">
-                            ✍ Signature non fournie ou en attente de validation
-                        </p>
+            </div>
+            <div class="content">
+                <div class="info-card">
+                    <div class="info-card-header">Informations du document</div>
+                    <p class="text-muted" style="margin: 0;">
+                        Ce document formalise les termes et conditions du mandat d'apporteur d'affaires
+                        entre BWHITE et l'agent soussigné. Version des conditions :
+                        <span class="badge">v{{ onboarding.version_conditions|default:"1.0" }}</span>
+                    </p>
+                </div>
+                <div class="convention-box">
+                    {% include "accounts/partials/conditions_apporteur_v1.html" with user=user version=onboarding.version_conditions today=onboarding.approuve_at %}
+                </div>
+                <div class="signature-section">
+                    <div class="signature-header">Signature de l'agent agréé</div>
+                    <div class="signature-container">
+                        {% if onboarding.signature_image %}
+                            <img src="{{ onboarding.signature_image.url }}"
+                                 alt="Signature de {{ user.get_full_name|default:user.username }}"
+                                 class="signature-image">
+                        {% else %}
+                            <p class="signature-placeholder">✍ Signature non fournie ou en attente de validation</p>
+                        {% endif %}
+                    </div>
+                    {% if onboarding.approuve_at %}
+                        <div class="signature-date">
+                            Signé électroniquement le {{ onboarding.approuve_at|date:"d F Y à H:i" }}
+                            par {{ user.get_full_name|default:user.username }}
+                        </div>
                     {% endif %}
                 </div>
-
-                {% if onboarding.approuve_at %}
-                <div class="signature-date">
-                    Signé électroniquement le {{ onboarding.approuve_at|date:"d F Y à H:i" }}
-                    par {{ user.get_full_name|default:user.username }}
-                </div>
+                {% if user.email or user.phone %}
+                    <div class="info-card mt-4">
+                        <div class="info-card-header">Coordonnées de l'agent</div>
+                        <table>
+                            <tbody>
+                                {% if user.get_full_name %}
+                                    <tr>
+                                        <td style="width: 30%; font-weight: 600;">Nom complet</td>
+                                        <td>{{ user.get_full_name }}</td>
+                                    </tr>
+                                {% endif %}
+                                {% if user.email %}
+                                    <tr>
+                                        <td style="width: 30%; font-weight: 600;">Email</td>
+                                        <td>{{ user.email }}</td>
+                                    </tr>
+                                {% endif %}
+                                {% if user.phone %}
+                                    <tr>
+                                        <td style="width: 30%; font-weight: 600;">Téléphone</td>
+                                        <td>{{ user.phone }}</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
                 {% endif %}
             </div>
-
-            {% if user.email or user.phone %}
-            <div class="info-card mt-4">
-                <div class="info-card-header">Coordonnées de l'agent</div>
-                <table>
-                    <tbody>
-                        {% if user.get_full_name %}
-                        <tr>
-                            <td style="width: 30%; font-weight: 600;">Nom complet</td>
-                            <td>{{ user.get_full_name }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if user.email %}
-                        <tr>
-                            <td style="width: 30%; font-weight: 600;">Email</td>
-                            <td>{{ user.email }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if user.phone %}
-                        <tr>
-                            <td style="width: 30%; font-weight: 600;">Téléphone</td>
-                            <td>{{ user.phone }}</td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-            {% endif %}
-        </div>
-
-        <div class="footer">
-            <div class="footer-content">
-                <strong>BWHITE</strong> — Apporteur d'affaires agréé
-                <div class="footer-divider"></div>
-                Document généré le {{ "now"|date:"d/m/Y à H:i" }} • Confidentiel et juridiquement contraignant
+            <div class="footer">
+                <div class="footer-content">
+                    <strong>BWHITE</strong> — Apporteur d'affaires agréé
+                    <div class="footer-divider"></div>
+                    Document généré le {{ "now"|date:"d/m/Y à H:i" }} • Confidentiel et juridiquement contraignant
+                </div>
             </div>
         </div>
-    </div>
-</body>
+    </body>
 </html>

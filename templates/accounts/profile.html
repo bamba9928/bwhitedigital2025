@@ -1,232 +1,196 @@
 {% extends 'base.html' %}
 {% load humanize %}
-
 {% block title %}Mon Profil - BWHITE DIGITAL{% endblock %}
-
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-8">
-
-    <!-- En-tête -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-white flex items-center gap-3">
-            <i class="fas fa-user-circle text-primary-green"></i>
-            Mon Profil
-        </h1>
-        <p class="text-gray-400 mt-2">Gérez vos informations personnelles et paramètres de compte</p>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Colonne principale (2/3) -->
-        <div class="lg:col-span-2 space-y-6">
-
-            <!-- Informations personnelles -->
-            <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-semibold text-white flex items-center gap-2">
-                        <i class="fas fa-id-card text-blue-400"></i>
-                        Informations Personnelles
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- En-tête -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                <i class="fas fa-user-circle text-primary-green"></i>
+                Mon Profil
+            </h1>
+            <p class="text-gray-400 mt-2">Gérez vos informations personnelles et paramètres de compte</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Colonne principale (2/3) -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Informations personnelles -->
+                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                            <i class="fas fa-id-card text-blue-400"></i>
+                            Informations Personnelles
+                        </h2>
+                        <a href="{% url 'accounts:edit_profile' %}"
+                           class="btn btn-primary flex items-center gap-2 text-sm">
+                            <i class="fas fa-edit"></i>
+                            <span>Modifier</span>
+                        </a>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Prénom</label>
+                                <div class="bg-gray-800 rounded-lg px-4 py-3 text-white">{{ user.first_name|default:"Non renseigné" }}</div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Nom</label>
+                                <div class="bg-gray-800 rounded-lg px-4 py-3 text-white">{{ user.last_name|default:"Non renseigné" }}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                            <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
+                                <i class="fas fa-envelope text-gray-500 text-sm"></i>
+                                {{ user.email|default:"Non renseigné" }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Nom d'utilisateur</label>
+                            <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
+                                <i class="fas fa-user text-gray-500 text-sm"></i>
+                                {{ user.username }}
+                            </div>
+                        </div>
+                        {% if user.role == 'APPORTEUR' %}
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Téléphone</label>
+                                <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
+                                    <i class="fas fa-phone text-gray-500 text-sm"></i>
+                                    {{ user.phone|default:"Non renseigné" }}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Adresse</label>
+                                <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-start gap-2">
+                                    <i class="fas fa-map-marker-alt text-gray-500 text-sm mt-1"></i>
+                                    {{ user.address|default:"Non renseignée" }}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- Sécurité -->
+                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                    <h2 class="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                        <i class="fas fa-shield-alt text-green-400"></i>
+                        Sécurité
                     </h2>
-                    <a href="{% url 'accounts:edit_profile' %}"
-                       class="btn btn-primary flex items-center gap-2 text-sm">
-                        <i class="fas fa-edit"></i>
-                        <span>Modifier</span>
-                    </a>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Prénom</label>
-                            <div class="bg-gray-800 rounded-lg px-4 py-3 text-white">
-                                {{ user.first_name|default:"Non renseigné" }}
+                            <h3 class="font-medium text-white">Mot de passe</h3>
+                            <p class="text-sm text-gray-400">••••••••</p>
+                        </div>
+                        <a href="{% url 'accounts:change_password' %}"
+                           class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition">
+                            Modifier
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!-- Sidebar (1/3) -->
+            <div class="space-y-6">
+                <!-- Statut du compte -->
+                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Statut du Compte</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400 text-sm">Rôle</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold {% if user.role == 'ADMIN' %}bg-yellow-900/50 text-yellow-300 {% else %}bg-blue-900/50 text-blue-300{% endif %}">
+                                {% if user.role == 'ADMIN' %}
+                                    <i class="fas fa-crown mr-1"></i>Admin
+                                {% else %}
+                                    <i class="fas fa-user-tie mr-1"></i>{{ user.get_grade_display }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400 text-sm">Membre depuis</span>
+                            <span class="text-white text-sm">{{ user.date_joined|date:"d/m/Y" }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400 text-sm">Dernière connexion</span>
+                            <span class="text-white text-sm">
+                                {% if user.last_login %}
+                                    {{ user.last_login|date:"d/m H:i" }}
+                                {% else %}
+                                    Jamais
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400 text-sm">Statut</span>
+                            <span class="flex items-center gap-2">
+                                {% if user.is_active %}
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                    <span class="text-green-400 text-sm font-medium">Actif</span>
+                                {% else %}
+                                    <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                                    <span class="text-red-400 text-sm font-medium">Inactif</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Statistiques -->
+                {% if user.role == 'APPORTEUR' %}
+                    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Mes Statistiques</h3>
+                        <div class="space-y-3">
+                            <div class="text-center p-4 bg-gray-800 rounded-lg">
+                                <div class="text-3xl font-bold text-blue-400">{{ stats.contrats_mois|default:0 }}</div>
+                                <div class="text-xs text-gray-400 mt-1">Contrats ce mois</div>
+                            </div>
+                            <div class="text-center p-4 bg-gray-800 rounded-lg">
+                                <div class="text-2xl font-bold text-green-400">
+                                    {{ stats.commissions_mois|default_if_none:0|floatformat:0|intcomma }} F
+                                </div>
+                                <div class="text-xs text-gray-400 mt-1">Commissions ce mois</div>
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Nom</label>
-                            <div class="bg-gray-800 rounded-lg px-4 py-3 text-white">
-                                {{ user.last_name|default:"Non renseigné" }}
+                        <a href="{% url 'accounts:user_stats' %}"
+                           class="block mt-4 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition">
+                            Voir mes statistiques
+                        </a>
+                        <a href="{% url 'accounts:apporteur_detail' %}"
+                           class="block mt-2 text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm transition">
+                            <i class="fas fa-file-signature mr-2"></i>Contrat et conditions
+                        </a>
+                    </div>
+                {% elif user.role == 'ADMIN' %}
+                    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Vue d'ensemble</h3>
+                        <div class="space-y-3">
+                            <div class="text-center p-4 bg-gray-800 rounded-lg">
+                                <div class="text-3xl font-bold text-blue-400">{{ stats.apporteurs_actifs|default:0 }}</div>
+                                <div class="text-xs text-gray-400 mt-1">Apporteurs actifs</div>
+                            </div>
+                            <div class="text-center p-4 bg-gray-800 rounded-lg">
+                                <div class="text-3xl font-bold text-green-400">{{ stats.contrats_total|default:0 }}</div>
+                                <div class="text-xs text-gray-400 mt-1">Contrats totaux</div>
                             </div>
                         </div>
                     </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Email</label>
-                        <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
-                            <i class="fas fa-envelope text-gray-500 text-sm"></i>
-                            {{ user.email|default:"Non renseigné" }}
-                        </div>
+                {% endif %}
+                <!-- Actions rapides -->
+                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Actions Rapides</h3>
+                    <div class="space-y-2">
+                        <a href="{% url 'contracts:nouveau_contrat' %}"
+                           class="block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm text-center transition">
+                            <i class="fas fa-plus mr-2"></i>Nouveau contrat
+                        </a>
+                        <a href="{% url 'contracts:liste_contrats' %}"
+                           class="block w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg text-sm text-center transition">
+                            <i class="fas fa-list mr-2"></i>Mes contrats
+                        </a>
+                        <a href="{% url 'contracts:liste_clients' %}"
+                           class="block w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg text-sm text-center transition">
+                            <i class="fas fa-users mr-2"></i>Mes clients
+                        </a>
                     </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Nom d'utilisateur</label>
-                        <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
-                            <i class="fas fa-user text-gray-500 text-sm"></i>
-                            {{ user.username }}
-                        </div>
-                    </div>
-
-                    {% if user.role == 'APPORTEUR' %}
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Téléphone</label>
-                        <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
-                            <i class="fas fa-phone text-gray-500 text-sm"></i>
-                            {{ user.phone|default:"Non renseigné" }}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Adresse</label>
-                        <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-start gap-2">
-                            <i class="fas fa-map-marker-alt text-gray-500 text-sm mt-1"></i>
-                            {{ user.address|default:"Non renseignée" }}
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Sécurité -->
-            <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                <h2 class="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-                    <i class="fas fa-shield-alt text-green-400"></i>
-                    Sécurité
-                </h2>
-
-                <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                    <div>
-                        <h3 class="font-medium text-white">Mot de passe</h3>
-                        <p class="text-sm text-gray-400">••••••••</p>
-                    </div>
-                    <a href="{% url 'accounts:change_password' %}"
-                       class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition">
-                        Modifier
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sidebar (1/3) -->
-        <div class="space-y-6">
-
-            <!-- Statut du compte -->
-            <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                <h3 class="text-lg font-semibold text-white mb-4">Statut du Compte</h3>
-
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-400 text-sm">Rôle</span>
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold
-                            {% if user.role == 'ADMIN' %}bg-yellow-900/50 text-yellow-300
-                            {% else %}bg-blue-900/50 text-blue-300{% endif %}">
-                            {% if user.role == 'ADMIN' %}
-                                <i class="fas fa-crown mr-1"></i>Admin
-                            {% else %}
-                                <i class="fas fa-user-tie mr-1"></i>{{ user.get_grade_display }}
-                            {% endif %}
-                        </span>
-                    </div>
-
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-400 text-sm">Membre depuis</span>
-                        <span class="text-white text-sm">{{ user.date_joined|date:"d/m/Y" }}</span>
-                    </div>
-
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-400 text-sm">Dernière connexion</span>
-                        <span class="text-white text-sm">
-                            {% if user.last_login %}
-                                {{ user.last_login|date:"d/m H:i" }}
-                            {% else %}
-                                Jamais
-                            {% endif %}
-                        </span>
-                    </div>
-
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-400 text-sm">Statut</span>
-                        <span class="flex items-center gap-2">
-                            {% if user.is_active %}
-                                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                                <span class="text-green-400 text-sm font-medium">Actif</span>
-                            {% else %}
-                                <span class="w-2 h-2 bg-red-500 rounded-full"></span>
-                                <span class="text-red-400 text-sm font-medium">Inactif</span>
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statistiques -->
-            {% if user.role == 'APPORTEUR' %}
-            <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                <h3 class="text-lg font-semibold text-white mb-4">Mes Statistiques</h3>
-
-                <div class="space-y-3">
-                    <div class="text-center p-4 bg-gray-800 rounded-lg">
-                        <div class="text-3xl font-bold text-blue-400">{{ stats.contrats_mois|default:0 }}</div>
-                        <div class="text-xs text-gray-400 mt-1">Contrats ce mois</div>
-                    </div>
-
-                    <div class="text-center p-4 bg-gray-800 rounded-lg">
-                        <div class="text-2xl font-bold text-green-400">
-                            {{ stats.commissions_mois|default_if_none:0|floatformat:0|intcomma }} F
-                        </div>
-                        <div class="text-xs text-gray-400 mt-1">Commissions ce mois</div>
-                    </div>
-                </div>
-
-                <a href="{% url 'accounts:user_stats' %}"
-                   class="block mt-4 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition">
-                    Voir mes statistiques
-                </a>
-
-                <a href="{% url 'accounts:apporteur_detail' %}"
-                   class="block mt-2 text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm transition">
-                    <i class="fas fa-file-signature mr-2"></i>Contrat et conditions
-                </a>
-            </div>
-            {% elif user.role == 'ADMIN' %}
-            <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                <h3 class="text-lg font-semibold text-white mb-4">Vue d'ensemble</h3>
-
-                <div class="space-y-3">
-                    <div class="text-center p-4 bg-gray-800 rounded-lg">
-                        <div class="text-3xl font-bold text-blue-400">{{ stats.apporteurs_actifs|default:0 }}</div>
-                        <div class="text-xs text-gray-400 mt-1">Apporteurs actifs</div>
-                    </div>
-
-                    <div class="text-center p-4 bg-gray-800 rounded-lg">
-                        <div class="text-3xl font-bold text-green-400">{{ stats.contrats_total|default:0 }}</div>
-                        <div class="text-xs text-gray-400 mt-1">Contrats totaux</div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Actions rapides -->
-            <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                <h3 class="text-lg font-semibold text-white mb-4">Actions Rapides</h3>
-
-                <div class="space-y-2">
-                    <a href="{% url 'contracts:nouveau_contrat' %}"
-                       class="block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm text-center transition">
-                        <i class="fas fa-plus mr-2"></i>Nouveau contrat
-                    </a>
-
-                    <a href="{% url 'contracts:liste_contrats' %}"
-                       class="block w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg text-sm text-center transition">
-                        <i class="fas fa-list mr-2"></i>Mes contrats
-                    </a>
-
-                    <a href="{% url 'contracts:liste_clients' %}"
-                       class="block w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg text-sm text-center transition">
-                        <i class="fas fa-users mr-2"></i>Mes clients
-                    </a>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

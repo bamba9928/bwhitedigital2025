@@ -29,8 +29,11 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
 
     # Garde-fous statut
     if getattr(instance, "status", None) in {"ANNULE", "BROUILLON", "DEVIS"}:
-        logger.info("Contrat %s non éligible (status=%s). Encaissement non créé.",
-                    instance.numero_police or instance.pk, instance.status)
+        logger.info(
+            "Contrat %s non éligible (status=%s). Encaissement non créé.",
+            instance.numero_police or instance.pk,
+            instance.status,
+        )
         return
 
     if not getattr(instance, "is_valide", False):
@@ -52,14 +55,22 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
     prime_ttc = Decimal(getattr(instance, "prime_ttc", 0) or 0)
     commission_apporteur = Decimal(getattr(instance, "commission_apporteur", 0) or 0)
 
-    montant_du = (prime_ttc - commission_apporteur).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    montant_du = (prime_ttc - commission_apporteur).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
     if montant_du <= 0:
-        logger.info("Contrat %s: montant_du <= 0, encaissement non créé.", instance.numero_police or instance.pk)
+        logger.info(
+            "Contrat %s: montant_du <= 0, encaissement non créé.",
+            instance.numero_police or instance.pk,
+        )
         return
 
     # Idempotence stricte + verrouillage transactionnel
     with transaction.atomic():
-        paiement, was_created = PaiementApporteur.objects.select_for_update().get_or_create(
+        (
+            paiement,
+            was_created,
+        ) = PaiementApporteur.objects.select_for_update().get_or_create(
             contrat=instance,
             defaults={
                 "montant_a_payer": montant_du,
@@ -72,7 +83,7 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
             paiement=paiement,
             action="CREATION",
             effectue_par=apporteur,
-            details=f"Encaissement créé pour contrat {instance.numero_police or instance.pk}",
+            details="Encaissement créé pour contrat {instance.numero_police or instance.pk}",
         )
         logger.info(
             "Encaissement créé | Contrat: %s | montant_a_payer: %s",
@@ -80,7 +91,10 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
             paiement.montant_a_payer,
         )
     else:
-        logger.info("Encaissement déjà existant pour contrat %s", instance.numero_police or instance.pk)
+        logger.info(
+            "Encaissement déjà existant pour contrat %s",
+            instance.numero_police or instance.pk,
+        )
 
 
 # ---------- Contrat : calculs avant save ----------
@@ -93,7 +107,9 @@ def update_contrat_dates_and_status(sender, instance: Contrat, **kwargs):
         instance.calculate_date_echeance()
 
     # Commission si manquante
-    if (getattr(instance, "commission_apporteur", None) in (None, 0)) and getattr(instance, "apporteur", None):
+    if (getattr(instance, "commission_apporteur", None) in (None, 0)) and getattr(
+        instance, "apporteur", None
+    ):
         # suppose: instance.calculate_commission() pose commission_apporteur et éventuels champs dérivés
         instance.calculate_commission()
 
@@ -106,7 +122,8 @@ def update_contrat_dates_and_status(sender, instance: Contrat, **kwargs):
         if instance.status in {"EMIS", "ACTIF"}:
             logger.info(
                 "Contrat %s automatiquement EXPIRÉ (échéance: %s)",
-                instance.numero_police or instance.pk, instance.date_echeance
+                instance.numero_police or instance.pk,
+                instance.date_echeance,
             )
             instance.status = "EXPIRE"
 
@@ -115,7 +132,10 @@ def update_contrat_dates_and_status(sender, instance: Contrat, **kwargs):
 # Important : enregistre ces receivers dans AppConfig.ready() pour éviter les imports croisés.
 PaiementApporteur = apps.get_model("payments", "PaiementApporteur")
 
-@receiver(pre_save, sender=PaiementApporteur, dispatch_uid="payments_capture_old_status_v2")
+
+@receiver(
+    pre_save, sender=PaiementApporteur, dispatch_uid="payments_capture_old_status_v2"
+)
 def _capture_old_status(sender, instance, **kwargs):
     if not instance.pk:
         instance._old_status = None
@@ -127,7 +147,9 @@ def _capture_old_status(sender, instance, **kwargs):
         instance._old_status = None
 
 
-@receiver(post_save, sender=PaiementApporteur, dispatch_uid="payments_log_status_change_v2")
+@receiver(
+    post_save, sender=PaiementApporteur, dispatch_uid="payments_log_status_change_v2"
+)
 def log_paiement_status_change(sender, instance, created, **kwargs):
     if created:
         return
@@ -142,7 +164,11 @@ def log_paiement_status_change(sender, instance, created, **kwargs):
             paiement=instance,
             action="STATUS_CHANGE",
             effectue_par=getattr(instance, "validated_by", None),
-            details=f"Statut changé de {old_label} vers {new_label}",
+            details="Statut changé de {old_label} vers {new_label}",
         )
-        logger.info("Paiement %s | Changement statut: %s → %s",
-                    instance.pk, old_status, instance.status)
+        logger.info(
+            "Paiement %s | Changement statut: %s → %s",
+            instance.pk,
+            old_status,
+            instance.status,
+        )

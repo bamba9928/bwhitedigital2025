@@ -1,32 +1,28 @@
 {% extends 'base.html' %}
 {% load humanize %}
-
 {% block title %}Nouveau Contrat - BWHITE DIGITAL{% endblock %}
-
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-8">
-  <div class="mb-8 text-center">
-    <h1 class="text-4xl font-bold text-white mb-3">
-      <i class="fas fa-file-contract mr-3 text-primary-green"></i> Nouveau Contrat
-    </h1>
-  </div>
-
-  <div id="contrat-form-wrapper">
-    <form id="contrat-form"
-          hx-post="{% url 'contracts:emettre_contrat' %}"
-          hx-target="#emission-result"
-          hx-swap="innerHTML"
-          hx-timeout="65000"
-          method="POST"
-          autocomplete="off">
-      {% csrf_token %}
-
-      {% include "contracts/partials/_client_form.html" %}
-      {% include "contracts/partials/_vehicule_form.html" %}
-      {% include "contracts/partials/_simulation_form.html" %}
-    </form>
-  </div>
-  <div id="simulation-result" class="mt-8 hidden"></div>
-  <div id="emission-result" class="mt-8 hidden"></div>
-</div>
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <div class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-white mb-3">
+                <i class="fas fa-file-contract mr-3 text-primary-green"></i> Nouveau Contrat
+            </h1>
+        </div>
+        <div id="contrat-form-wrapper">
+            <form id="contrat-form"
+                  hx-post="{% url 'contracts:emettre_contrat' %}"
+                  hx-target="#emission-result"
+                  hx-swap="innerHTML"
+                  hx-timeout="65000"
+                  method="POST"
+                  autocomplete="off">
+                {% csrf_token %}
+                {% include "contracts/partials/_client_form.html" %}
+                {% include "contracts/partials/_vehicule_form.html" %}
+                {% include "contracts/partials/_simulation_form.html" %}
+            </form>
+        </div>
+        <div id="simulation-result" class="mt-8 hidden"></div>
+        <div id="emission-result" class="mt-8 hidden"></div>
+    </div>
 {% endblock %}

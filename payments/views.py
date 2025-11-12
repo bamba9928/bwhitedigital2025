@@ -10,6 +10,7 @@ from contracts.models import Contrat
 from django import forms
 from django.db.models import Q, Sum
 
+
 # -----------------------------
 # Forms
 # -----------------------------
@@ -45,9 +46,13 @@ def mes_paiements(request):
     if not _require_apporteur(request.user):
         return redirect("accounts:profile")
 
-    qs = PaiementApporteur.objects.select_related("contrat", "contrat__client", "contrat__vehicule") \
-        .filter(contrat__apporteur=request.user) \
+    qs = (
+        PaiementApporteur.objects.select_related(
+            "contrat", "contrat__client", "contrat__vehicule"
+        )
+        .filter(contrat__apporteur=request.user)
         .order_by("-created_at")
+    )
 
     status = request.GET.get("status", "").upper()
     if status in {"EN_ATTENTE", "PAYE", "ANNULE"}:
@@ -56,12 +61,16 @@ def mes_paiements(request):
     paginator = Paginator(qs, 25)
     page = paginator.get_page(request.GET.get("page"))
 
-    return render(request, "payments/mes_paiements.html", {
-        "title": "Mes encaissements",
-        "page_obj": page,
-        "paiements": page,
-        "filter_status": status,
-    })
+    return render(
+        request,
+        "payments/mes_paiements.html",
+        {
+            "title": "Mes encaissements",
+            "page_obj": page,
+            "paiements": page,
+            "filter_status": status,
+        },
+    )
 
 
 @login_required
@@ -82,9 +91,10 @@ def declarer_paiement(request, contrat_id):
         apporteur=request.user,
     )
 
-
     if not contrat.is_valide:
-        messages.error(request, "Contrat non valide. Attestation ou carte brune manquante.")
+        messages.error(
+            request, "Contrat non valide. Attestation ou carte brune manquante."
+        )
         return redirect("payments:mes_paiements")
 
     paiement, _ = PaiementApporteur.objects.get_or_create(
@@ -99,18 +109,33 @@ def declarer_paiement(request, contrat_id):
     if request.method == "POST":
         form = DeclarationPaiementForm(request.POST, instance=paiement)
         if form.is_valid():
-            form.save(update_fields=["methode_paiement", "reference_transaction", "numero_compte", "notes"])
-            messages.success(request, "Déclaration soumise. En attente de validation admin.")
+            form.save(
+                update_fields=[
+                    "methode_paiement",
+                    "reference_transaction",
+                    "numero_compte",
+                    "notes",
+                ]
+            )
+            messages.success(
+                request, "Déclaration soumise. En attente de validation admin."
+            )
             return redirect("payments:mes_paiements")
     else:
         form = DeclarationPaiementForm(instance=paiement)
 
-    return render(request, "payments/declarer_paiement.html", {
-        "title": "Déclarer mon paiement",
-        "contrat": contrat,
-        "paiement": paiement,
-        "form": form,
-    })
+    return render(
+        request,
+        "payments/declarer_paiement.html",
+        {
+            "title": "Déclarer mon paiement",
+            "contrat": contrat,
+            "paiement": paiement,
+            "form": form,
+        },
+    )
+
+
 # -----------------------------
 # Admin: liste et validation
 # -----------------------------
@@ -131,46 +156,63 @@ def liste_encaissements(request):
     q = request.GET.get("q", "").strip()
     if q:
         qs = qs.filter(
-            Q(contrat__numero_police__icontains=q) |
-            Q(reference_transaction__icontains=q) |
-            Q(contrat__client__prenom__icontains=q) |
-            Q(contrat__client__nom__icontains=q)
+            Q(contrat__numero_police__icontains=q)
+            | Q(reference_transaction__icontains=q)
+            | Q(contrat__client__prenom__icontains=q)
+            | Q(contrat__client__nom__icontains=q)
         )
 
-
-    total_attente = qs.filter(status="EN_ATTENTE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+    total_attente = (
+        qs.filter(status="EN_ATTENTE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+    )
     total_paye = qs.filter(status="PAYE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
-    total_annule = qs.filter(status="ANNULE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+    total_annule = (
+        qs.filter(status="ANNULE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+    )
 
     paginator = Paginator(qs, 50)
     page = paginator.get_page(request.GET.get("page"))
 
-    return render(request, "payments/liste_encaissements.html", {
-        "title": "Encaissements apporteurs",
-        "page_obj": page,
-        "paiements": page,
-        "total_attente": total_attente,
-        "total_paye": total_paye,
-        "total_annule": total_annule,
-        "filter_status": st,
-        "query": q,
-        "apporteur_id": apporteur_id,
-    })
+    return render(
+        request,
+        "payments/liste_encaissements.html",
+        {
+            "title": "Encaissements apporteurs",
+            "page_obj": page,
+            "paiements": page,
+            "total_attente": total_attente,
+            "total_paye": total_paye,
+            "total_annule": total_annule,
+            "filter_status": st,
+            "query": q,
+            "apporteur_id": apporteur_id,
+        },
+    )
+
+
 @staff_member_required
 def detail_encaissement(request, paiement_id):
     paiement = get_object_or_404(
-        PaiementApporteur.objects.select_related("contrat", "contrat__apporteur", "contrat__client"),
+        PaiementApporteur.objects.select_related(
+            "contrat", "contrat__apporteur", "contrat__client"
+        ),
         pk=paiement_id,
     )
-    vform = ValidationPaiementForm(initial={
-        "methode_paiement": paiement.methode_paiement or "OM",
-        "reference_transaction": paiement.reference_transaction,
-    })
-    return render(request, "payments/detail_encaissement.html", {
-        "title": "Détail encaissement",
-        "paiement": paiement,
-        "vform": vform,
-    })
+    vform = ValidationPaiementForm(
+        initial={
+            "methode_paiement": paiement.methode_paiement or "OM",
+            "reference_transaction": paiement.reference_transaction,
+        }
+    )
+    return render(
+        request,
+        "payments/detail_encaissement.html",
+        {
+            "title": "Détail encaissement",
+            "paiement": paiement,
+            "vform": vform,
+        },
+    )
 
 
 @staff_member_required
@@ -195,7 +237,8 @@ def valider_encaissement(request, paiement_id):
     methode = form.cleaned_data["methode_paiement"]
     reference = form.cleaned_data["reference_transaction"]
 
-
-    paiement.marquer_comme_paye(methode=methode, reference=reference, validated_by=request.user)
+    paiement.marquer_comme_paye(
+        methode=methode, reference=reference, validated_by=request.user
+    )
     messages.success(request, "Paiement validé.")
     return redirect("payments:detail_encaissement", paiement_id=paiement.id)

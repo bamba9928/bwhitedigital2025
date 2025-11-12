@@ -1,42 +1,36 @@
 {% load humanize %}
-
 <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mt-6 shadow-lg">
-  <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
-    <i class="fas fa-coins mr-2 text-yellow-400"></i>
-    Totaux (période filtrée)
-  </h2>
-
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-
-    <!-- Total Primes TTC -->
-    <div class="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-500 transition">
-      <p class="text-gray-400 text-sm flex items-center justify-center gap-2">
-        <i class="fas fa-wallet text-blue-400"></i> Total Primes TTC
-      </p>
-      <p class="text-3xl font-extrabold text-white mt-2">
-        {{ total_primes_filtre|default_if_none:0|floatformat:0|intcomma }} FCFA
-      </p>
+    <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+        <i class="fas fa-coins mr-2 text-yellow-400"></i>
+        Totaux (période filtrée)
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+        <!-- Total Primes TTC -->
+        <div class="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-500 transition">
+            <p class="text-gray-400 text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-wallet text-blue-400"></i> Total Primes TTC
+            </p>
+            <p class="text-3xl font-extrabold text-white mt-2">
+                {{ total_primes_filtre|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
+        </div>
+        <!-- Total Commissions -->
+        <div class="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-500 transition">
+            <p class="text-gray-400 text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-hand-holding-usd text-green-400"></i> Total Commissions
+            </p>
+            <p class="text-3xl font-extrabold text-green-400 mt-2">
+                {{ total_commissions_filtre|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
+        </div>
+        <!-- Net à reverser -->
+        <div class="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-500 transition">
+            <p class="text-gray-400 text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-exchange-alt text-orange-400"></i> Net à reverser
+            </p>
+            <p class="text-3xl font-extrabold text-orange-400 mt-2">
+                {{ total_net_filtre|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
+        </div>
     </div>
-
-    <!-- Total Commissions -->
-    <div class="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-500 transition">
-      <p class="text-gray-400 text-sm flex items-center justify-center gap-2">
-        <i class="fas fa-hand-holding-usd text-green-400"></i> Total Commissions
-      </p>
-      <p class="text-3xl font-extrabold text-green-400 mt-2">
-        {{ total_commissions_filtre|default_if_none:0|floatformat:0|intcomma }} FCFA
-      </p>
-    </div>
-
-    <!-- Net à reverser -->
-    <div class="p-6 bg-gray-800 rounded-lg border border-gray-700 hover:border-green-500 transition">
-      <p class="text-gray-400 text-sm flex items-center justify-center gap-2">
-        <i class="fas fa-exchange-alt text-orange-400"></i> Net à reverser
-      </p>
-      <p class="text-3xl font-extrabold text-orange-400 mt-2">
-        {{ total_net_filtre|default_if_none:0|floatformat:0|intcomma }} FCFA
-      </p>
-    </div>
-
-  </div>
 </div>

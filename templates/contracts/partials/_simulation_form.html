@@ -1,70 +1,65 @@
 {% load humanize widget_tweaks %}
-
 <div class="form-section">
-  <h2 class="text-2xl font-semibold text-white mb-4 flex items-center">
-    <i class="fas fa-calendar-alt mr-2 text-blue-400"></i> Durée & Début
-  </h2>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="field-group">
-      <label for="{{ simulation_form.duree.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
-        <i class="fas fa-clock mr-1 text-green-500"></i>
-        Durée du contrat <span class="text-red-400">*</span>
-      </label>
-      {{ simulation_form.duree|attr:"required:required"|attr:"min:1" }}
-      {% if simulation_form.duree.errors %}
-        <p class="text-red-500 text-xs mt-1">{{ simulation_form.duree.errors.0 }}</p>
-      {% endif %}
+    <h2 class="text-2xl font-semibold text-white mb-4 flex items-center">
+        <i class="fas fa-calendar-alt mr-2 text-blue-400"></i> Durée & Début
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="field-group">
+            <label for="{{ simulation_form.duree.id_for_label }}"
+                   class="block text-gray-300 text-sm font-medium mb-2">
+                <i class="fas fa-clock mr-1 text-green-500"></i>
+                Durée du contrat <span class="text-red-400">*</span>
+            </label>
+            {{ simulation_form.duree|attr:"required:required"|attr:"min:1" }}
+            {% if simulation_form.duree.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ simulation_form.duree.errors.0 }}</p>
+            {% endif %}
+        </div>
+        <div class="field-group">
+            <label for="{{ simulation_form.date_effet.id_for_label }}"
+                   class="block text-gray-300 text-sm font-medium mb-2">
+                <i class="fas fa-calendar-day mr-1 text-green-500"></i>
+                Date d'effet <span class="text-red-400">*</span>
+            </label>
+            {{ simulation_form.date_effet|attr:"required:required"|attr:"autocomplete:off" }}
+            {% if simulation_form.date_effet.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ simulation_form.date_effet.errors.0 }}</p>
+            {% endif %}
+            <p class="text-gray-400 text-xs mt-1">
+                <i class="fas fa-info-circle mr-1"></i>
+                Cliquez pour ouvrir le calendrier
+            </p>
+        </div>
     </div>
-
-    <div class="field-group">
-      <label for="{{ simulation_form.date_effet.id_for_label }}" class="block text-gray-300 text-sm font-medium mb-2">
-        <i class="fas fa-calendar-day mr-1 text-green-500"></i>
-        Date d'effet <span class="text-red-400">*</span>
-      </label>
-      {{ simulation_form.date_effet|attr:"required:required"|attr:"autocomplete:off" }}
-      {% if simulation_form.date_effet.errors %}
-        <p class="text-red-500 text-xs mt-1">{{ simulation_form.date_effet.errors.0 }}</p>
-      {% endif %}
-      <p class="text-gray-400 text-xs mt-1">
-        <i class="fas fa-info-circle mr-1"></i>
-        Cliquez pour ouvrir le calendrier
-      </p>
-    </div>
-  </div>
 </div>
-
 <!-- Section Actions centrée -->
 <div class="form-section mt-6">
-  <div class="flex flex-col md:flex-row md:items-center md:justify-center gap-3">
-    <button type="button"
-            id="btn-retour-dashboard"
-            class="btn btn-secondary flex items-center justify-center space-x-2">
-      <i class="fas fa-arrow-left"></i>
-      <span>Retour</span>
-    </button>
-
-    <button id="btn-calculer-tarif"
-            type="submit"
-            hx-post="{% url 'contracts:simuler_tarif' %}"
-            hx-target="#simulation-result"
-            hx-swap="innerHTML"
-            hx-include="#contrat-form"
-            hx-indicator="#sim-indicator"
-            hx-timeout="15000"
-            class="btn btn-primary flex items-center justify-center space-x-2">
-
-      <span>Envoyer</span>
-    </button>
-  </div>
-
-  <!-- Indicateur unique et correctement placé -->
-  <div id="sim-indicator" class="htmx-indicator hidden mt-4 text-center text-sm text-blue-300">
-    <i class="fas fa-circle-notch fa-spin mr-2"></i>
-    <span>Calcul en cours, veuillez patienter...</span>
-  </div>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-center gap-3">
+        <button type="button"
+                id="btn-retour-dashboard"
+                class="btn btn-secondary flex items-center justify-center space-x-2">
+            <i class="fas fa-arrow-left"></i>
+            <span>Retour</span>
+        </button>
+        <button id="btn-calculer-tarif"
+                type="submit"
+                hx-post="{% url 'contracts:simuler_tarif' %}"
+                hx-target="#simulation-result"
+                hx-swap="innerHTML"
+                hx-include="#contrat-form"
+                hx-indicator="#sim-indicator"
+                hx-timeout="15000"
+                class="btn btn-primary flex items-center justify-center space-x-2">
+            <span>Envoyer</span>
+        </button>
+    </div>
+    <!-- Indicateur unique et correctement placé -->
+    <div id="sim-indicator"
+         class="htmx-indicator hidden mt-4 text-center text-sm text-blue-300">
+        <i class="fas fa-circle-notch fa-spin mr-2"></i>
+        <span>Calcul en cours, veuillez patienter...</span>
+    </div>
 </div>
-
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   // Configuration date minimum (aujourd'hui)

@@ -1,108 +1,116 @@
 <div class="bg-gray-900 rounded-lg border border-gray-800 shadow-md">
-  <button type="button"
-          class="w-full flex justify-between items-center px-4 py-3 text-white font-semibold hover:bg-gray-800 transition"
-          onclick="document.getElementById('filters-admin').classList.toggle('hidden')">
-    <span><i class="fas fa-filter mr-2"></i> Filtres avancés</span>
-    <i class="fas fa-chevron-down"></i>
-  </button>
-
-  <div id="filters-admin" class="hidden border-t border-gray-800 px-4 py-4 animate-fadeIn">
-    <form id="form-filtres-admin" method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-      <!-- Période -->
-      <div>
-        <label class="block text-gray-200 text-sm mb-1">Période</label>
-        <select name="periode" class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-green-500">
-          <option value="">-- Choisir --</option>
-          {% for key, label in periode_choices %}
-            <option value="{{ key }}" {% if periode == key %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Statut -->
-      <div>
-        <label class="block text-gray-200 text-sm mb-1">Statut</label>
-        <select name="statut" class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-blue-500">
-          <option value="">-- Tous --</option>
-          {% for key, label in statut_choices %}
-            <option value="{{ key }}" {% if statut == key %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Apporteur -->
-      <div>
-        <label class="block text-gray-200 text-sm mb-1">Apporteur</label>
-        <select name="apporteur" class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-purple-500">
-          <option value="">Tous</option>
-          {% for a in apporteurs %}
-            <option value="{{ a.id }}" {% if apporteur_id == a.id|stringformat:'s' %}selected{% endif %}>
-              {{ a.get_full_name }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Date début -->
-      <div>
-        <label class="block text-gray-200 text-sm mb-1">Date début</label>
-        <input type="date" name="date_debut" value="{{ date_debut|date:'Y-m-d' }}"
-               class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-green-500">
-      </div>
-
-      <!-- Date fin -->
-      <div>
-        <label class="block text-gray-200 text-sm mb-1">Date fin</label>
-        <input type="date" name="date_fin" value="{{ date_fin|date:'Y-m-d' }}"
-               class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-green-500">
-      </div>
-
-      <!-- Recherche -->
-      <div class="md:col-span-3 flex items-center gap-2">
-        <div class="flex-1">
-          <label class="block text-gray-200 text-sm mb-1">Recherche</label>
-          <input type="text" name="search" value="{{ search }}" placeholder="Immatriculation, Nom, Prénom"
-                 class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-yellow-500">
-        </div>
-        {% if search %}
-          <a href="{% url 'dashboard:home' %}" class="mt-6 text-red-400 hover:text-red-300">
-            <i class="fas fa-times-circle"></i>
-          </a>
+    <button type="button"
+            class="w-full flex justify-between items-center px-4 py-3 text-white font-semibold hover:bg-gray-800 transition"
+            onclick="document.getElementById('filters-admin').classList.toggle('hidden')">
+        <span><i class="fas fa-filter mr-2"></i> Filtres avancés</span>
+        <i class="fas fa-chevron-down"></i>
+    </button>
+    <div id="filters-admin"
+         class="hidden border-t border-gray-800 px-4 py-4 animate-fadeIn">
+        <form id="form-filtres-admin"
+              method="get"
+              class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Période -->
+            <div>
+                <label class="block text-gray-200 text-sm mb-1">Période</label>
+                <select name="periode"
+                        class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-green-500">
+                    <option value="">-- Choisir --</option>
+                    {% for key, label in periode_choices %}
+                        <option value="{{ key }}" {% if periode == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Statut -->
+            <div>
+                <label class="block text-gray-200 text-sm mb-1">Statut</label>
+                <select name="statut"
+                        class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-blue-500">
+                    <option value="">-- Tous --</option>
+                    {% for key, label in statut_choices %}
+                        <option value="{{ key }}" {% if statut == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Apporteur -->
+            <div>
+                <label class="block text-gray-200 text-sm mb-1">Apporteur</label>
+                <select name="apporteur"
+                        class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-purple-500">
+                    <option value="">Tous</option>
+                    {% for a in apporteurs %}
+                        <option value="{{ a.id }}"
+                                {% if apporteur_id == a.id|stringformat:'s' %}selected{% endif %}>
+                            {{ a.get_full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Date début -->
+            <div>
+                <label class="block text-gray-200 text-sm mb-1">Date début</label>
+                <input type="date"
+                       name="date_debut"
+                       value="{{ date_debut|date:'Y-m-d' }}"
+                       class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-green-500">
+            </div>
+            <!-- Date fin -->
+            <div>
+                <label class="block text-gray-200 text-sm mb-1">Date fin</label>
+                <input type="date"
+                       name="date_fin"
+                       value="{{ date_fin|date:'Y-m-d' }}"
+                       class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-green-500">
+            </div>
+            <!-- Recherche -->
+            <div class="md:col-span-3 flex items-center gap-2">
+                <div class="flex-1">
+                    <label class="block text-gray-200 text-sm mb-1">Recherche</label>
+                    <input type="text"
+                           name="search"
+                           value="{{ search }}"
+                           placeholder="Immatriculation, Nom, Prénom"
+                           class="w-full bg-gray-800 text-white rounded px-3 py-2 focus:border-yellow-500">
+                </div>
+                {% if search %}
+                    <a href="{% url 'dashboard:home' %}"
+                       class="mt-6 text-red-400 hover:text-red-300">
+                        <i class="fas fa-times-circle"></i>
+                    </a>
+                {% endif %}
+            </div>
+            <!-- Boutons -->
+            <div class="md:col-span-3 flex gap-3 mt-2">
+                <button type="submit"
+                        class="px-4 py-2 rounded bg-green-600 hover:bg-green-500 text-white font-semibold">
+                    <i class="fas fa-check"></i> Appliquer
+                </button>
+                <a href="{% url 'dashboard:home' %}"
+                   class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white">
+                    <i class="fas fa-undo"></i> Réinitialiser
+                </a>
+                <a href="{% url 'accounts:nouveau_apporteur' %}"
+                   class="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold">
+                    <i class="fas fa-plus"></i> Ajouter Apporteur
+                </a>
+            </div>
+        </form>
+        <!-- Résumé visuel des filtres -->
+        {% if periode or statut or apporteur_id or search %}
+            <div class="flex flex-wrap gap-2 mt-4">
+                {% if periode %}
+                    <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">Période : {{ periode }}</span>
+                {% endif %}
+                {% if statut %}
+                    <span class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm">Statut : {{ statut }}</span>
+                {% endif %}
+                {% if apporteur_id %}
+                    <span class="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm">Apporteur : {{ apporteur_id }}</span>
+                {% endif %}
+                {% if search %}
+                    <span class="px-3 py-1 bg-yellow-600 text-black rounded-lg text-sm">Recherche : "{{ search }}"</span>
+                {% endif %}
+            </div>
         {% endif %}
-      </div>
-
-      <!-- Boutons -->
-      <div class="md:col-span-3 flex gap-3 mt-2">
-        <button type="submit" class="px-4 py-2 rounded bg-green-600 hover:bg-green-500 text-white font-semibold">
-          <i class="fas fa-check"></i> Appliquer
-        </button>
-        <a href="{% url 'dashboard:home' %}" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white">
-          <i class="fas fa-undo"></i> Réinitialiser
-        </a>
-        <a href="{% url 'accounts:nouveau_apporteur' %}"
-           class="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold">
-          <i class="fas fa-plus"></i> Ajouter Apporteur
-        </a>
-      </div>
-    </form>
-
-    <!-- Résumé visuel des filtres -->
-    {% if periode or statut or apporteur_id or search %}
-    <div class="flex flex-wrap gap-2 mt-4">
-      {% if periode %}
-        <span class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">Période : {{ periode }}</span>
-      {% endif %}
-      {% if statut %}
-        <span class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm">Statut : {{ statut }}</span>
-      {% endif %}
-      {% if apporteur_id %}
-        <span class="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm">Apporteur : {{ apporteur_id }}</span>
-      {% endif %}
-      {% if search %}
-        <span class="px-3 py-1 bg-yellow-600 text-black rounded-lg text-sm">Recherche : "{{ search }}"</span>
-      {% endif %}
     </div>
-    {% endif %}
-  </div>
 </div>

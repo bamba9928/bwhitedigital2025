@@ -1,32 +1,49 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="fr" class="h-full">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Connexion | BWHITE DIGITAL</title>
-
-  <!-- Optimisation des ressources externes -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-
-  <!-- Ressources locales -->
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  <link rel="manifest" href="{% static 'manifest.json' %}">
-
-  <!-- Métadonnées PWA -->
-  <meta name="theme-color" content="#00FF00">
-  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'icons/favicon-16x16.png' %}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32x32.png' %}">
-  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'icons/apple-touch-icon.png' %}">
-  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/android-chrome-192x192.png' %}">
-  <link rel="icon" type="image/png" sizes="512x512" href="{% static 'icons/android-chrome-512x512.png' %}">
-
-  <style>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Connexion | BWHITE DIGITAL</title>
+        <!-- Optimisation des ressources externes -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;600;700;800&display=swap"
+              rel="stylesheet">
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+              integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+              crossorigin="anonymous"
+              referrerpolicy="no-referrer" />
+        <link rel="stylesheet"
+              href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+              rel="stylesheet">
+        <!-- Ressources locales -->
+        <link rel="stylesheet" href="{% static 'css/style.css' %}">
+        <link rel="manifest" href="{% static 'manifest.json' %}">
+        <!-- Métadonnées PWA -->
+        <meta name="theme-color" content="#00FF00">
+        <link rel="icon"
+              type="image/png"
+              sizes="16x16"
+              href="{% static 'icons/favicon-16x16.png' %}">
+        <link rel="icon"
+              type="image/png"
+              sizes="32x32"
+              href="{% static 'icons/favicon-32x32.png' %}">
+        <link rel="apple-touch-icon"
+              sizes="180x180"
+              href="{% static 'icons/apple-touch-icon.png' %}">
+        <link rel="icon"
+              type="image/png"
+              sizes="192x192"
+              href="{% static 'icons/android-chrome-192x192.png' %}">
+        <link rel="icon"
+              type="image/png"
+              sizes="512x512"
+              href="{% static 'icons/android-chrome-512x512.png' %}">
+        <style>
     /* Variables CSS optimisées */
     :root {
       --brand-accent: #00FF00;
@@ -137,153 +154,170 @@
     .font-montserrat {
       font-family: 'Montserrat', sans-serif;
     }
-  </style>
-{% block extra_css %}{% endblock %}
-</head>
-<body class="min-h-screen text-gray-200 selection:bg-green-300/20 selection:text-white">
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <header class="fixed top-0 inset-x-0 z-50 bg-black/60 border-b border-white/5 backdrop-blur-md">
-    <div class="mx-auto max-w-7xl">
-      <div class="h-12 flex items-center overflow-hidden scroll-container" role="region" aria-label="Informations de contact et de sécurité défilantes">
-        <div class="flex-1 relative">
-          <!-- Premier ensemble d'informations -->
-          {% block banner %}
-            {% include "includes/_top_banner.html" %}
-          {% endblock %}
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <main class="pt-24 px-4">
-    <div class="max-w-md mx-auto">
-      <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 brand-chip shadow-lg shadow-green-900/40 overflow-hidden" role="img" aria-label="Logo BWHITE DIGITAL">
-          <img src="{% static 'images/logo.png' %}" alt="BWHITE DIGITAL" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-          <i class="hidden fas fa-shield-alt text-white text-2xl" aria-hidden="true"></i>
-        </div>
-        <h1 class="text-3xl font-bold text-white tracking-tight font-montserrat">
-          BWHITE DIGITAL
-        </h1>
-        <p class="text-gray-400 mt-1">Plateforme de gestion d'assurance automobile</p>
-      </div>
-
-      <section class="login-card rounded-2xl p-8 border border-gray-800/70" style="animation: slideIn .45s ease-out" aria-labelledby="login-heading">
-        <h2 id="login-heading" class="text-2xl font-semibold text-white mb-6 text-center">Connexion</h2>
-
-        <!-- Messages Django -->
-        {% if messages %}
-          {% for message in messages %}
-            {% if message.level_tag == 'error' %}
-              <div class="mb-4 p-3 rounded-lg bg-red-900/60 text-red-200 border border-red-700/60" role="alert">
-                {{ message }}
-              </div>
-            {% else %}
-              <div class="mb-4 p-3 rounded-lg bg-emerald-900/40 text-emerald-200 border border-emerald-700/40" role="status">
-                {{ message }}
-              </div>
-            {% endif %}
-          {% endfor %}
-        {% endif %}
-
-        <!-- Erreurs de formulaire -->
-        {% if form.non_field_errors %}
-          <div class="mb-4 p-3 bg-red-900/60 text-red-200 border border-red-700/60 rounded-lg" role="alert">
-            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-          </div>
-        {% endif %}
-
-        <!-- Formulaire de connexion -->
-        <form method="post" action="{% url 'accounts:login' %}" class="space-y-5" novalidate>
-          {% csrf_token %}
-
-          <!-- Champ nom d'utilisateur -->
-          <div>
-            <label for="id_username" class="block text-gray-300 text-sm font-medium mb-2">
-              <i class="fas fa-user mr-2 brand-text" aria-hidden="true"></i>Nom d'utilisateur
-            </label>
-            <input type="text" name="username" id="id_username" required autofocus autocomplete="username"
-                   class="w-full px-4 py-3 bg-gray-800/80 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-green-500 input-focus placeholder-gray-500 transition-colors duration-200"
-                   placeholder="Entrez votre nom d'utilisateur"
-                   {% if form.username.errors %}aria-invalid="true" aria-describedby="username-error"{% endif %}>
-            {% if form.username.errors %}
-              <p id="username-error" class="text-red-400 text-sm mt-1" role="alert">{{ form.username.errors.0 }}</p>
-            {% endif %}
-          </div>
-
-          <!-- Champ mot de passe -->
-          <div>
-            <label for="id_password" class="block text-gray-300 text-sm font-medium mb-2">
-              <i class="fas fa-lock mr-2 brand-text" aria-hidden="true"></i>Mot de passe
-            </label>
-            <div class="relative">
-              <input type="password" name="password" id="id_password" required autocomplete="current-password"
-                     class="w-full px-4 py-3 bg-gray-800/80 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-green-500 input-focus placeholder-gray-500 transition-colors duration-200 pr-12"
-                     placeholder="Entrez votre mot de passe"
-                     {% if form.password.errors %}aria-invalid="true" aria-describedby="password-error"{% endif %}>
-              <button type="button" id="togglePwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors duration-200 p-1 rounded" aria-label="Afficher le mot de passe">
-                <i id="password-icon" class="fas fa-eye" aria-hidden="true"></i>
-              </button>
+        </style>
+        {% block extra_css %}{% endblock %}
+    </head>
+    <body class="min-h-screen text-gray-200 selection:bg-green-300/20 selection:text-white">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <header class="fixed top-0 inset-x-0 z-50 bg-black/60 border-b border-white/5 backdrop-blur-md">
+            <div class="mx-auto max-w-7xl">
+                <div class="h-12 flex items-center overflow-hidden scroll-container"
+                     role="region"
+                     aria-label="Informations de contact et de sécurité défilantes">
+                    <div class="flex-1 relative">
+                        <!-- Premier ensemble d'informations -->
+                        {% block banner %}
+                            {% include "includes/_top_banner.html" %}
+                        {% endblock %}
+                    </div>
+                </div>
             </div>
-            {% if form.password.errors %}
-              <p id="password-error" class="text-red-400 text-sm mt-1" role="alert">{{ form.password.errors.0 }}</p>
-            {% endif %}
-          </div>
-
-          <!-- Options de connexion -->
-          <div class="flex items-center justify-between">
-            <label for="id_remember" class="inline-flex items-center text-gray-300 text-sm select-none cursor-pointer">
-              <input type="checkbox" name="remember" id="id_remember" class="mr-2 rounded border-gray-600 bg-gray-800/80 text-green-500 focus:ring-green-500 focus:ring-2">
-              Se souvenir de moi
-            </label>
-            <a href="#" class="text-sm link-brand hover:underline transition-colors duration-200">Mot de passe oublié ?</a>
-          </div>
-
-          <!-- Bouton de soumission -->
-          <button type="submit" class="w-full btn-brand text-black font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center shadow-lg shadow-green-900/30 hover:shadow-green-900/40">
-            <i class="fas fa-sign-in-alt mr-2" aria-hidden="true"></i>Se connecter
-          </button>
-
-          {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-        </form>
-
-        <!-- Indicateurs de sécurité -->
-        <div class="mt-6 pt-6 border-t border-gray-800/70">
-          <div class="flex items-center justify-center gap-4 text-sm text-gray-400 flex-wrap">
-            <span class="inline-flex items-center">
-              <i class="fas fa-shield-alt mr-2 brand-text" aria-hidden="true"></i>Connexion sécurisée
-            </span>
-            <span aria-hidden="true">•</span>
-            <span class="inline-flex items-center">
-              <i class="fas fa-lock mr-2 brand-text" aria-hidden="true"></i>SSL activé
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Pied de page -->
-      <footer class="text-center mt-8 text-gray-500 text-sm">
-        <p>© 2025 BWHITE DIGITAL. Tous droits réservés.</p>
-        <p class="mt-2">
-          <a href="#" class="link-brand hover:underline transition-colors duration-200">Conditions d'utilisation</a>
-          <span class="mx-2" aria-hidden="true">•</span>
-          <a href="#" class="link-brand hover:underline transition-colors duration-200">Politique de confidentialité</a>
-        </p>
-      </footer>
-    </div>
-  </main>
-
-  <!-- Message sans JavaScript -->
-  <noscript>
-    <div class="fixed bottom-4 inset-x-0 mx-auto max-w-md px-4 z-50">
-      <div class="rounded-lg border border-yellow-700 bg-yellow-900/40 text-yellow-200 p-3 text-sm text-center" role="alert">
-        Activez JavaScript pour une expérience complète.
-      </div>
-    </div>
-  </noscript>
-
-  <script>
+        </header>
+        <main class="pt-24 px-4">
+            <div class="max-w-md mx-auto">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 brand-chip shadow-lg shadow-green-900/40 overflow-hidden"
+                         role="img"
+                         aria-label="Logo BWHITE DIGITAL">
+                        <img src="{% static 'images/logo.png' %}"
+                             alt="BWHITE DIGITAL"
+                             class="w-full h-full object-contain"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                        <i class="hidden fas fa-shield-alt text-white text-2xl"
+                           aria-hidden="true"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold text-white tracking-tight font-montserrat">BWHITE DIGITAL</h1>
+                    <p class="text-gray-400 mt-1">Plateforme de gestion d'assurance automobile</p>
+                </div>
+                <section class="login-card rounded-2xl p-8 border border-gray-800/70"
+                         style="animation: slideIn .45s ease-out"
+                         aria-labelledby="login-heading">
+                    <h2 id="login-heading"
+                        class="text-2xl font-semibold text-white mb-6 text-center">Connexion</h2>
+                    <!-- Messages Django -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            {% if message.level_tag == 'error' %}
+                                <div class="mb-4 p-3 rounded-lg bg-red-900/60 text-red-200 border border-red-700/60"
+                                     role="alert">{{ message }}</div>
+                            {% else %}
+                                <div class="mb-4 p-3 rounded-lg bg-emerald-900/40 text-emerald-200 border border-emerald-700/40"
+                                     role="status">{{ message }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <!-- Erreurs de formulaire -->
+                    {% if form.non_field_errors %}
+                        <div class="mb-4 p-3 bg-red-900/60 text-red-200 border border-red-700/60 rounded-lg"
+                             role="alert">
+                            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <!-- Formulaire de connexion -->
+                    <form method="post"
+                          action="{% url 'accounts:login' %}"
+                          class="space-y-5"
+                          novalidate>
+                        {% csrf_token %}
+                        <!-- Champ nom d'utilisateur -->
+                        <div>
+                            <label for="id_username"
+                                   class="block text-gray-300 text-sm font-medium mb-2">
+                                <i class="fas fa-user mr-2 brand-text" aria-hidden="true"></i>Nom d'utilisateur
+                            </label>
+                            <input type="text"
+                                   name="username"
+                                   id="id_username"
+                                   required
+                                   autofocus
+                                   autocomplete="username"
+                                   class="w-full px-4 py-3 bg-gray-800/80 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-green-500 input-focus placeholder-gray-500 transition-colors duration-200"
+                                   placeholder="Entrez votre nom d'utilisateur"
+                                   {% if form.username.errors %}aria-invalid="true" aria-describedby="username-error"{% endif %}>
+                            {% if form.username.errors %}
+                                <p id="username-error" class="text-red-400 text-sm mt-1" role="alert">{{ form.username.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        <!-- Champ mot de passe -->
+                        <div>
+                            <label for="id_password"
+                                   class="block text-gray-300 text-sm font-medium mb-2">
+                                <i class="fas fa-lock mr-2 brand-text" aria-hidden="true"></i>Mot de passe
+                            </label>
+                            <div class="relative">
+                                <input type="password"
+                                       name="password"
+                                       id="id_password"
+                                       required
+                                       autocomplete="current-password"
+                                       class="w-full px-4 py-3 bg-gray-800/80 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-green-500 input-focus placeholder-gray-500 transition-colors duration-200 pr-12"
+                                       placeholder="Entrez votre mot de passe"
+                                       {% if form.password.errors %}aria-invalid="true" aria-describedby="password-error"{% endif %}>
+                                <button type="button"
+                                        id="togglePwd"
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors duration-200 p-1 rounded"
+                                        aria-label="Afficher le mot de passe">
+                                    <i id="password-icon" class="fas fa-eye" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            {% if form.password.errors %}
+                                <p id="password-error" class="text-red-400 text-sm mt-1" role="alert">{{ form.password.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        <!-- Options de connexion -->
+                        <div class="flex items-center justify-between">
+                            <label for="id_remember"
+                                   class="inline-flex items-center text-gray-300 text-sm select-none cursor-pointer">
+                                <input type="checkbox"
+                                       name="remember"
+                                       id="id_remember"
+                                       class="mr-2 rounded border-gray-600 bg-gray-800/80 text-green-500 focus:ring-green-500 focus:ring-2">
+                                Se souvenir de moi
+                            </label>
+                            <a href="#"
+                               class="text-sm link-brand hover:underline transition-colors duration-200">Mot de passe oublié ?</a>
+                        </div>
+                        <!-- Bouton de soumission -->
+                        <button type="submit"
+                                class="w-full btn-brand text-black font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center shadow-lg shadow-green-900/30 hover:shadow-green-900/40">
+                            <i class="fas fa-sign-in-alt mr-2" aria-hidden="true"></i>Se connecter
+                        </button>
+                        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+                    </form>
+                    <!-- Indicateurs de sécurité -->
+                    <div class="mt-6 pt-6 border-t border-gray-800/70">
+                        <div class="flex items-center justify-center gap-4 text-sm text-gray-400 flex-wrap">
+                            <span class="inline-flex items-center">
+                                <i class="fas fa-shield-alt mr-2 brand-text" aria-hidden="true"></i>Connexion sécurisée
+                            </span>
+                            <span aria-hidden="true">•</span>
+                            <span class="inline-flex items-center">
+                                <i class="fas fa-lock mr-2 brand-text" aria-hidden="true"></i>SSL activé
+                            </span>
+                        </div>
+                    </div>
+                </section>
+                <!-- Pied de page -->
+                <footer class="text-center mt-8 text-gray-500 text-sm">
+                    <p>© 2025 BWHITE DIGITAL. Tous droits réservés.</p>
+                    <p class="mt-2">
+                        <a href="#"
+                           class="link-brand hover:underline transition-colors duration-200">Conditions d'utilisation</a>
+                        <span class="mx-2" aria-hidden="true">•</span>
+                        <a href="#"
+                           class="link-brand hover:underline transition-colors duration-200">Politique de confidentialité</a>
+                    </p>
+                </footer>
+            </div>
+        </main>
+        <!-- Message sans JavaScript -->
+        <noscript>
+            <div class="fixed bottom-4 inset-x-0 mx-auto max-w-md px-4 z-50">
+                <div class="rounded-lg border border-yellow-700 bg-yellow-900/40 text-yellow-200 p-3 text-sm text-center"
+                     role="alert">Activez JavaScript pour une expérience complète.</div>
+            </div>
+        </noscript>
+        <script>
     (function(){
       'use strict';
 
@@ -309,6 +343,6 @@
         });
       }
     })();
-  </script>
-</body>
+        </script>
+    </body>
 </html>

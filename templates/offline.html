@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hors ligne — BWHITE DIGITAL</title>
-  <meta name="theme-color" content="#16a34a" />
-  <style>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Hors ligne — BWHITE DIGITAL</title>
+        <meta name="theme-color" content="#16a34a" />
+        <style>
     :root{
       --brand-300:#86efac; --brand-400:#4ade80; --brand-600:#16a34a; --brand-700:#15803d; --brand-900:#14532d;
       --bg-900:#0b1020; --bg-800:#111827; --card:#0f172acc; --text:#e5e7eb; --muted:#94a3b8; --danger:#ef4444;
@@ -62,59 +62,76 @@
     svg{display:block}
     @keyframes fadeIn{from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:translateY(0)}}
     @media (prefers-reduced-motion:reduce){.card{animation:none}}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card" role="status" aria-live="polite">
-      <div class="logo" aria-hidden="true">
-        <!-- bouclier -->
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 3l7 3v5c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-3Z" fill="white" fill-opacity=".12" />
-          <path d="M12 21c-3.5-1-7-5-7-10V6l7-3m0 18c3.5-1 7-5 7-10V6l-7-3m0 0v18" stroke="white" stroke-opacity=".9" stroke-width="1.2"/>
-          <path d="M8.5 12.5l2.2 2.2 4.8-4.8" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-
-      <h1>BWHITE DIGITAL</h1>
-      <p class="lead">Vous êtes hors connexion. Certaines fonctionnalités sont indisponibles.</p>
-
-      <div style="text-align:center">
-        <span id="pill" class="status">
-          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="6" fill="#ef4444"></circle>
-          </svg>
-          <span id="state-text">Hors ligne</span>
-        </span>
-      </div>
-
-      <div class="grid">
-        <button id="retry" class="btn" type="button" aria-label="Réessayer la connexion">
-          <!-- refresh -->
-          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 6V3L8 7l4 4V8a4 4 0 1 1-3.39 2h-2.1A6 6 0 1 0 12 6z"/></svg>
-          Réessayer
-        </button>
-        <a href="/" class="btn secondary" aria-label="Aller à l'accueil">
-          <!-- home -->
-          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 3 9 8h-3v9h-5v-6H11v6H6v-9H3l9-8z"/></svg>
-          Accueil
-        </a>
-      </div>
-
-      <div class="meta" id="meta">
-        <div class="row"><span>Dernier essai</span><span id="ts">—</span></div>
-        <div class="row"><span>État</span><span id="net">offline</span></div>
-        <div class="row"><span>Type réseau</span><span id="rtt">n/a</span></div>
-        <div class="row"><span>Cache</span><span id="cache">PWA/Service Worker requis</span></div>
-        <div id="err" class="row err" hidden><span>Erreur</span><span id="errmsg"></span></div>
-      </div>
-
-      <p class="hint">Astuce&nbsp;: vérifiez votre connexion ou réessayez. La page se recharge dès que le réseau revient.</p>
-      <noscript><p class="hint err">JavaScript est requis pour la détection de l’état réseau.</p></noscript>
-    </div>
-  </div>
-
-  <script>
+        </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <div class="card" role="status" aria-live="polite">
+                <div class="logo" aria-hidden="true">
+                    <!-- bouclier -->
+                    <svg width="34"
+                         height="34"
+                         viewBox="0 0 24 24"
+                         fill="none"
+                         aria-hidden="true">
+                        <path d="M12 3l7 3v5c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-3Z" fill="white" fill-opacity=".12" />
+                        <path d="M12 21c-3.5-1-7-5-7-10V6l7-3m0 18c3.5-1 7-5 7-10V6l-7-3m0 0v18" stroke="white" stroke-opacity=".9" stroke-width="1.2" />
+                        <path d="M8.5 12.5l2.2 2.2 4.8-4.8" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <h1>BWHITE DIGITAL</h1>
+                <p class="lead">Vous êtes hors connexion. Certaines fonctionnalités sont indisponibles.</p>
+                <div style="text-align:center">
+                    <span id="pill" class="status">
+                        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="6" fill="#ef4444"></circle>
+                        </svg>
+                        <span id="state-text">Hors ligne</span>
+                    </span>
+                </div>
+                <div class="grid">
+                    <button id="retry"
+                            class="btn"
+                            type="button"
+                            aria-label="Réessayer la connexion">
+                        <!-- refresh -->
+                        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="#fff" d="M12 6V3L8 7l4 4V8a4 4 0 1 1-3.39 2h-2.1A6 6 0 1 0 12 6z" />
+                        </svg>
+                        Réessayer
+                    </button>
+                    <a href="/" class="btn secondary" aria-label="Aller à l'accueil">
+                        <!-- home -->
+                        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor" d="m12 3 9 8h-3v9h-5v-6H11v6H6v-9H3l9-8z" />
+                        </svg>
+                        Accueil
+                    </a>
+                </div>
+                <div class="meta" id="meta">
+                    <div class="row">
+                        <span>Dernier essai</span><span id="ts">—</span>
+                    </div>
+                    <div class="row">
+                        <span>État</span><span id="net">offline</span>
+                    </div>
+                    <div class="row">
+                        <span>Type réseau</span><span id="rtt">n/a</span>
+                    </div>
+                    <div class="row">
+                        <span>Cache</span><span id="cache">PWA/Service Worker requis</span>
+                    </div>
+                    <div id="err" class="row err" hidden>
+                        <span>Erreur</span><span id="errmsg"></span>
+                    </div>
+                </div>
+                <p class="hint">Astuce&nbsp;: vérifiez votre connexion ou réessayez. La page se recharge dès que le réseau revient.</p>
+                <noscript>
+                    <p class="hint err">JavaScript est requis pour la détection de l’état réseau.</p>
+                </noscript>
+            </div>
+        </div>
+        <script>
     (function(){
       const stateText = document.getElementById('state-text');
       const pill = document.getElementById('pill');
@@ -167,6 +184,6 @@
       document.getElementById('retry').addEventListener('click', retry);
       paint();
     })();
-  </script>
-</body>
+        </script>
+    </body>
 </html>

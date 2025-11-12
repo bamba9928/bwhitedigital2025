@@ -1,34 +1,30 @@
 {% load humanize %}
-
 <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mt-6">
-  <h2 class="text-xl font-semibold text-white mb-4">
-    <i class="fas fa-user-shield mr-2 text-red-400"></i> Résumé Admin (Primes brutes Askia)
-  </h2>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <div class="bg-blue-900/70 rounded-xl p-6 border border-blue-700">
-      <p class="text-blue-200 text-sm">Contrats</p>
-      <p class="text-3xl font-bold text-white mt-2">
-        {{ resume_admin.nb_contrats|default_if_none:0|intcomma }}
-      </p>
+    <h2 class="text-xl font-semibold text-white mb-4">
+        <i class="fas fa-user-shield mr-2 text-red-400"></i> Résumé Admin (Primes brutes Askia)
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-blue-900/70 rounded-xl p-6 border border-blue-700">
+            <p class="text-blue-200 text-sm">Contrats</p>
+            <p class="text-3xl font-bold text-white mt-2">{{ resume_admin.nb_contrats|default_if_none:0|intcomma }}</p>
+        </div>
+        <div class="bg-green-900/70 rounded-xl p-6 border border-green-700">
+            <p class="text-green-200 text-sm">Primes totales</p>
+            <p class="text-3xl font-bold text-white mt-2">
+                {{ resume_admin.total_primes|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
+        </div>
+        <div class="bg-yellow-900/70 rounded-xl p-6 border border-yellow-700">
+            <p class="text-yellow-200 text-sm">Commissions Admin</p>
+            <p class="text-3xl font-bold text-green-300 mt-2">
+                {{ resume_admin.total_commissions|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
+        </div>
+        <div class="bg-orange-900/70 rounded-xl p-6 border border-orange-700">
+            <p class="text-orange-200 text-sm">Net à reverser</p>
+            <p class="text-3xl font-bold text-orange-400 mt-2">
+                {{ resume_admin.total_net|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
+        </div>
     </div>
-    <div class="bg-green-900/70 rounded-xl p-6 border border-green-700">
-      <p class="text-green-200 text-sm">Primes totales</p>
-      <p class="text-3xl font-bold text-white mt-2">
-        {{ resume_admin.total_primes|default_if_none:0|floatformat:0|intcomma }} FCFA
-      </p>
-    </div>
-    <div class="bg-yellow-900/70 rounded-xl p-6 border border-yellow-700">
-      <p class="text-yellow-200 text-sm">Commissions Admin</p>
-      <p class="text-3xl font-bold text-green-300 mt-2">
-        {{ resume_admin.total_commissions|default_if_none:0|floatformat:0|intcomma }} FCFA
-      </p>
-    </div>
-    <div class="bg-orange-900/70 rounded-xl p-6 border border-orange-700">
-      <p class="text-orange-200 text-sm">Net à reverser</p>
-      <p class="text-3xl font-bold text-orange-400 mt-2">
-        {{ resume_admin.total_net|default_if_none:0|floatformat:0|intcomma }} FCFA
-      </p>
-    </div>
-  </div>
 </div>

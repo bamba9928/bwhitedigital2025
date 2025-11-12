@@ -6,18 +6,21 @@ from .api_client import _validate_immatriculation, _canon_immat
 # 📞 Validateur de Téléphone
 # ==================================
 SENEGAL_PHONE_VALIDATOR = RegexValidator(
-    regex=r'^(70|71|75|76|77|78|30|33|34)\d{7}$',
-    message="Le numéro doit être au format sénégalais (ex: 771234567)"
+    regex=r"^(70|71|75|76|77|78|30|33|34)\d{7}$",
+    message="Le numéro doit être au format sénégalais (ex: 771234567)",
 )
+
 
 def normalize_phone_for_storage(phone: str) -> str:
     if not phone:
         return ""
     return "".join(filter(str.isdigit, str(phone)))
 
+
 # ==================================
 # 🚗 Validateur d'Immatriculation
 # ==================================
+
 
 def validate_immatriculation(value):
     """
@@ -28,7 +31,8 @@ def validate_immatriculation(value):
         _validate_immatriculation(str(value))
     except ValueError as e:
 
-        raise ValidationError(str(e), code='invalid_immat')
+        raise ValidationError(str(e), code="invalid_immat")
+
 
 def normalize_immat_for_storage(immat: str) -> str:
     """

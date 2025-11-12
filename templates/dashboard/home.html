@@ -1,276 +1,233 @@
 {% extends 'base.html' %}
 {% load humanize %}
-
 {% block title %}Tableau de Bord - BWHITE DIGITAL{% endblock %}
-
 {% block banner %}
-  {% include "includes/_top_banner.html" %}
+    {% include "includes/_top_banner.html" %}
 {% endblock %}
-
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8 space-y-8 animate-fadeIn">
-  <!-- En-tête modernisé avec grille 3 colonnes -->
-  <div class="grid grid-cols-1 md:grid-cols-[1fr,auto,auto] items-center gap-4">
-    <!-- Col 1 : titre -->
-    <div>
-      <h1 class="text-3xl md:text-4xl font-bold text-white flex items-center gap-3">
-        {% if user.role == 'ADMIN' %}
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-green to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
-            <i class="fas fa-chart-line text-gray-900"></i>
-          </div>
-          <span class="bg-gradient-to-r from-primary-green to-emerald-400 bg-clip-text text-transparent">Administration</span>
-        {% else %}
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <i class="fas fa-user-tie text-white"></i>
-          </div>
-          <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Mon Tableau de Bord</span>
-        {% endif %}
-      </h1>
-      <p class="text-gray-400 mt-2 text-sm md:text-base">
-        Bienvenue, <span class="font-semibold text-white">{{ user.get_full_name|default:user.username }}</span>
-        <span class="inline-block ml-2">👋</span>
-      </p>
-    </div>
-
-    <!-- Col 2 : bouton échéances -->
-    <a href="{% url 'contracts:echeances_aujourdhui' %}"
-       class="inline-flex items-center px-4 py-2 rounded-lg bg-primary-green text-black hover:opacity-90 justify-self-start md:justify-self-center">
-      <i class="fas fa-clock mr-2"></i> Date échéances
-    </a>
-
-    <!-- Col 3 : date du jour -->
-    <div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl border border-gray-700 shadow-lg hover:border-gray-600 transition-all duration-300 group justify-self-start md:justify-self-end">
-      <div class="w-10 h-10 rounded-lg bg-primary-green/10 flex items-center justify-center group-hover:bg-primary-green/20 transition-colors">
-        <i class="far fa-calendar-alt text-primary-green text-lg"></i>
-      </div>
-      <div>
-        <p class="text-gray-400 text-xs">Aujourd'hui</p>
-        <p class="text-white text-sm font-semibold" id="current-date">{% now "l j F Y" %}</p>
-      </div>
-    </div>
-  </div>
-  <!-- Cartes d'actions rapides modernisées -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    <!-- Nouveau Contrat -->
-    <a href="{% url 'contracts:nouveau_contrat' %}"
-       class="group relative bg-gradient-to-br from-green-900/40 via-green-800/30 to-emerald-900/40
-              p-6 rounded-2xl border border-green-700/40 hover:border-green-500/60
-              transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-green-500/10
-              hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
-      <!-- Effet de lueur -->
-      <div class="absolute inset-0 bg-gradient-to-br from-green-500/0 to-emerald-500/0 group-hover:from-green-500/5 group-hover:to-emerald-500/5 transition-all duration-300"></div>
-
-      <div class="relative flex flex-col gap-4">
-        <div class="flex items-center justify-between">
-          <div class="p-4 bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-xl
-                      group-hover:from-green-600/30 group-hover:to-emerald-600/30
-                      group-hover:scale-110 transition-all duration-300
-                      shadow-lg shadow-green-500/10">
-            <i class="fas fa-plus text-green-400 text-2xl"></i>
-          </div>
-          <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
-            <i class="fas fa-arrow-right text-green-400 text-sm group-hover:translate-x-1 transition-transform"></i>
-          </div>
-        </div>
-        <div>
-          <p class="text-white font-bold text-lg mb-1">Nouveau Contrat</p>
-          <p class="text-green-300/80 text-sm">Créer un nouveau contrat client</p>
-        </div>
-      </div>
-    </a>
-
-    <!-- Mes Contrats -->
-    <a href="{% url 'contracts:liste_contrats' %}"
-       class="group relative bg-gradient-to-br from-blue-900/40 via-blue-800/30 to-blue-900/40
-              p-6 rounded-2xl border border-blue-700/40 hover:border-blue-500/60
-              transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-blue-500/10
-              hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
-      <!-- Effet de lueur -->
-      <div class="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-500/0 group-hover:from-blue-500/5 group-hover:to-blue-500/5 transition-all duration-300"></div>
-
-      <div class="relative flex flex-col gap-4">
-        <div class="flex items-center justify-between">
-          <div class="p-4 bg-gradient-to-br from-blue-600/20 to-blue-600/20 rounded-xl
-                      group-hover:from-blue-600/30 group-hover:to-blue-600/30
-                      group-hover:scale-110 transition-all duration-300
-                      shadow-lg shadow-blue-500/10">
-            <i class="fas fa-file-contract text-blue-400 text-2xl"></i>
-          </div>
-          <div class="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-            <i class="fas fa-arrow-right text-blue-400 text-sm group-hover:translate-x-1 transition-transform"></i>
-          </div>
-        </div>
-        <div>
-          <p class="text-white font-bold text-lg mb-1">Mes Contrats</p>
-          <p class="text-blue-300/80 text-sm">Voir et gérer tous les contrats</p>
-        </div>
-      </div>
-    </a>
-
-    <!-- Mes Clients -->
-    <a href="{% url 'contracts:liste_clients' %}"
-       class="group relative bg-gradient-to-br from-purple-900/40 via-purple-800/30 to-purple-900/40
-              p-6 rounded-2xl border border-purple-700/40 hover:border-purple-500/60
-              transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-purple-500/10
-              hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
-      <!-- Effet de lueur -->
-      <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-500/0 group-hover:from-purple-500/5 group-hover:to-purple-500/5 transition-all duration-300"></div>
-
-      <div class="relative flex flex-col gap-4">
-        <div class="flex items-center justify-between">
-          <div class="p-4 bg-gradient-to-br from-purple-600/20 to-purple-600/20 rounded-xl
-                      group-hover:from-purple-600/30 group-hover:to-purple-600/30
-                      group-hover:scale-110 transition-all duration-300
-                      shadow-lg shadow-purple-500/10">
-            <i class="fas fa-users text-purple-400 text-2xl"></i>
-          </div>
-          <div class="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
-            <i class="fas fa-arrow-right text-purple-400 text-sm group-hover:translate-x-1 transition-transform"></i>
-          </div>
-        </div>
-        <div>
-          <p class="text-white font-bold text-lg mb-1">Mes Clients</p>
-          <p class="text-purple-300/80 text-sm">Accéder à la liste des clients</p>
-        </div>
-      </div>
-    </a>
-
-    <!-- Ajouter Apporteur (Admin seulement) -->
-    {% if user.role == 'ADMIN' %}
-    <a href="{% url 'accounts:nouveau_apporteur' %}"
-       class="group relative bg-gradient-to-br from-emerald-900/40 via-emerald-800/30 to-emerald-900/40
-              p-6 rounded-2xl border border-emerald-700/40 hover:border-emerald-500/60
-              transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/10
-              hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
-      <!-- Effet de lueur -->
-      <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:to-emerald-500/5 transition-all duration-300"></div>
-
-      <div class="relative flex flex-col gap-4">
-        <div class="flex items-center justify-between">
-          <div class="p-4 bg-gradient-to-br from-emerald-600/20 to-emerald-600/20 rounded-xl
-                      group-hover:from-emerald-600/30 group-hover:to-emerald-600/30
-                      group-hover:scale-110 transition-all duration-300
-                      shadow-lg shadow-emerald-500/10">
-            <i class="fas fa-user-plus text-emerald-400 text-2xl"></i>
-          </div>
-          <div class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-            <i class="fas fa-arrow-right text-emerald-400 text-sm group-hover:translate-x-1 transition-transform"></i>
-          </div>
-        </div>
-        <div>
-          <p class="text-white font-bold text-lg mb-1">Ajouter Apporteur</p>
-          <p class="text-emerald-300/80 text-sm">Créer un nouveau compte apporteur</p>
-        </div>
-      </div>
-    </a>
-    {% endif %}
-  </section>
-
-  <!-- Section vérification des contrats modernisée -->
-  <section class="bg-gradient-to-br from-gray-900/80 to-gray-900/60 rounded-2xl border border-gray-800/50 overflow-hidden shadow-2xl backdrop-blur-sm">
-    <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 border-b border-gray-800/50 bg-gradient-to-r from-gray-900/90 to-gray-800/90 gap-3">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-green/20 to-emerald-600/20 flex items-center justify-center border border-primary-green/30">
-          <i class="fas fa-shield-check text-primary-green text-xl"></i>
-        </div>
-        <div>
-          <h2 class="text-xl font-bold text-white">Vérifier la validité des contrats</h2>
-          <p class="text-gray-400 text-sm mt-0.5">Outil de vérification Diotali</p>
-        </div>
-      </div>
-      <a href="https://aas.diotali.com/#/verification"
-         target="_blank" rel="noopener noreferrer"
-         class="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-green/10 to-emerald-600/10
-                hover:from-primary-green/20 hover:to-emerald-600/20
-                text-primary-green rounded-xl transition-all duration-300
-                border border-primary-green/30 hover:border-primary-green/50
-                text-sm font-semibold hover:scale-105 active:scale-95
-                w-full sm:w-auto justify-center shadow-lg hover:shadow-green-500/20">
-        <i class="fas fa-external-link-alt group-hover:rotate-12 transition-transform"></i>
-        <span>Ouvrir en grand</span>
-      </a>
-    </header>
-
-    <div class="relative bg-gray-900/50" style="height: 600px; min-height: 400px;">
-      <iframe
-        id="verification-iframe"
-        src="https://aas.diotali.com/#/verification"
-        class="w-full h-full opacity-0 transition-opacity duration-500"
-        frameborder="0"
-        loading="lazy"
-        title="Outil de vérification de documents Diotali"
-        allow="camera; microphone"
-        onerror="handleIframeError()"
-      ></iframe>
-
-      <!-- Loader modernisé -->
-      <div id="iframe-loader" class="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-950 flex items-center justify-center transition-opacity duration-500">
-        <div class="text-center">
-          <div class="relative inline-block">
-            <div class="w-16 h-16 rounded-full border-4 border-gray-800 border-t-primary-green animate-spin"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <i class="fas fa-shield-check text-primary-green text-xl"></i>
+    <div class="max-w-7xl mx-auto px-4 py-8 space-y-8 animate-fadeIn">
+        <!-- En-tête modernisé avec grille 3 colonnes -->
+        <div class="grid grid-cols-1 md:grid-cols-[1fr,auto,auto] items-center gap-4">
+            <!-- Col 1 : titre -->
+            <div>
+                <h1 class="text-3xl md:text-4xl font-bold text-white flex items-center gap-3">
+                    {% if user.role == 'ADMIN' %}
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-green to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
+                            <i class="fas fa-chart-line text-gray-900"></i>
+                        </div>
+                        <span class="bg-gradient-to-r from-primary-green to-emerald-400 bg-clip-text text-transparent">Administration</span>
+                    {% else %}
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <i class="fas fa-user-tie text-white"></i>
+                        </div>
+                        <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Mon Tableau de Bord</span>
+                    {% endif %}
+                </h1>
+                <p class="text-gray-400 mt-2 text-sm md:text-base">
+                    Bienvenue, <span class="font-semibold text-white">{{ user.get_full_name|default:user.username }}</span>
+                    <span class="inline-block ml-2">👋</span>
+                </p>
             </div>
-          </div>
-          <p class="text-white font-semibold mt-6 text-lg">Chargement de la page de vérification...</p>
-          <p class="text-gray-400 text-sm mt-2">Cela peut prendre quelques secondes</p>
-          <div class="mt-6 w-64 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto">
-            <div class="h-full bg-gradient-to-r from-primary-green to-emerald-600 rounded-full animate-pulse" style="width: 60%;"></div>
-          </div>
+            <!-- Col 2 : bouton échéances -->
+            <a href="{% url 'contracts:echeances_aujourdhui' %}"
+               class="inline-flex items-center px-4 py-2 rounded-lg bg-primary-green text-black hover:opacity-90 justify-self-start md:justify-self-center">
+                <i class="fas fa-clock mr-2"></i> Date échéances
+            </a>
+            <!-- Col 3 : date du jour -->
+            <div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl border border-gray-700 shadow-lg hover:border-gray-600 transition-all duration-300 group justify-self-start md:justify-self-end">
+                <div class="w-10 h-10 rounded-lg bg-primary-green/10 flex items-center justify-center group-hover:bg-primary-green/20 transition-colors">
+                    <i class="far fa-calendar-alt text-primary-green text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-gray-400 text-xs">Aujourd'hui</p>
+                    <p class="text-white text-sm font-semibold" id="current-date">{% now "l j F Y" %}</p>
+                </div>
+            </div>
         </div>
-      </div>
-
-      <!-- Message d'erreur modernisé -->
-      <div id="iframe-error" class="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-950 flex items-center justify-center hidden">
-        <div class="text-center max-w-md mx-auto p-8">
-          <div class="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6 border border-red-500/30">
-            <i class="fas fa-exclamation-triangle text-red-400 text-3xl"></i>
-          </div>
-          <p class="text-xl font-bold text-white mb-2">Erreur de chargement</p>
-          <p class="text-gray-400 text-sm mb-6">Impossible de charger l'outil de vérification. Veuillez vérifier votre connexion internet.</p>
-          <button onclick="retryIframe()"
-                  class="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800
-                         text-white rounded-xl transition-all duration-300 shadow-lg shadow-red-500/20
-                         hover:shadow-red-500/40 font-semibold hover:scale-105 active:scale-95
-                         inline-flex items-center gap-2">
-            <i class="fas fa-redo"></i>
-            <span>Réessayer</span>
-          </button>
-        </div>
-      </div>
+        <!-- Cartes d'actions rapides modernisées -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Nouveau Contrat -->
+            <a href="{% url 'contracts:nouveau_contrat' %}"
+               class="group relative bg-gradient-to-br from-green-900/40 via-green-800/30 to-emerald-900/40 p-6 rounded-2xl border border-green-700/40 hover:border-green-500/60 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-green-500/10 hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
+                <!-- Effet de lueur -->
+                <div class="absolute inset-0 bg-gradient-to-br from-green-500/0 to-emerald-500/0 group-hover:from-green-500/5 group-hover:to-emerald-500/5 transition-all duration-300">
+                </div>
+                <div class="relative flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <div class="p-4 bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-xl group-hover:from-green-600/30 group-hover:to-emerald-600/30 group-hover:scale-110 transition-all duration-300 shadow-lg shadow-green-500/10">
+                            <i class="fas fa-plus text-green-400 text-2xl"></i>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+                            <i class="fas fa-arrow-right text-green-400 text-sm group-hover:translate-x-1 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-white font-bold text-lg mb-1">Nouveau Contrat</p>
+                        <p class="text-green-300/80 text-sm">Créer un nouveau contrat client</p>
+                    </div>
+                </div>
+            </a>
+            <!-- Mes Contrats -->
+            <a href="{% url 'contracts:liste_contrats' %}"
+               class="group relative bg-gradient-to-br from-blue-900/40 via-blue-800/30 to-blue-900/40 p-6 rounded-2xl border border-blue-700/40 hover:border-blue-500/60 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-blue-500/10 hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
+                <!-- Effet de lueur -->
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-500/0 group-hover:from-blue-500/5 group-hover:to-blue-500/5 transition-all duration-300">
+                </div>
+                <div class="relative flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <div class="p-4 bg-gradient-to-br from-blue-600/20 to-blue-600/20 rounded-xl group-hover:from-blue-600/30 group-hover:to-blue-600/30 group-hover:scale-110 transition-all duration-300 shadow-lg shadow-blue-500/10">
+                            <i class="fas fa-file-contract text-blue-400 text-2xl"></i>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                            <i class="fas fa-arrow-right text-blue-400 text-sm group-hover:translate-x-1 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-white font-bold text-lg mb-1">Mes Contrats</p>
+                        <p class="text-blue-300/80 text-sm">Voir et gérer tous les contrats</p>
+                    </div>
+                </div>
+            </a>
+            <!-- Mes Clients -->
+            <a href="{% url 'contracts:liste_clients' %}"
+               class="group relative bg-gradient-to-br from-purple-900/40 via-purple-800/30 to-purple-900/40 p-6 rounded-2xl border border-purple-700/40 hover:border-purple-500/60 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-purple-500/10 hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
+                <!-- Effet de lueur -->
+                <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-500/0 group-hover:from-purple-500/5 group-hover:to-purple-500/5 transition-all duration-300">
+                </div>
+                <div class="relative flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <div class="p-4 bg-gradient-to-br from-purple-600/20 to-purple-600/20 rounded-xl group-hover:from-purple-600/30 group-hover:to-purple-600/30 group-hover:scale-110 transition-all duration-300 shadow-lg shadow-purple-500/10">
+                            <i class="fas fa-users text-purple-400 text-2xl"></i>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                            <i class="fas fa-arrow-right text-purple-400 text-sm group-hover:translate-x-1 transition-transform"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-white font-bold text-lg mb-1">Mes Clients</p>
+                        <p class="text-purple-300/80 text-sm">Accéder à la liste des clients</p>
+                    </div>
+                </div>
+            </a>
+            <!-- Ajouter Apporteur (Admin seulement) -->
+            {% if user.role == 'ADMIN' %}
+                <a href="{% url 'accounts:nouveau_apporteur' %}"
+                   class="group relative bg-gradient-to-br from-emerald-900/40 via-emerald-800/30 to-emerald-900/40 p-6 rounded-2xl border border-emerald-700/40 hover:border-emerald-500/60 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/10 hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
+                    <!-- Effet de lueur -->
+                    <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:to-emerald-500/5 transition-all duration-300">
+                    </div>
+                    <div class="relative flex flex-col gap-4">
+                        <div class="flex items-center justify-between">
+                            <div class="p-4 bg-gradient-to-br from-emerald-600/20 to-emerald-600/20 rounded-xl group-hover:from-emerald-600/30 group-hover:to-emerald-600/30 group-hover:scale-110 transition-all duration-300 shadow-lg shadow-emerald-500/10">
+                                <i class="fas fa-user-plus text-emerald-400 text-2xl"></i>
+                            </div>
+                            <div class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                                <i class="fas fa-arrow-right text-emerald-400 text-sm group-hover:translate-x-1 transition-transform"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-white font-bold text-lg mb-1">Ajouter Apporteur</p>
+                            <p class="text-emerald-300/80 text-sm">Créer un nouveau compte apporteur</p>
+                        </div>
+                    </div>
+                </a>
+            {% endif %}
+        </section>
+        <!-- Section vérification des contrats modernisée -->
+        <section class="bg-gradient-to-br from-gray-900/80 to-gray-900/60 rounded-2xl border border-gray-800/50 overflow-hidden shadow-2xl backdrop-blur-sm">
+            <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 border-b border-gray-800/50 bg-gradient-to-r from-gray-900/90 to-gray-800/90 gap-3">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-green/20 to-emerald-600/20 flex items-center justify-center border border-primary-green/30">
+                        <i class="fas fa-shield-check text-primary-green text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Vérifier la validité des contrats</h2>
+                        <p class="text-gray-400 text-sm mt-0.5">Outil de vérification Diotali</p>
+                    </div>
+                </div>
+                <a href="https://aas.diotali.com/#/verification"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-green/10 to-emerald-600/10 hover:from-primary-green/20 hover:to-emerald-600/20 text-primary-green rounded-xl transition-all duration-300 border border-primary-green/30 hover:border-primary-green/50 text-sm font-semibold hover:scale-105 active:scale-95 w-full sm:w-auto justify-center shadow-lg hover:shadow-green-500/20">
+                    <i class="fas fa-external-link-alt group-hover:rotate-12 transition-transform"></i>
+                    <span>Ouvrir en grand</span>
+                </a>
+            </header>
+            <div class="relative bg-gray-900/50"
+                 style="height: 600px;
+                        min-height: 400px">
+                <iframe id="verification-iframe"
+                        src="https://aas.diotali.com/#/verification"
+                        class="w-full h-full opacity-0 transition-opacity duration-500"
+                        frameborder="0"
+                        loading="lazy"
+                        title="Outil de vérification de documents Diotali"
+                        allow="camera; microphone"
+                        onerror="handleIframeError()"></iframe>
+                <!-- Loader modernisé -->
+                <div id="iframe-loader"
+                     class="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-950 flex items-center justify-center transition-opacity duration-500">
+                    <div class="text-center">
+                        <div class="relative inline-block">
+                            <div class="w-16 h-16 rounded-full border-4 border-gray-800 border-t-primary-green animate-spin"></div>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fas fa-shield-check text-primary-green text-xl"></i>
+                            </div>
+                        </div>
+                        <p class="text-white font-semibold mt-6 text-lg">Chargement de la page de vérification...</p>
+                        <p class="text-gray-400 text-sm mt-2">Cela peut prendre quelques secondes</p>
+                        <div class="mt-6 w-64 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto">
+                            <div class="h-full bg-gradient-to-r from-primary-green to-emerald-600 rounded-full animate-pulse"
+                                 style="width: 60%"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Message d'erreur modernisé -->
+                <div id="iframe-error"
+                     class="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-950 flex items-center justify-center hidden">
+                    <div class="text-center max-w-md mx-auto p-8">
+                        <div class="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6 border border-red-500/30">
+                            <i class="fas fa-exclamation-triangle text-red-400 text-3xl"></i>
+                        </div>
+                        <p class="text-xl font-bold text-white mb-2">Erreur de chargement</p>
+                        <p class="text-gray-400 text-sm mb-6">
+                            Impossible de charger l'outil de vérification. Veuillez vérifier votre connexion internet.
+                        </p>
+                        <button onclick="retryIframe()"
+                                class="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl transition-all duration-300 shadow-lg shadow-red-500/20 hover:shadow-red-500/40 font-semibold hover:scale-105 active:scale-95 inline-flex items-center gap-2">
+                            <i class="fas fa-redo"></i>
+                            <span>Réessayer</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Sections dynamiques selon le rôle -->
+        <section>
+            {% if user.role == 'ADMIN' %}
+                {% include "dashboard/partials/_filtres_admin.html" %}
+            {% elif user.role == 'APPORTEUR' %}
+                {% include "dashboard/partials/_filtres_apporteur.html" %}
+            {% endif %}
+        </section>
+        <section class="mt-8">
+            {% if user.role == 'ADMIN' %}
+                {% include "dashboard/partials/_stats_admin.html" %}
+            {% else %}
+                {% include "dashboard/partials/_stats_apporteur.html" %}
+            {% endif %}
+        </section>
+        <section class="space-y-6 mt-8">
+            {% include "dashboard/partials/_totaux_filtre.html" %}
+            {% include "dashboard/partials/_derniers_contrats.html" %}
+            {% if user.role == 'ADMIN' %}
+                {% include "dashboard/partials/_recap_apporteurs.html" %}
+            {% endif %}
+        </section>
     </div>
-  </section>
-
-  <!-- Sections dynamiques selon le rôle -->
-  <section>
-    {% if user.role == 'ADMIN' %}
-      {% include "dashboard/partials/_filtres_admin.html" %}
-    {% elif user.role == 'APPORTEUR' %}
-      {% include "dashboard/partials/_filtres_apporteur.html" %}
-    {% endif %}
-  </section>
-
-  <section class="mt-8">
-    {% if user.role == 'ADMIN' %}
-      {% include "dashboard/partials/_stats_admin.html" %}
-    {% else %}
-      {% include "dashboard/partials/_stats_apporteur.html" %}
-    {% endif %}
-  </section>
-
-  <section class="space-y-6 mt-8">
-    {% include "dashboard/partials/_totaux_filtre.html" %}
-    {% include "dashboard/partials/_derniers_contrats.html" %}
-
-    {% if user.role == 'ADMIN' %}
-      {% include "dashboard/partials/_recap_apporteurs.html" %}
-    {% endif %}
-  </section>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 // Gestion du chargement de l'iframe
 document.addEventListener('DOMContentLoaded', function() {
   const iframe = document.getElementById('verification-iframe');
@@ -377,5 +334,5 @@ document.addEventListener('DOMContentLoaded', function() {
     observer.observe(section);
   });
 });
-</script>
+    </script>
 {% endblock %}

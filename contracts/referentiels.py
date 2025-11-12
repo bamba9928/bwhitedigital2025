@@ -8,44 +8,59 @@ DUREE_CHOICES = [
 ]
 
 REGION_PREFIXES = (
-    "AB","AC","DK","TH","SL","DB","LG","TC","KL","KD","ZG",
-    "FK","KF","KG","MT","SD","DL"
+    "AB",
+    "AC",
+    "DK",
+    "TH",
+    "SL",
+    "DB",
+    "LG",
+    "TC",
+    "KL",
+    "KD",
+    "ZG",
+    "FK",
+    "KF",
+    "KG",
+    "MT",
+    "SD",
+    "DL",
 )
 
 CATEGORIES = [
-    ('', 'Sélectionner une catégorie'),
+    ("", "Sélectionner une catégorie"),
     ("510", "VP"),
     ("520", "TPC"),
     ("550", "2 Roues / Motocyclette"),
 ]
 
 SOUS_CATEGORIES_520 = [
-    ('', 'Sélectionner une sous catégorie'),
+    ("", "Sélectionner une sous catégorie"),
     ("002", "Fourgonnette"),
     ("003", "Utilitaires jusqu'à 3T500"),
     ("004", "Utilitaires au-delà de 3T500"),
     ("025", "Remorque"),
 ]
 SOUS_CATEGORIES_550 = [
-    ('', 'Sélectionner un genre'),
+    ("", "Sélectionner un genre"),
     ("009", "Cyclomoteur"),
     ("010", "Scooter -125 cm3"),
     ("011", "Scooter +125 cm3"),
     ("012", "Tricycle, Quad..."),
 ]
 CARBURANTS = [
-    ('', 'Sélectionner un carburant'),
+    ("", "Sélectionner un carburant"),
     ("E00001", "Essence"),
     ("E00002", "Diesel"),
 ]
 STATUS_CHOICES = [
-        ('cree', 'Créé'),
-        ('docs_en_attente', 'Documents en attente'),
-        ('pret', 'Prêt'),
-        ('recalcule', 'Recalculé'),
-    ]
+    ("cree", "Créé"),
+    ("docs_en_attente", "Documents en attente"),
+    ("pret", "Prêt"),
+    ("recalcule", "Recalculé"),
+]
 MARQUES = [
-    ('', 'Marque'),
+    ("", "Marque"),
     ("M00001", "TOYOTA"),
     ("M00002", "TATA"),
     ("M00003", "RENAULT"),
