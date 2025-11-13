@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 from .models import PaiementApporteur
 from contracts.models import Contrat
+from accounts.models import User
 from django import forms
 from django.db.models import Q, Sum
 
@@ -93,32 +94,31 @@ def declarer_paiement(request, contrat_id):
 
     if not contrat.is_valide:
         messages.error(
-            request, "Contrat non valide. Attestation ou carte brune manquante."
+            request, f"Contrat non valide. Attestation ou carte brune manquante."
         )
         return redirect("payments:mes_paiements")
 
-    paiement, _ = PaiementApporteur.objects.get_or_create(
+    paiement, created = PaiementApporteur.objects.get_or_create(
         contrat=contrat,
         defaults={"montant_a_payer": contrat.net_a_reverser},
     )
+    if not created and paiement.est_en_attente:
+        if paiement.montant_a_payer != contrat.net_a_reverser:
+            paiement.montant_a_payer = contrat.net_a_reverser
+            paiement.save(update_fields=["montant_a_payer"])
 
     if paiement.est_paye:
-        messages.info(request, "Ce contrat est déjà marqué comme payé.")
+        messages.info(request, f"Ce contrat est déjà marqué comme payé.")
         return redirect("payments:mes_paiements")
 
     if request.method == "POST":
         form = DeclarationPaiementForm(request.POST, instance=paiement)
         if form.is_valid():
-            form.save(
-                update_fields=[
-                    "methode_paiement",
-                    "reference_transaction",
-                    "numero_compte",
-                    "notes",
-                ]
-            )
+            form.save()
+
+
             messages.success(
-                request, "Déclaration soumise. En attente de validation admin."
+                request, f"Déclaration soumise. En attente de validation admin."
             )
             return redirect("payments:mes_paiements")
     else:
@@ -163,15 +163,16 @@ def liste_encaissements(request):
         )
 
     total_attente = (
-        qs.filter(status="EN_ATTENTE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+            qs.filter(status="EN_ATTENTE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
     )
     total_paye = qs.filter(status="PAYE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
     total_annule = (
-        qs.filter(status="ANNULE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+            qs.filter(status="ANNULE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
     )
 
     paginator = Paginator(qs, 50)
     page = paginator.get_page(request.GET.get("page"))
+    apporteurs = User.objects.filter(role="APPORTEUR").order_by("first_name", "last_name")
 
     return render(
         request,
@@ -183,6 +184,7 @@ def liste_encaissements(request):
             "total_attente": total_attente,
             "total_paye": total_paye,
             "total_annule": total_annule,
+            "apporteurs": apporteurs,
             "filter_status": st,
             "query": q,
             "apporteur_id": apporteur_id,

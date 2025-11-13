@@ -170,7 +170,7 @@ class VehiculeForm(forms.ModelForm):
         required = False
         choices = [("", "-- Sélectionner --")]
         if categorie in ("520", "550"):
-            cache_key = "sous_categories_ref_{categorie}"
+            cache_key = f"sous_categories_ref_${categorie}"
             api_choices = cache.get(cache_key)
             if api_choices is None:
                 try:

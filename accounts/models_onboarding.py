@@ -7,7 +7,7 @@ class ApporteurOnboarding(models.Model):
     class Status(models.TextChoices):
         EN_ATTENTE_VALIDATION = "EN_ATTENTE_VALIDATION", "En attente de validation"
         SOUMIS = "SOUMIS", "Soumis par l'apporteur"
-        VALIDE = "VALIDE", "Validé par l’admin"
+        VALIDE = "VALIDE", "Validé par l'admin"
         REJETE = "REJETE", "Rejeté"
 
     # --- Champs du modèle ---
@@ -48,9 +48,7 @@ class ApporteurOnboarding(models.Model):
 
     def __str__(self):
         # get_status_display() récupère la version lisible du statut
-        return (
-            "Onboarding de {self.user.username} - Statut: {self.get_status_display()}"
-        )
+        return f"Onboarding de {self.user.username} - Statut: {self.get_status_display()}"
 
     # --- Méthodes personnalisées ---
     def est_complet(self):
@@ -61,3 +59,8 @@ class ApporteurOnboarding(models.Model):
             and self.cni_verso
             and self.signature_image
         )
+
+    class Meta:
+        verbose_name = "Onboarding Apporteur"
+        verbose_name_plural = "Onboardings Apporteurs"
+        ordering = ["-created_at"]

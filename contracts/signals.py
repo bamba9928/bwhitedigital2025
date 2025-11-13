@@ -51,7 +51,6 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
     PaiementApporteur = apps.get_model("payments", "PaiementApporteur")
     HistoriquePaiement = apps.get_model("payments", "HistoriquePaiement")
 
-    # Calcul robuste du montant dû par l'apporteur à BWHITE
     prime_ttc = Decimal(getattr(instance, "prime_ttc", 0) or 0)
     commission_apporteur = Decimal(getattr(instance, "commission_apporteur", 0) or 0)
 
@@ -83,7 +82,7 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
             paiement=paiement,
             action="CREATION",
             effectue_par=apporteur,
-            details="Encaissement créé pour contrat {instance.numero_police or instance.pk}",
+            details=f"Encaissement créé pour contrat {instance.numero_police or instance.pk}",
         )
         logger.info(
             "Encaissement créé | Contrat: %s | montant_a_payer: %s",
@@ -95,22 +94,18 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
             "Encaissement déjà existant pour contrat %s",
             instance.numero_police or instance.pk,
         )
-
-
 # ---------- Contrat : calculs avant save ----------
 @receiver(pre_save, sender=Contrat, dispatch_uid="contracts_sync_fields_before_save_v2")
 def update_contrat_dates_and_status(sender, instance: Contrat, **kwargs):
     """Calcule échéance, commission, timestamps, et expiration."""
     # Échéance
     if instance.date_effet and instance.duree and not instance.date_echeance:
-        # suppose: instance.calculate_date_echeance() pose date_echeance
         instance.calculate_date_echeance()
 
     # Commission si manquante
     if (getattr(instance, "commission_apporteur", None) in (None, 0)) and getattr(
         instance, "apporteur", None
     ):
-        # suppose: instance.calculate_commission() pose commission_apporteur et éventuels champs dérivés
         instance.calculate_commission()
 
     # Datation émission
@@ -120,6 +115,7 @@ def update_contrat_dates_and_status(sender, instance: Contrat, **kwargs):
     # Expiration automatique
     if instance.date_echeance and instance.date_echeance < timezone.localdate():
         if instance.status in {"EMIS", "ACTIF"}:
+            # CORRIGÉ: Retrait du f-string
             logger.info(
                 "Contrat %s automatiquement EXPIRÉ (échéance: %s)",
                 instance.numero_police or instance.pk,
@@ -127,12 +123,7 @@ def update_contrat_dates_and_status(sender, instance: Contrat, **kwargs):
             )
             instance.status = "EXPIRE"
 
-
-# ---------- PaiementApporteur : suivi de changement de statut ----------
-# Important : enregistre ces receivers dans AppConfig.ready() pour éviter les imports croisés.
 PaiementApporteur = apps.get_model("payments", "PaiementApporteur")
-
-
 @receiver(
     pre_save, sender=PaiementApporteur, dispatch_uid="payments_capture_old_status_v2"
 )
@@ -145,8 +136,6 @@ def _capture_old_status(sender, instance, **kwargs):
         instance._old_status = old.status
     except sender.DoesNotExist:
         instance._old_status = None
-
-
 @receiver(
     post_save, sender=PaiementApporteur, dispatch_uid="payments_log_status_change_v2"
 )
@@ -159,13 +148,13 @@ def log_paiement_status_change(sender, instance, created, **kwargs):
         choices_map = dict(instance._meta.get_field("status").choices)
         old_label = choices_map.get(old_status, old_status)
         new_label = instance.get_status_display()
-
         HistoriquePaiement.objects.create(
             paiement=instance,
             action="STATUS_CHANGE",
             effectue_par=getattr(instance, "validated_by", None),
-            details="Statut changé de {old_label} vers {new_label}",
+            details=f"Statut changé de {old_label} vers {new_label}",
         )
+
         logger.info(
             "Paiement %s | Changement statut: %s → %s",
             instance.pk,

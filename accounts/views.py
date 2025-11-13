@@ -1,6 +1,5 @@
 import base64
 import csv
-
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import update_session_auth_hash
@@ -14,6 +13,7 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone
+import time
 from django.views.decorators.http import require_http_methods, require_POST
 
 from contracts.models import Contrat
@@ -179,7 +179,7 @@ def liste_apporteurs(request):
 
 @staff_member_required
 def nouveau_apporteur(request):
-    """Création d’un apporteur"""
+    """Création d'un apporteur"""
     if request.method == "POST":
         form = ApporteurCreationForm(request.POST)
         if form.is_valid():
@@ -188,7 +188,7 @@ def nouveau_apporteur(request):
             apporteur.created_by = request.user
             apporteur.save()
             messages.success(
-                request, "Apporteur {apporteur.get_full_name()} créé avec succès!"
+                request, f"Apporteur {apporteur.get_full_name()} créé avec succès!"
             )
             return redirect("accounts:detail_apporteur", pk=apporteur.pk)
     else:
@@ -203,7 +203,7 @@ def nouveau_apporteur(request):
 
 @staff_member_required
 def detail_apporteur(request, pk):
-    """Vue détaillée d’un apporteur"""
+    """Vue détaillée d'un apporteur"""
     apporteur = get_object_or_404(User, pk=pk, role="APPORTEUR")
     onboarding = ApporteurOnboarding.objects.filter(user=apporteur).first()
 
@@ -213,7 +213,7 @@ def detail_apporteur(request, pk):
             apporteur.is_active = not apporteur.is_active
             apporteur.save()
             messages.success(
-                request, "Apporteur {'activé' if apporteur.is_active else 'désactivé'}"
+                request, f"Apporteur {'activé' if apporteur.is_active else 'désactivé'}"
             )
         elif action == "change_grade":
             new_grade = request.POST.get("grade")
@@ -221,7 +221,7 @@ def detail_apporteur(request, pk):
                 apporteur.grade = new_grade
                 apporteur.save()
                 messages.success(
-                    request, "Grade modifié en {apporteur.get_grade_display()}"
+                    request, f"Grade modifié en {apporteur.get_grade_display()}"
                 )
         elif action == "valider_onboarding" and onboarding:
             if (
@@ -259,7 +259,7 @@ def detail_apporteur(request, pk):
         request,
         "accounts/detail_apporteur.html",
         {
-            "title": "Apporteur - {apporteur.get_full_name()}",
+            "title": f"Apporteur - {apporteur.get_full_name()}",
             "apporteur": apporteur,
             "stats": stats,
             "derniers_contrats": derniers_contrats,
@@ -321,7 +321,7 @@ def apporteur_detail(request):
                 ext = "png" if "png" in header else "jpg"
                 content = ContentFile(
                     base64.b64decode(b64data),
-                    name="sig_{user.id}_{int(timezone.now().timestamp())}.{ext}",
+                    name=f"sig_{user.id}_{int(timezone.now().timestamp())}.{ext}",
                 )
                 ob.signature_image = content
             except Exception:
@@ -381,24 +381,23 @@ def contrat_pdf(request):
         pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
         resp = HttpResponse(pdf, content_type="application/pdf")
         resp["Content-Disposition"] = (
-            'attachment; filename="Contrat_BWHITE_{user.username}.pdf"'
+            f'attachment; filename="Contrat_BWHITE_{user.username}.pdf"'
         )
         return resp
     except Exception:
-
         return HttpResponse(html)
 
 
 @staff_member_required
 def edit_apporteur(request, pk):
-    """Édition d’un apporteur"""
+    """Édition d'un apporteur"""
     apporteur = get_object_or_404(User, pk=pk, role="APPORTEUR")
     if request.method == "POST":
         form = AdminApporteurUpdateForm(request.POST, instance=apporteur)
         if form.is_valid():
             form.save()
             messages.success(
-                request, "{apporteur.get_full_name()} modifié avec succès!"
+                request, f"{apporteur.get_full_name()} modifié avec succès!"
             )
             return redirect("accounts:detail_apporteur", pk=pk)
     else:
@@ -408,7 +407,7 @@ def edit_apporteur(request, pk):
         request,
         "accounts/edit_apporteur.html",
         {
-            "title": "Modifier - {apporteur.get_full_name()}",
+            "title": f"Modifier - {apporteur.get_full_name()}",
             "form": form,
             "apporteur": apporteur,
         },
@@ -418,7 +417,7 @@ def edit_apporteur(request, pk):
 @staff_member_required
 @require_POST
 def delete_apporteur(request, pk):
-    """Suppression sécurisée d’un apporteur"""
+    """Suppression sécurisée d'un apporteur"""
     apporteur = get_object_or_404(User, pk=pk, role="APPORTEUR")
     if apporteur.contrats_apportes.exists():
         messages.error(
@@ -427,15 +426,13 @@ def delete_apporteur(request, pk):
         return redirect("accounts:detail_apporteur", pk=pk)
     name = apporteur.get_full_name()
     apporteur.delete()
-    messages.success(request, "Apporteur {name} supprimé avec succès!")
+    messages.success(request, f"Apporteur {name} supprimé avec succès!")
     return redirect("accounts:liste_apporteurs")
 
 
 # ==========================================
 # ACTIONS AJAX
 # ==========================================
-
-
 @staff_member_required
 @require_POST
 def toggle_apporteur_status(request, pk):
@@ -476,23 +473,23 @@ def bulk_actions_apporteurs(request):
 
     if action == "activate":
         apporteurs.update(is_active=True)
-        msg = "{count} activé(s)"
+        msg = f"{count} activé(s)"
     elif action == "deactivate":
         apporteurs.update(is_active=False)
-        msg = "{count} désactivé(s)"
+        msg = f"{count} désactivé(s)"
     elif action == "change_grade_platine":
         apporteurs.update(grade="PLATINE")
-        msg = "{count} passé(s) Platine"
+        msg = f"{count} passé(s) Platine"
     elif action == "change_grade_freemium":
         apporteurs.update(grade="FREEMIUM")
-        msg = "{count} passé(s) Freemium"
+        msg = f"{count} passé(s) Freemium"
     elif action == "delete":
         if apporteurs.filter(contrats_apportes__isnull=False).exists():
             return JsonResponse(
                 {"success": False, "message": "Certains ont des contrats existants"}
             )
         apporteurs.delete()
-        msg = "{count} supprimé(s)"
+        msg = f"{count} supprimé(s)"
     else:
         return JsonResponse({"success": False, "message": "Action invalide"})
 
@@ -502,8 +499,6 @@ def bulk_actions_apporteurs(request):
 # ==========================================
 # EXPORT / IMPORT
 # ==========================================
-
-
 @staff_member_required
 def export_apporteurs(request):
     """Export CSV"""
@@ -573,10 +568,10 @@ def import_apporteurs(request):
                     )
                     created += 1
                 except Exception as e:
-                    errors.append("Ligne {i}: {e}")
+                    errors.append(f"Ligne {i}: {e}")
 
         if created:
-            messages.success(request, "{created} importé(s)")
+            messages.success(request, f"{created} importé(s)")
         for e in errors[:5]:
             messages.error(request, e)
 
@@ -588,8 +583,6 @@ def import_apporteurs(request):
 # =========================================
 # API CHECKS HTMX
 # ==========================================
-
-
 @require_http_methods(["GET"])
 def check_username_availability(request):
     username = request.GET.get("username", "").lower().strip()
@@ -731,7 +724,7 @@ def user_stats(request):
 
 @login_required
 def edit_profile(request):
-    """Vue dédiée à l’édition du profil utilisateur"""
+    """Vue dédiée à l'édition du profil utilisateur"""
     if request.method == "POST":
         form = ProfileUpdateForm(request.POST, instance=request.user)
         if form.is_valid():

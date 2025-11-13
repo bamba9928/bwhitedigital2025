@@ -15,6 +15,7 @@ from django.db.models import Q, Count
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django.utils.html import escape  # <-- AJOUT (P0)
 from django.views.decorators.http import require_http_methods
 
 from .api_client import askia_client
@@ -111,8 +112,6 @@ LABELS = {
     "adresse": "Adresse",
     "date_effet": "Date d'effet",
 }
-
-
 def _g(req, key, default=""):
     v = req.POST.get(key, default)
     return v.strip() if isinstance(v, str) else v
@@ -130,8 +129,6 @@ def _parse_date(value: str) -> date | None:
             except ValueError:
                 continue
     return None
-
-
 @login_required
 @require_http_methods(["POST"])
 def simuler_tarif(request):
@@ -157,7 +154,7 @@ def simuler_tarif(request):
                 "Champs manquants : " + ", ".join(LABELS.get(k, k) for k in missing),
             )
 
-        # 1) Téléphone : normalisation + validation stricte
+        # 1) Téléphone : normalisation + validation stricte
         try:
             tel_norm = _phone_validate_or_err(_g(request, "telephone"))
         except ValueError as e:
@@ -240,7 +237,7 @@ def simuler_tarif(request):
             simulation = askia_client.get_simulation_auto(vehicule_data, duree)
         except Exception as e:
             logger.error("Erreur simulation Askia | %s", str(e), exc_info=True)
-            return _render_error(request, "Erreur API Askia : {str(e)}")
+            return _render_error(request, "Erreur API Askia : {e}")
 
         prime_nette = Decimal(str(simulation["prime_nette"]))
         prime_ttc = Decimal(str(simulation["prime_ttc"]))
@@ -301,9 +298,7 @@ def simuler_tarif(request):
 
     except Exception as e:
         logger.error("Erreur inattendue simuler_tarif | %s", str(e), exc_info=True)
-        return _render_error(request, "Erreur inattendue: {str(e)}")
-
-
+        return _render_error(request, "Erreur inattendue: {e}")
 @login_required
 @require_http_methods(["POST"])
 @transaction.atomic
@@ -377,7 +372,7 @@ def emettre_contrat(request):
                     client_data.get("telephone"),
                     e,
                 )
-                return _render_error(request, "Erreur création client ASKIA : {str(e)}")
+                return _render_error(request, "Erreur création client ASKIA : {e}")
 
         # ---------- VÉHICULE ----------
         immat = vehicule_clean["immatriculation"]
@@ -431,12 +426,12 @@ def emettre_contrat(request):
             error_msg = str(api_error)
             id_saisie = simulation_data.get("id_saisie")
 
-            # Récupération si Askia a émis malgré l’exception (timeout/500)
             if id_saisie:
-                for nf in ("{datetime.now().year}{id_saisie}", id_saisie):
-                    existing = askia_client.verify_contrat_exists(nf)
+                candidates = (f"{timezone.now().year}{id_saisie}", str(id_saisie))
+                for ref in candidates:
+                    existing = askia_client.verify_contrat_exists(ref)
                     if existing and existing.get("numeroPolice"):
-                        liens = existing.get("lien", {}) or {}
+                        liens = existing.get("lien") or {}
                         numero_police = existing.get("numeroPolice")
                         numero_facture = existing.get("numeroFacture")
                         result = {
@@ -526,7 +521,7 @@ def emettre_contrat(request):
                 request,
                 "contracts/partials/emission_success.html",
                 {
-                    "contrat": contrat,
+                    "emis": contrat,
                     "success_message": "Contrat {contrat.numero_police} émis avec succès !",
                 },
             )
@@ -537,8 +532,6 @@ def emettre_contrat(request):
     except Exception as e:
         logger.error("Erreur inattendue émission contrat | %s", e, exc_info=True)
         return _render_error(request, "Erreur inattendue lors de l'émission : {str(e)}")
-
-
 @login_required
 def detail_contrat(request, pk):
     """Vue détaillée d'un contrat."""
@@ -557,8 +550,6 @@ def detail_contrat(request, pk):
             "title": "Contrat {contrat.numero_police}",
         },
     )
-
-
 @require_http_methods(["GET"])
 def check_immatriculation(request):
     """Validation instantanée de l'immatriculation (HTMX)."""
@@ -572,9 +563,11 @@ def check_immatriculation(request):
         validate_immatriculation(immat)
 
     except ValidationError as e:
+        # MODIFICATION (P0) : Échapper le message d'erreur pour éviter XSS
+        safe_message = escape(e.message)
         return HttpResponse(
-            '<span class="text-orange-400 text-xs"><i class="fas fa-exclamation-triangle mr-1"></i>'
-            "{e.message}</span>"
+            f'<span class="text-orange-400 text-xs"><i class="fas fa-exclamation-triangle mr-1"></i>'
+            f"{safe_message}</span>"
         )
 
     immat_norm = normalize_immat_for_storage(immat)
@@ -606,8 +599,6 @@ def check_client(request):
         )
     except Client.DoesNotExist:
         return JsonResponse({"exists": False})
-
-
 @login_required
 @require_http_methods(["GET"])
 def load_sous_categories(request):
@@ -752,8 +743,6 @@ def liste_clients(request):
             "search_query": search_query,
         },
     )
-
-
 # =========================
 # Échéances + Renouvellement
 # =========================
@@ -912,7 +901,7 @@ def annuler_contrat(request, pk):
     api_success = False
     ""
 
-    # 1. Appel API Annulation (Conforme Doc Page 27)
+    # 1. Appel API Annulation
     if contrat.numero_facture:
         try:
             # Appel de l'endpoint documenté

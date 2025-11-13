@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction  # <-- Import transaction
 
 
 class PaiementApporteur(models.Model):
@@ -81,8 +81,9 @@ class PaiementApporteur(models.Model):
         ]
 
     def __str__(self):
-        ref = self.contrat.numero_police or "Contrat#{self.contrat_id}"
-        return "Encaissement {ref} - {self.get_status_display()}"
+        # CORRIGÉ (f-string) et (Optimisation N+1)
+        # N'utilise que self.contrat_id pour éviter une requête DB supplémentaire
+        return f"Encaissement Contrat#{self.contrat_id} - {self.get_status_display()}"
 
     @property
     def est_paye(self) -> bool:
@@ -106,41 +107,56 @@ class PaiementApporteur(models.Model):
         if not reference or len(reference.strip()) < 6:
             raise ValueError("Référence transaction invalide.")
 
-        self.methode_paiement = methode
-        self.reference_transaction = reference.strip()
-        self.status = "PAYE"
-        self.save(
-            update_fields=[
-                "methode_paiement",
-                "reference_transaction",
-                "status",
-                "updated_at",
-            ]
-        )
+        # CORRIGÉ: Utilisation de transaction.atomic()
+        try:
+            with transaction.atomic():
+                self.methode_paiement = methode
+                self.reference_transaction = reference.strip()
+                self.status = "PAYE"
+                self.save(
+                    update_fields=[
+                        "methode_paiement",
+                        "reference_transaction",
+                        "status",
+                        "updated_at",
+                    ]
+                )
 
-        HistoriquePaiement.objects.create(
-            paiement=self,
-            action="VALIDATION",
-            effectue_par=validated_by,
-            details=(
-                "Paiement validé via {self.get_methode_paiement_display()} "
-                "| Ref={self.reference_transaction}"
-            ),
-        )
+                # CORRIGÉ (f-string)
+                HistoriquePaiement.objects.create(
+                    paiement=self,
+                    action="VALIDATION",
+                    effectue_par=validated_by,
+                    details=(
+                        f"Paiement validé via {self.get_methode_paiement_display()} "
+                        f"| Ref={self.reference_transaction}"
+                    ),
+                )
+        except Exception as e:
+            # En cas d'échec, rien n'est sauvegardé (ni le paiement, ni l'historique)
+            raise ValueError(f"Échec de la validation du paiement : {e}")
 
     def annuler(self, reason: str = "", by=None):
         if self.status == "PAYE":
             raise ValueError("Déjà payé. Annulation interdite.")
         if self.status == "ANNULE":
             return
-        self.status = "ANNULE"
-        self.save(update_fields=["status", "updated_at"])
-        HistoriquePaiement.objects.create(
-            paiement=self,
-            action="STATUS_CHANGE",
-            effectue_par=by,
-            details="Statut -> ANNULE. {reason}".strip(),
-        )
+
+        # CORRIGÉ: Utilisation de transaction.atomic()
+        try:
+            with transaction.atomic():
+                self.status = "ANNULE"
+                self.save(update_fields=["status", "updated_at"])
+
+                # CORRIGÉ (f-string)
+                HistoriquePaiement.objects.create(
+                    paiement=self,
+                    action="STATUS_CHANGE",
+                    effectue_par=by,
+                    details=f"Statut -> ANNULE. {reason}".strip(),
+                )
+        except Exception as e:
+            raise ValueError(f"Échec de l'annulation du paiement : {e}")
 
 
 class HistoriquePaiement(models.Model):
@@ -178,4 +194,5 @@ class HistoriquePaiement(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return "{self.get_action_display()} • {self.created_at:%Y-%m-%d %H:%M}"
+        # CORRIGÉ (f-string)
+        return f"{self.get_action_display()} • {self.created_at:%Y-%m-%d %H:%M}"

@@ -27,19 +27,10 @@
         <style>
     [x-cloak]{display:none !important;}
     .mobile-menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;}
-    .mobile-sidebar{position:fixed;top:0;bottom:0;left:0;width:16rem;z-index:40;overflow-y:auto;transform:translateX(-100%);}
+    /* .mobile-sidebar est défini dans style.css */
     .mobile-sidebar.open{transform:translateX(0);}
     .sidebar-transition{transition:transform .3s ease-in-out;}
-    .btn-primary-modern{position:relative;overflow:hidden;transition:all .3s cubic-bezier(.4,0,.2,1);}
-    .btn-primary-modern::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transition:left .5s;}
-    .btn-primary-modern:hover::before{left:100%;}
-    .btn-primary-modern:hover{transform:translateY(-2px);}
-    .btn-primary-modern:active{transform:translateY(0);}
-    .ripple{position:relative;overflow:hidden;}
-    .ripple::after{content:'';position:absolute;top:50%;left:50%;width:0;height:0;border-radius:50%;
-      background:rgba(255,255,255,.3);transform:translate(-50%,-50%);transition:width .6s,height .6s;}
-    .ripple:active::after{width:300px;height:300px;}
+    /* .btn-primary-modern et .ripple sont définis dans style.css */
         </style>
         <!-- Libs CSS -->
         <link rel="stylesheet"

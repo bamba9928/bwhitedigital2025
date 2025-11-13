@@ -70,11 +70,11 @@ class Client(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return "{self.prenom} {self.nom} - {self.telephone}"
+        return f"{self.prenom} {self.nom} - {self.telephone}"
 
     @property
     def nom_complet(self):
-        return "{self.prenom} {self.nom}"
+        return f"{self.prenom} {self.nom}"
 
 
 # =========================
@@ -241,7 +241,7 @@ class Vehicule(models.Model):
             and immat[2:6].isdigit()
             and immat[6:].isalpha()
         ):
-            return "{immat[:2]}-{immat[2:6]}-{immat[6:]}"
+            return f"{immat[:2]}-{immat[2:6]}-{immat[6:]}"
 
         # Ancien: AA001AA
         if (
@@ -250,15 +250,15 @@ class Vehicule(models.Model):
             and immat[2:5].isdigit()
             and immat[5:].isalpha()
         ):
-            return "{immat[:2]}-{immat[2:5]}-{immat[5:]}"
+            return f"{immat[:2]}-{immat[2:5]}-{immat[5:]}"
 
         # Diplomatique: AD0001
         if immat.startswith("AD") and len(immat) == 6 and immat[2:].isdigit():
-            return "AD-{immat[2:]}"
+            return f"AD-{immat[2:]}"
 
         # Export: 0001EX
         if len(immat) == 6 and immat[:4].isdigit() and immat.endswith("EX"):
-            return "{immat[:4]}-EX"
+            return f"{immat[:4]}-EX"
 
         # EP: 0001EP01
         if (
@@ -267,7 +267,7 @@ class Vehicule(models.Model):
             and immat[4:6] == "EP"
             and immat[6:].isdigit()
         ):
-            return "{immat[:4]}-{immat[4:]}"
+            return f"{immat[:4]}-{immat[4:]}"
 
         # Apporteur: 001AP0001
         if (
@@ -276,18 +276,18 @@ class Vehicule(models.Model):
             and immat[3:5] == "AP"
             and immat[5:].isdigit()
         ):
-            return "{immat[:3]}-AP-{immat[5:]}"
+            return f"{immat[:3]}-AP-{immat[5:]}"
 
         # TT: 0001TTA ou AD0001TTA
         if "TT" in immat and len(immat) >= 7:
             if immat.startswith("AD") and len(immat) == 8:
-                return "{immat[:6]}-TT-{immat[-1]}"
+                return f"{immat[:6]}-TT-{immat[-1]}"
             if len(immat) == 7 and immat[:4].isdigit():
-                return "{immat[:4]}-TT-{immat[-1]}"
+                return f"{immat[:4]}-TT-{immat[-1]}"
 
         # Étranger: CH000001
         if immat.startswith("CH") and len(immat) == 8 and immat[2:].isdigit():
-            return "CH-{immat[2:]}"
+            return f"CH-{immat[2:]}"
 
         return immat
 
@@ -471,7 +471,7 @@ class Contrat(models.Model):
         ]
 
     def __str__(self):
-        return "{self.numero_police or 'SIMULATION'} - {self.client.nom_complet}"
+        return f"{self.numero_police or 'SIMULATION'} - {self.client.nom_complet}"
 
     def clean(self):
         """Validation métier."""
@@ -558,7 +558,7 @@ class Contrat(models.Model):
     def raison_invalide(self):
         """Raison d’invalidité si applicable."""
         if self.status not in ["EMIS", "ACTIF", "EXPIRE"]:
-            return "Statut: {self.get_status_display()}"
+            return f"Statut: {self.get_status_display()}"
         if not (self.link_attestation or self.link_carte_brune):
             return "Aucun document (attestation/carte brune)"
         return None

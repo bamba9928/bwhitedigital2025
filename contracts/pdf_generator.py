@@ -35,10 +35,10 @@ def telecharger_documents(request, pk):
 
     contrat = get_object_or_404(Contrat, pk=pk)
     if (
-        getattr(request.user, "role", "") == "APPORTEUR"
+        getattr(request.user, f"role", "") == "APPORTEUR"
         and contrat.apporteur != request.user
     ):
-        messages.error(request, "Vous n'avez pas accès à ce contrat.")
+        messages.error(request, f"Vous n'avez pas accès à ce contrat.")
         return redirect("dashboard:home")
 
     def format_date(d: date | None) -> str:
@@ -47,51 +47,52 @@ def telecharger_documents(request, pk):
     def format_montant(m: Decimal | None) -> str:
         if m is None:
             return "0"
-        s = "{m:,.0f}".replace(",", " ")
+        s = f"{m:,.0f}".replace(",", " ")
         return s
 
     buffer = _io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=2 * cm,
-        leftMargin=2 * cm,
-        topMargin=2 * cm,
-        bottomMargin=2 * cm,
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm,
     )
 
     styles = getSampleStyleSheet()
     style_titre = ParagraphStyle(
         "CustomTitle",
         parent=styles["Heading1"],
-        fontSize=22,
+        fontSize=20,  # MODIFIÉ
         textColor=colors.HexColor("#1e40af"),
-        spaceAfter=30,
+        spaceAfter=15,  # MODIFIÉ
         alignment=TA_CENTER,
         fontName="Helvetica-Bold",
     )
     style_sous_titre = ParagraphStyle(
         "CustomSubTitle",
         parent=styles["Heading2"],
-        fontSize=16,
+        fontSize=14,
         textColor=colors.HexColor("#3b82f6"),
-        spaceAfter=20,
+        spaceAfter=10,
         alignment=TA_CENTER,
         fontName="Helvetica-Bold",
     )
     style_section = ParagraphStyle(
         "SectionTitle",
         parent=styles["Heading3"],
-        fontSize=12,
+        fontSize=11,
         textColor=colors.HexColor("#1e40af"),
-        spaceAfter=10,
+        spaceAfter=6,
         fontName="Helvetica-Bold",
-        backColor=colors.HexColor("#eff6ff"),  # visuel léger
-        # Remarque: ParagraphStyle n’a pas 'padding' par défaut dans ReportLab,
-        # on garde le backColor pour marquer la section.
+        backColor=colors.HexColor("#eff6ff"),
+        paddingLeft=4,
+        paddingTop=4,
+        paddingBottom=4,
     )
     style_normal = ParagraphStyle(
-        "CustomNormal", parent=styles["Normal"], fontSize=10, leading=14
+        "CustomNormal", parent=styles["Normal"], fontSize=9, leading=12  # MODIFIÉ
     )
     style_footer = ParagraphStyle(
         "Footer",
@@ -106,8 +107,11 @@ def telecharger_documents(request, pk):
             ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f8fafc")),
             ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            # MODIFIÉ: Padding réduit
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("FONTSIZE", (0, 0), (-1, -1), 9), # MODIFIÉ
         ]
     )
 
@@ -120,21 +124,21 @@ def telecharger_documents(request, pk):
     if logo_path and os.path.exists(logo_path):
         img = Image(logo_path)
         img.hAlign = "CENTER"
-        img.drawHeight = 1.8 * cm
+        img.drawHeight = 0.5 * cm
         img.drawWidth = img.imageWidth * (img.drawHeight / img.imageHeight)
-        elements += [img, Spacer(1, 0.4 * cm)]
+        elements += [img, Spacer(0.5, 0.1 * cm)]
 
     elements += [
         Paragraph("BWHITE DIGITAL", style_titre),
         Paragraph("Détail du contrat", style_sous_titre),
-        Spacer(1, 0.5 * cm),
+        Spacer(1, 0.2 * cm),  # MODIFIÉ
     ]
 
     # Police
     data_police = [
-        [Paragraph("<b>Police N° :</b> {contrat.numero_police or 'N/A'}", style_normal)]
+        [Paragraph(f"<b>Police N° :</b> {contrat.numero_police or 'N/A'}", style_normal)]
     ]
-    table_police = Table(data_police, colWidths=[17 * cm])
+    table_police = Table(data_police, colWidths=[18 * cm])
     table_police.setStyle(
         TableStyle(
             [
@@ -142,18 +146,17 @@ def telecharger_documents(request, pk):
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1e40af")),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 12),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("FONTSIZE", (0, 0), (-1, -1), 11), # MODIFIÉ
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8), # MODIFIÉ
+                ("TOPPADDING", (0, 0), (-1, -1), 8), # MODIFIÉ
                 ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#3b82f6")),
             ]
         )
     )
-    elements += [table_police, Spacer(1, 0.8 * cm)]
+    elements += [table_police, Spacer(1, 0.5 * cm)]
 
     # Assuré
     elements.append(Paragraph("ASSURÉ", style_section))
-    elements.append(Spacer(1, 0.3 * cm))
     data_assure = [
         [
             "Nom complet:",
@@ -169,13 +172,11 @@ def telecharger_documents(request, pk):
             ),
         ],
     ]
-    table_assure = Table(data_assure, colWidths=[5 * cm, 12 * cm])
+    table_assure = Table(data_assure, colWidths=[4 * cm, 14 * cm])
     table_assure.setStyle(style_table_info)
-    elements += [table_assure, Spacer(1, 0.8 * cm)]
-
+    elements += [table_assure, Spacer(1, 0.5 * cm)]
     # Véhicule
     elements.append(Paragraph("VÉHICULE ASSURÉ", style_section))
-    elements.append(Spacer(1, 0.3 * cm))
     v = contrat.vehicule
     data_vehicule = [
         [
@@ -203,8 +204,9 @@ def telecharger_documents(request, pk):
         ],
         [
             "Puissance:",
+
             (
-                "{v.puissance_fiscale} CV"
+                f"{v.puissance_fiscale} CV"
                 if v and getattr(v, "puissance_fiscale", None) is not None
                 else "N/A"
             ),
@@ -218,26 +220,26 @@ def telecharger_documents(request, pk):
             ),
         ],
     ]
-    table_vehicule = Table(data_vehicule, colWidths=[5 * cm, 12 * cm])
+    table_vehicule = Table(data_vehicule, colWidths=[4 * cm, 14 * cm])
     table_vehicule.setStyle(style_table_info)
-    elements += [table_vehicule, Spacer(1, 0.8 * cm)]
+    elements += [table_vehicule, Spacer(1, 0.5 * cm)]
 
     # Période
     elements.append(Paragraph("PÉRIODE DE GARANTIE", style_section))
-    elements.append(Spacer(1, 0.3 * cm))
     data_garantie = [
         ["Date d'effet:", format_date(contrat.date_effet)],
         ["Date d'échéance:", format_date(contrat.date_echeance)],
-        ["Durée:", "{contrat.duree} mois"],
+        ["Durée:", f"{contrat.duree} mois"],
         ["Type de garantie:", getattr(contrat, "type_garantie", "—") or "—"],
     ]
-    table_garantie = Table(data_garantie, colWidths=[5 * cm, 12 * cm])
+    table_garantie = Table(data_garantie, colWidths=[4 * cm, 14 * cm])
     table_garantie.setStyle(style_table_info)
-    elements += [table_garantie, Spacer(1, 0.8 * cm)]
+    elements += [table_garantie, Spacer(1, 0.5 * cm)] # MODIFIÉ
 
     # Prime TTC
-    prime_text = "<b>PRIME TTC :</b> {format_montant(contrat.prime_ttc)} FCFA"
-    table_prime = Table([[Paragraph(prime_text, style_normal)]], colWidths=[17 * cm])
+
+    prime_text = f"<b>PRIME TTC :</b> {format_montant(contrat.prime_ttc)} FCFA"
+    table_prime = Table([[Paragraph(prime_text, style_normal)]], colWidths=[18 * cm]) # MODIFIÉ
     table_prime.setStyle(
         TableStyle(
             [
@@ -245,18 +247,18 @@ def telecharger_documents(request, pk):
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#166534")),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 14),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("FONTSIZE", (0, 0), (-1, -1), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
                 ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#22c55e")),
             ]
         )
     )
-    elements += [table_prime, Spacer(1, 1.5 * cm)]
+    elements += [table_prime, Spacer(1, 0.5 * cm)]
 
     # Pied
     now_str = dj_tz.localtime().strftime("%d/%m/%Y à %H:%M")
-    elements.append(Paragraph("Document généré le {now_str}", style_footer))
+    elements.append(Paragraph(f"Document généré le {now_str}", style_footer))
     elements.append(
         Paragraph(
             "Valable si les informations sont exactes et la prime payée.", style_footer
@@ -267,6 +269,6 @@ def telecharger_documents(request, pk):
     doc.build(elements)
     buffer.seek(0)
     response = HttpResponse(buffer, content_type="application/pdf")
-    filename = 'detail_contrat_{contrat.numero_police or "contrat"}.pdf'
-    response["Content-Disposition"] = 'attachment; filename="{filename}"'
+    filename = f'detail_contrat_{contrat.numero_police or "contrat"}.pdf'
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response

@@ -5,7 +5,6 @@ from .models import PaiementApporteur, HistoriquePaiement
 
 # --- ADMIN DE PAIEMENT APPORTEUR ---
 
-
 @admin.register(PaiementApporteur)
 class PaiementApporteurAdmin(admin.ModelAdmin):
     list_display = (

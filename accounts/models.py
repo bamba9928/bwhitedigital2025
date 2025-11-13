@@ -62,7 +62,7 @@ class User(AbstractUser):
         return "{label} ({grade_display})"
 
     def get_full_name(self):
-        return "{self.first_name} {self.last_name}".strip() or self.username
+        return f"{self.first_name} {self.last_name}".strip() or self.username
 
     @property
     def is_admin(self):

@@ -8,6 +8,9 @@ from .forms_onboarding import OnboardingForm
 import base64
 from django.core.files.base import ContentFile
 from django.utils import timezone
+from django.contrib import messages
+import logging
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -29,11 +32,13 @@ def apporteur_detail(request):
                     ext = "png" if "png" in header else "jpg"
                     ob.signature_image = ContentFile(
                         base64.b64decode(b64),
-                        name="sig_{user.id}_{int(timezone.now().timestamp())}.{ext}",
-                    )
-                except Exception:
 
-                    pass
+                        name=f"sig_{user.id}_{int(timezone.now().timestamp())}.{ext}",
+                    )
+                except Exception as e:
+                    logger.error("Échec décodage signature pour user %s: %s", user.id, e)
+                    messages.error(request, "La sauvegarde de l'image signature a échoué. Veuillez réessayer.")
+                    return redirect("accounts:apporteur_detail")
 
             ob.a_lu_et_approuve = True
             ob.approuve_at = timezone.now()
@@ -50,8 +55,9 @@ def apporteur_detail(request):
             ob.save()
             return redirect("accounts:apporteur_detail")
 
-    else:  # Si GET
+    else:
         form = OnboardingForm(instance=ob)
+
     conditions_html = render_to_string(
         "accounts/partials/conditions_apporteur_v1.html",
         {"user": user, "version": ob.version_conditions, "today": timezone.now()},
@@ -68,8 +74,6 @@ def apporteur_detail(request):
             "conditions_html": conditions_html,
         },
     )
-
-
 @login_required
 def contrat_pdf(request):
     """Téléchargement du contrat en PDF; fallback HTML imprimable."""
@@ -86,10 +90,10 @@ def contrat_pdf(request):
         from weasyprint import HTML
 
         pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
-        filename = "Contrat_BWHITE_{user.username}.pdf"
+        filename = f"Contrat_BWHITE_{user.username}.pdf"
         response = HttpResponse(pdf, content_type="application/pdf")
-        response["Content-Disposition"] = 'attachment; filename="{filename}"'
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
-    except Exception:
-
+    except Exception as e:
+        logger.warning("Échec génération PDF Weasyprint (fallback HTML): %s", e)
         return HttpResponse(html)
