@@ -12,8 +12,10 @@
                     <th class="py-2 px-3 text-right">Contrats</th>
                     <th class="py-2 px-3 text-right">Primes</th>
                     <th class="py-2 px-3 text-right">Commissions (Apporteur)</th>
-                    <th class="py-2 px-3 text-right">Commissions (BWHITE)</th>
-                    <th class="py-2 px-3 text-right">Net à Reverser (Askia)</th>
+                    {% if user.is_true_admin %}
+                        <th class="py-2 px-3 text-right">Commissions (BWHITE)</th>
+                        <th class="py-2 px-3 text-right">Net à Reverser (Askia)</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -30,16 +32,20 @@
                         <td class="py-2 px-3 text-right tabular-nums {% if a.total_commissions_apporteur > 0 %}text-green-400{% else %}text-gray-500{% endif %}">
                             {{ a.total_commissions_apporteur|default_if_none:0|floatformat:0|intcomma }} FCFA
                         </td>
-                        <td class="py-2 px-3 text-right tabular-nums {% if a.total_commissions_bwhite > 0 %}text-blue-400{% else %}text-gray-500{% endif %}">
-                            {{ a.total_commissions_bwhite|default_if_none:0|floatformat:0|intcomma }} FCFA
-                        </td>
-                        <td class="py-2 px-3 text-right tabular-nums {% if a.total_net > 0 %}text-orange-400{% else %}text-gray-500{% endif %}">
-                            {{ a.total_net|default_if_none:0|floatformat:0|intcomma }} FCFA
-                        </td>
+                        {% if user.is_true_admin %}
+                            <td class="py-2 px-3 text-right tabular-nums {% if a.total_commissions_bwhite > 0 %}text-blue-400{% else %}text-gray-500{% endif %}">
+                                {{ a.total_commissions_bwhite|default_if_none:0|floatformat:0|intcomma }} FCFA
+                            </td>
+                            <td class="py-2 px-3 text-right tabular-nums {% if a.total_net > 0 %}text-orange-400{% else %}text-gray-500{% endif %}">
+                                {{ a.total_net|default_if_none:0|floatformat:0|intcomma }} FCFA
+                            </td>
+                        {% endif %}
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-3 text-gray-500">Aucun apporteur trouvé</td>
+                        <td colspan="{% if user.is_true_admin %}6{% else %}4{% endif %}" class="text-center py-3 text-gray-500">
+                            Aucun apporteur trouvé
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

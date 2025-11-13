@@ -175,31 +175,30 @@ def liste_apporteurs(request):
             "total_count": paginator.count,
         },
     )
-
-
 @staff_member_required
 def nouveau_apporteur(request):
-    """Création d'un apporteur"""
+    """Création d'un apporteur ou commercial"""
     if request.method == "POST":
         form = ApporteurCreationForm(request.POST)
         if form.is_valid():
-            apporteur = form.save(commit=False)
-            apporteur.role = "APPORTEUR"
-            apporteur.created_by = request.user
-            apporteur.save()
+            utilisateur = form.save(commit=False)
+            # Le rôle et le grade sont gérés dans le form.save()/clean()
+            utilisateur.created_by = request.user
+            utilisateur.save()
             messages.success(
-                request, f"Apporteur {apporteur.get_full_name()} créé avec succès!"
+                request,
+                f"Utilisateur {utilisateur.get_full_name()} ({utilisateur.get_role_display()}) créé avec succès!",
             )
-            return redirect("accounts:detail_apporteur", pk=apporteur.pk)
+            # Retour à la liste des apporteurs/commerciaux
+            return redirect("accounts:liste_apporteurs")
     else:
         form = ApporteurCreationForm()
 
     return render(
         request,
         "accounts/nouveau_apporteur.html",
-        {"title": "Nouvel Apporteur", "form": form},
+        {"title": "Nouvel utilisateur", "form": form},
     )
-
 
 @staff_member_required
 def detail_apporteur(request, pk):
@@ -611,7 +610,6 @@ def check_email_availability(request):
             "message": "Disponible" if not exists else "Déjà utilisé",
         }
     )
-
 
 @require_http_methods(["GET"])
 def check_phone_availability(request):

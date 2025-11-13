@@ -31,76 +31,39 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ("username", "first_name", "last_name", "email", "phone")
     ordering = ("-created_at",)
 
-    # Champs en lecture seule
     readonly_fields = ("created_by", "created_at", "updated_at")
 
-    # Organisation des fieldsets
     fieldsets = (
-        (
-            _("Informations générales"),
-            {
-                "fields": (
-                    "username",
-                    "password",
-                    "first_name",
-                    "last_name",
-                    "email",
-                    "phone",
-                    "address",
-                    "role",
-                )
-            },
-        ),
-        (
-            _("Grade (apporteur uniquement)"),
-            {
-                "fields": ("grade",),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            _("Permissions"),
-            {
-                "fields": (
-                    "is_active",
-                    "is_staff",
-                    "is_superuser",
-                    "groups",
-                    "user_permissions",
-                )
-            },
-        ),
-        (
-            _("Suivi"),
-            {
-                "fields": ("created_by", "created_at", "updated_at"),
-            },
-        ),
+        (_("Informations générales"), {
+            "fields": (
+                "username", "password", "first_name", "last_name",
+                "email", "phone", "address", "role"
+            )
+        }),
+        (_("Grade (apporteur uniquement)"), {
+            "fields": ("grade",),
+            "classes": ("collapse",),
+        }),
+        (_("Permissions"), {
+            "fields": (
+                "is_active", "is_staff", "is_superuser",
+                "groups", "user_permissions"
+            )
+        }),
+        (_("Suivi"), {
+            "fields": ("created_by", "created_at", "updated_at"),
+        }),
     )
 
-    # Fieldsets utilisés lors de la création d'un user
     add_fieldsets = (
-        (
-            None,
-            {
-                "classes": ("wide",),
-                "fields": (
-                    "username",
-                    "password1",
-                    "password2",
-                    "first_name",
-                    "last_name",
-                    "email",
-                    "phone",
-                    "address",
-                    "role",
-                    "grade",
-                    "is_active",
-                    "is_staff",
-                    "is_superuser",
-                ),
-            },
-        ),
+        (None, {
+            "classes": ("wide",),
+            "fields": (
+                "username", "password1", "password2",
+                "first_name", "last_name", "email", "phone", "address",
+                "role", "grade", "is_active", "is_staff", "is_superuser"
+            ),
+        }),
     )
 
     class Media:
@@ -108,6 +71,7 @@ class UserAdmin(BaseUserAdmin):
 
     actions = [
         "set_admin",
+        "set_commercial",
         "set_apporteur_freemium",
         "set_apporteur_platine",
         "reset_grade",
@@ -117,16 +81,25 @@ class UserAdmin(BaseUserAdmin):
         queryset.update(role="ADMIN", grade=None, updated_at=timezone.now())
         self.message_user(
             request,
-            "{queryset.count()} utilisateur(s) transformé(s) en Administrateur.",
+            f"{queryset.count()} utilisateur(s) transformé(s) en Administrateur.",
         )
 
     set_admin.short_description = "Passer en Administrateur"
+
+    def set_commercial(self, request, queryset):  # <-- AJOUT
+        queryset.update(role="COMMERCIAL", grade=None, is_staff=True, updated_at=timezone.now())
+        self.message_user(
+            request,
+            f"{queryset.count()} utilisateur(s) transformé(s) en Commercial.",
+        )
+
+    set_commercial.short_description = "Passer en Commercial"
 
     def set_apporteur_freemium(self, request, queryset):
         queryset.update(role="APPORTEUR", grade="FREEMIUM", updated_at=timezone.now())
         self.message_user(
             request,
-            "{queryset.count()} utilisateur(s) transformé(s) en Apporteur Freemium.",
+            f"{queryset.count()} utilisateur(s) transformé(s) en Apporteur Freemium.",
         )
 
     set_apporteur_freemium.short_description = "Passer en Apporteur (Freemium)"
@@ -135,7 +108,7 @@ class UserAdmin(BaseUserAdmin):
         queryset.update(role="APPORTEUR", grade="PLATINE", updated_at=timezone.now())
         self.message_user(
             request,
-            "{queryset.count()} utilisateur(s) transformé(s) en Apporteur Platine.",
+            f"{queryset.count()} utilisateur(s) transformé(s) en Apporteur Platine.",
         )
 
     set_apporteur_platine.short_description = "Passer en Apporteur (Platine)"
@@ -144,23 +117,20 @@ class UserAdmin(BaseUserAdmin):
         queryset.update(grade=None, updated_at=timezone.now())
         self.message_user(
             request,
-            "{queryset.count()} utilisateur(s) réinitialisé(s) (grade supprimé).",
+            f"{queryset.count()} utilisateur(s) réinitialisé(s) (grade supprimé).",
         )
 
     reset_grade.short_description = "Réinitialiser le grade"
 
     def get_fieldsets(self, request, obj=None):
-
         fieldsets = super().get_fieldsets(request, obj)
 
-        if obj and obj.role == "ADMIN":
+        if obj and obj.role in ["ADMIN", "COMMERCIAL"]:
             new_fieldsets = list(fieldsets)
-
             for i, (title, options) in enumerate(new_fieldsets):
                 if title == _("Grade (apporteur uniquement)"):
                     new_fieldsets.pop(i)
                     break
-
             return tuple(new_fieldsets)
 
         return fieldsets

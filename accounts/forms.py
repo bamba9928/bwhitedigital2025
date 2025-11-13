@@ -48,11 +48,6 @@ class CleanUserFieldsMixin:
             if qs.exists():
                 raise forms.ValidationError("Ce numéro de téléphone est déjà utilisé.")
         return val
-
-
-# =============================
-# 🔹 Création d’apporteur
-# =============================
 class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
     phone = forms.CharField(
         label="Téléphone",
@@ -69,6 +64,23 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
         ),
     )
 
+    role = forms.ChoiceField(
+        label="Rôle",
+        choices=[
+            ("APPORTEUR", "Apporteur d'affaires"),
+            ("COMMERCIAL", "Commercial"),
+        ],
+        initial="APPORTEUR",
+        widget=forms.Select(
+            attrs={
+                # même design que grade
+                "class": "select2 w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-100 "
+                         "focus:border-green-500 focus:outline-none",
+                "data-placeholder": "Sélectionner un rôle",
+            }
+        ),
+    )
+
     class Meta:
         model = User
         fields = [
@@ -78,6 +90,7 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
             "email",
             "phone",
             "address",
+            "role",
             "grade",
             "password1",
             "password2",
@@ -131,7 +144,7 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Style passwords
+
         self.fields["password1"].widget.attrs.update(
             {
                 "class": "w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-100 "
@@ -146,11 +159,10 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
                 "placeholder": "Confirmer le mot de passe",
             }
         )
-        # Champs requis
         self.fields["first_name"].required = True
         self.fields["last_name"].required = True
         self.fields["email"].required = True
-        self.fields["grade"].required = True
+        self.fields["grade"].required = False  # conditionnel
 
     def clean_username(self):
         username = self.cleaned_data.get("username")
@@ -160,15 +172,31 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
                 raise forms.ValidationError("Ce nom d'utilisateur est déjà pris.")
         return username
 
+    def clean(self):
+        cleaned_data = super().clean()
+        role = cleaned_data.get("role")
+        grade = cleaned_data.get("grade")
+
+        if role == "APPORTEUR":
+            if not grade:
+                cleaned_data["grade"] = "FREEMIUM"
+        elif role == "COMMERCIAL":
+            cleaned_data["grade"] = None
+
+        return cleaned_data
+
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.role = "APPORTEUR"
-        if not user.grade:
-            user.grade = "FREEMIUM"
+        user.role = self.cleaned_data.get("role", "APPORTEUR")
+
+        if user.role == "APPORTEUR":
+            user.grade = self.cleaned_data.get("grade", "FREEMIUM")
+        else:
+            user.grade = None
+
         if commit:
             user.save()
         return user
-
 
 # =============================
 # 🔹 Mise à jour profil user

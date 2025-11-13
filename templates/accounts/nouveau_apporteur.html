@@ -50,6 +50,11 @@
                     {{ form.username }}
                 </div>
                 <div>
+                    <label for="{{ form.role.id_for_label }}"
+                           class="block text-gray-300 font-medium mb-1">{{ form.role.label }}</label>
+                    {{ form.role }}
+                </div>
+                <div id="grade-field-wrapper">
                     <label for="{{ form.grade.id_for_label }}"
                            class="block text-gray-300 font-medium mb-1">{{ form.grade.label }}</label>
                     {{ form.grade }}
@@ -88,18 +93,61 @@
 {% block extra_js %}
     <script>
     document.addEventListener("DOMContentLoaded", function () {
-        if (typeof $ !== 'undefined' && $('#id_grade').length) {
-            $('#id_grade').select2({
-                placeholder: "Sélectionner un grade",
-                allowClear: true,
-                width: '100%',
-                theme: 'default',
-                minimumResultsForSearch: Infinity, // 🚀 enlève la barre de recherche
-                language: {
-                    noResults: () => "Aucun résultat trouvé",
-                    searching: () => "Recherche..."
+        if (typeof $ !== 'undefined') {
+            const $grade = $('#id_grade');
+            const $role = $('#id_role');  // Django va générer id="id_role" pour le champ role
+            const gradeWrapper = document.getElementById("grade-field-wrapper");
+
+            // Init Select2 pour grade
+            if ($grade.length) {
+                $grade.select2({
+                    placeholder: "Sélectionner un grade",
+                    allowClear: true,
+                    width: '100%',
+                    theme: 'default',
+                    minimumResultsForSearch: Infinity,
+                    language: {
+                        noResults: function () { return "Aucun résultat trouvé"; },
+                        searching: function () { return "Recherche..."; }
+                    }
+                });
+            }
+
+            // Init Select2 pour role (même design)
+            if ($role.length) {
+                $role.select2({
+                    placeholder: "Sélectionner un rôle",
+                    allowClear: false,
+                    width: '100%',
+                    theme: 'default',
+                    minimumResultsForSearch: Infinity,
+                    language: {
+                        noResults: function () { return "Aucun résultat trouvé"; },
+                        searching: function () { return "Recherche..."; }
+                    }
+                });
+            }
+
+            function toggleGradeField() {
+                if (!$role.length || !gradeWrapper) {
+                    return;
                 }
-            });
+                const value = $role.val();  // valeur réelle du select, même avec Select2
+
+                if (value === "APPORTEUR") {
+                    gradeWrapper.style.display = "";
+                } else {
+                    gradeWrapper.style.display = "none";
+                }
+            }
+
+            // Au chargement
+            toggleGradeField();
+
+            // Au changement (événement jQuery, compatible Select2)
+            if ($role.length) {
+                $role.on("change", toggleGradeField);
+            }
         }
     });
     </script>

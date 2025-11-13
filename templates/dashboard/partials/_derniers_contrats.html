@@ -50,7 +50,7 @@
                             {% if contrat.date_effet %}
                                 <time datetime="{{ contrat.date_effet|date:'Y-m-d' }}">{{ contrat.date_effet|date:"d/m/Y" }}</time>
                             {% else %}
-                                -
+
                             {% endif %}
                         </td>
                         <td class="py-3 px-3 text-gray-300 whitespace-nowrap">
@@ -68,7 +68,7 @@
                                 <span class="px-2 py-1 rounded-full bg-yellow-900/50 text-yellow-300 text-xs font-medium">
                                     {{ contrat.commission_apporteur|default_if_none:0|floatformat:0|intcomma }} F
                                 </span>
-                            {% else %}
+                            {% elif user.is_true_admin %}
                                 <span class="px-2 py-1 rounded-full bg-blue-900/50 text-blue-300 text-xs font-medium">
                                     {{ contrat.commission_bwhite|default_if_none:0|floatformat:0|intcomma }} F
                                 </span>

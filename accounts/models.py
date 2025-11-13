@@ -5,7 +5,11 @@ from contracts.validators import SENEGAL_PHONE_VALIDATOR
 
 
 class User(AbstractUser):
-    ROLE_CHOICES = [("ADMIN", "Administrateur"), ("APPORTEUR", "Apporteur d'affaires")]
+    ROLE_CHOICES = [
+        ("ADMIN", "Administrateur"),
+        ("COMMERCIAL", "Commercial"),
+        ("APPORTEUR", "Apporteur d'affaires"),
+    ]
     GRADE_CHOICES = [
         ("PLATINE", "Platine - 18% + 2000 FCFA"),
         ("FREEMIUM", "Freemium - 10% + 1800 FCFA"),
@@ -23,7 +27,6 @@ class User(AbstractUser):
         help_text="Applicable uniquement pour les apporteurs",
     )
 
-    # 9 chiffres normalisés, unique + index
     phone = models.CharField(
         validators=[SENEGAL_PHONE_VALIDATOR],
         max_length=9,
@@ -57,9 +60,9 @@ class User(AbstractUser):
     def __str__(self):
         label = self.get_full_name() or self.username
         if self.role == "ADMIN":
-            return "{label} (Administrateur)"
+            return f"{label} (Administrateur)"
         grade_display = self.get_grade_display() if self.grade else "Sans grade"
-        return "{label} ({grade_display})"
+        return f"{label} ({grade_display})"
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}".strip() or self.username
@@ -71,6 +74,11 @@ class User(AbstractUser):
     @property
     def is_apporteur(self):
         return self.role == "APPORTEUR"
+
+    @property
+    def is_true_admin(self):
+        """Vrai Admin seulement (pour masquer les finances au Commercial)"""
+        return self.role == "ADMIN"
 
     def save(self, *args, **kwargs):
         # normaliser phone en 9 chiffres
@@ -85,6 +93,12 @@ class User(AbstractUser):
         elif self.role == "ADMIN":
             self.is_staff = True
             self.grade = None
-        elif self.role == "APPORTEUR" and not self.grade:
-            self.grade = "FREEMIUM"
+        elif self.role == "COMMERCIAL":
+            self.is_staff = True
+            self.is_superuser = False
+            self.grade = None
+        elif self.role == "APPORTEUR":
+            self.is_staff = False
+            if not self.grade:
+                self.grade = "FREEMIUM"
         super().save(*args, **kwargs)
