@@ -1,6 +1,6 @@
 import logging
-from decimal import Decimal
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, Q
@@ -56,11 +56,6 @@ def _compute_stats(contrats, today, commission_field: str):
         "montant_paye": _safe_sum(enc_payes, "montant_a_payer"),
         "montant_a_payer_total": _safe_sum(encaissements, "montant_a_payer"),
     }
-
-
-# ---------- Vues ----------
-
-
 @login_required
 def home(request):
     today = timezone.now().date()
@@ -109,7 +104,7 @@ def home(request):
     # Restrictions rôle
     if request.user.role == "APPORTEUR":
         contrats = contrats.filter(apporteur=request.user)
-    elif request.user.role == "ADMIN" and apporteur_id:
+    elif request.user.is_staff and apporteur_id:  # MODIFIÉ (Admin OU Commercial)
         contrats = contrats.filter(apporteur__id=apporteur_id)
 
     # Filtres
@@ -128,8 +123,10 @@ def home(request):
             | Q(numero_police__icontains=search)
         )
 
-    # Admin
-    if request.user.role == "ADMIN":
+    # --- Définition du Contexte ---
+
+    # Admin et Commercial (is_staff)
+    if request.user.is_staff:  # MODIFIÉ
         total_contrats = contrats.count()
         total_clients = Client.objects.count()
         total_apporteurs = User.objects.filter(role="APPORTEUR").count()
@@ -137,23 +134,30 @@ def home(request):
         # Encaissements (Paiements Apporteur -> BWHITE)
         encaissements = PaiementApporteur.objects.filter(contrat__in=contrats)
         paiements_attente = encaissements.filter(status="EN_ATTENTE").count()
-        # CORRIGÉ: Utilise 'montant_a_payer'
         montant_attente = _safe_sum(
             encaissements.filter(status="EN_ATTENTE"), "montant_a_payer"
         )
 
-        # Contrats créés par l'admin lui-même (BWHITE)
-        contrats_admin = contrats.filter(apporteur=request.user)
+        # Le champ de commission pour les stats dépend du rôle
+        if request.user.is_true_admin:
+            # L'Admin voit le profit BWHITE
+            commission_field_for_stats = "commission_bwhite"
+        else:
+            # Le Commercial voit la commission de l'apporteur
+            commission_field_for_stats = "commission_apporteur"
 
-        # Résumé des contrats créés par l'admin (son propre profit)
-        resume_admin = contrats_admin.aggregate(
-            nb_contrats=Count("id"),
-            total_primes=Sum("prime_ttc"),
-            total_commissions=Sum("commission_bwhite"),  # CORRIGÉ: Profit BWHITE
-            total_net=Sum("net_a_reverser"),
-        )
+        # Stats spécifiques au VRAI Admin
+        resume_admin = {}
+        if request.user.is_true_admin:
+            contrats_admin = contrats.filter(apporteur=request.user)
+            resume_admin = contrats_admin.aggregate(
+                nb_contrats=Count("id"),
+                total_primes=Sum("prime_ttc"),
+                total_commissions=Sum("commission_bwhite"),  # Profit BWHITE
+                total_net=Sum("net_a_reverser"),
+            )
 
-        # Top 5 apporteurs
+        # Top 5 apporteurs (visible par Admin et Commercial)
         top_apporteurs = (
             contrats.filter(apporteur__role="APPORTEUR")
             .values("apporteur__id", "apporteur__first_name", "apporteur__last_name")
@@ -167,7 +171,7 @@ def home(request):
             .order_by("-total_primes")[:5]
         )
 
-        # Récapitulatif de tous les apporteurs (sur la période filtrée)
+        # Récapitulatif de tous les apporteurs (visible par Admin et Commercial)
         recap_apporteurs = (
             contrats.filter(apporteur__role="APPORTEUR")
             .values("apporteur__id", "apporteur__first_name", "apporteur__last_name")
@@ -184,16 +188,15 @@ def home(request):
         )
 
         context = {
-            "title": "Dashboard Admin",
+            "title": "Dashboard Staff",  # Titre géré par le template
             "today": today,
             "total_contrats": total_contrats,
             "total_clients": total_clients,
             "total_apporteurs": total_apporteurs,
-            "paiements_attente": paiements_attente,  # Nbr paiements en attente
-            "montant_attente": montant_attente,  # Montant dû par les apporteurs
-            "resume_admin": resume_admin,  # Stats des contrats créés par l'admin
-            # Stats globales (Admin voit son profit 'commission_bwhite')
-            **_compute_stats(contrats, today, commission_field="commission_bwhite"),
+            "paiements_attente": paiements_attente,
+            "montant_attente": montant_attente,
+            "resume_admin": resume_admin,  # Sera vide pour le Commercial
+            **_compute_stats(contrats, today, commission_field=commission_field_for_stats),
             "top_apporteurs": top_apporteurs,
             "recap_apporteurs": recap_apporteurs,
             "periode": periode,
@@ -211,8 +214,8 @@ def home(request):
             "apporteur_id": apporteur_id,
             "derniers_contrats_affiches": contrats.order_by("-created_at")[:10],
             "search": search,
-            "date_debut": date_debut.isoformat() if date_debut else "",
-            "date_fin": date_fin.isoformat() if date_fin else "",
+            "date_debut": date_debut,
+            "date_fin": date_fin,
         }
 
     # Apporteur
@@ -241,19 +244,26 @@ def home(request):
         }
 
     else:
+        # Fallback (ne devrait pas arriver pour un utilisateur authentifié)
         context = {"title": "Dashboard"}
 
     return render(request, "dashboard/home.html", context)
-
-
 def get_evolution_data(user):
     """Évolution 12 mois. Séries en float, calculs en Decimal."""
     data = []
     today = timezone.now().date()
 
-    # Définit quel champ commission utiliser
-    commission_field = (
-        "commission_bwhite" if user.role == "ADMIN" else "commission_apporteur"
+    # Alignement avec home/statistiques
+    if getattr(user, "is_true_admin", False):
+        commission_field = "commission_bwhite"
+    else:
+        commission_field = "commission_apporteur"
+
+    # Filtre de base selon le rôle
+    base_qs = (
+        user.contrats_apportes.emis_avec_doc()
+        if user.role == "APPORTEUR"
+        else Contrat.objects.emis_avec_doc()
     )
 
     for i in range(12):
@@ -264,16 +274,12 @@ def get_evolution_data(user):
         else:
             mois_fin = mois_debut.replace(month=mois_debut.month + 1, day=1)
 
-        # Filtre les contrats
-        contrats_user = (
-            user.contrats_apportes.emis_avec_doc()
-            if user.role == "APPORTEUR"
-            else Contrat.objects.emis_avec_doc()
-        )
-
-        stats = contrats_user.filter(
+        stats = base_qs.filter(
             created_at__gte=mois_debut, created_at__lt=mois_fin
-        ).aggregate(nombre=Count("id"), commissions=Sum(commission_field))
+        ).aggregate(
+            nombre=Count("id"),
+            commissions=Sum(commission_field),
+        )
 
         data.append(
             {
@@ -284,8 +290,6 @@ def get_evolution_data(user):
         )
 
     return list(reversed(data))
-
-
 @login_required
 def statistiques(request):
     """Page statistiques détaillées."""
@@ -323,12 +327,11 @@ def statistiques(request):
     contrats = Contrat.objects.emis_avec_doc().select_related(
         "client", "vehicule", "apporteur"
     )
-
-    commission_field = "commission_bwhite"
-
+    commission_field = "commission_apporteur"  # Par défaut (Apporteur ou Commercial)
     if request.user.role == "APPORTEUR":
         contrats = contrats.filter(apporteur=request.user)
-        commission_field = "commission_apporteur"
+    elif request.user.is_true_admin:
+        commission_field = "commission_bwhite"  # Seul l'Admin voit le profit
 
     if date_debut:
         contrats = contrats.filter(date_effet__gte=date_debut)
@@ -359,8 +362,8 @@ def statistiques(request):
     context = {
         "title": "Statistiques",
         "periode": periode,
-        "date_debut": date_debut.isoformat() if date_debut else "",
-        "date_fin": date_fin.isoformat() if date_fin else "",
+        "date_debut": date_debut,
+        "date_fin": date_fin,
         "stats_categories": stats_categories,
         "stats_durees": stats_durees,
         "evolution": list(reversed(evolution)),

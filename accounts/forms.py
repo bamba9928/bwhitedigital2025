@@ -73,7 +73,6 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
         initial="APPORTEUR",
         widget=forms.Select(
             attrs={
-                # même design que grade
                 "class": "select2 w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-100 "
                          "focus:border-green-500 focus:outline-none",
                 "data-placeholder": "Sélectionner un rôle",
@@ -143,8 +142,11 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
         }
 
     def __init__(self, *args, **kwargs):
+        # on récupère l'utilisateur qui crée
+        self.current_user = kwargs.pop("current_user", None)
         super().__init__(*args, **kwargs)
 
+        # style passwords
         self.fields["password1"].widget.attrs.update(
             {
                 "class": "w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-100 "
@@ -159,18 +161,34 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
                 "placeholder": "Confirmer le mot de passe",
             }
         )
+
         self.fields["first_name"].required = True
         self.fields["last_name"].required = True
         self.fields["email"].required = True
         self.fields["grade"].required = False  # conditionnel
 
-    def clean_username(self):
-        username = self.cleaned_data.get("username")
-        if username:
-            username = username.lower().strip()
-            if User.objects.filter(username=username).exists():
-                raise forms.ValidationError("Ce nom d'utilisateur est déjà pris.")
-        return username
+        # 🔒 Règle métier :
+        # - ADMIN : peut créer APPORTEUR / COMMERCIAL
+        # - COMMERCIAL : ne peut créer que APPORTEUR
+        if self.current_user and getattr(self.current_user, "is_commercial", False):
+            self.fields["role"].choices = [
+                ("APPORTEUR", "Apporteur d'affaires")
+            ]
+            self.fields["role"].initial = "APPORTEUR"
+
+    def clean_role(self):
+        role = self.cleaned_data.get("role")
+
+        # double sécurité côté serveur
+        if (
+            self.current_user
+            and getattr(self.current_user, "is_commercial", False)
+            and role != "APPORTEUR"
+        ):
+            raise forms.ValidationError(
+                "Vous n'êtes pas autorisé à créer un utilisateur avec ce rôle."
+            )
+        return role
 
     def clean(self):
         cleaned_data = super().clean()
@@ -194,10 +212,11 @@ class ApporteurCreationForm(UserCreationForm, CleanUserFieldsMixin):
         else:
             user.grade = None
 
+        user.created_by = getattr(self, "current_user", None)
+
         if commit:
             user.save()
         return user
-
 # =============================
 # 🔹 Mise à jour profil user
 # =============================

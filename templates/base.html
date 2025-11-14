@@ -126,11 +126,11 @@
                         <span class="text-xl font-bold bg-gradient-to-r from-primary-green to-green-400 bg-clip-text text-transparent">Bwhite Digital</span>
                     </a>
                     <script>
-          document.addEventListener('DOMContentLoaded',function(){
-            const logo=document.getElementById('nav-main-logo');
-            const fb=document.getElementById('nav-fallback-icon');
-            if(logo&&fb){ logo.onerror=function(){ this.classList.add('hidden'); fb.classList.remove('hidden'); fb.classList.add('flex'); }; }
-          });
+              document.addEventListener('DOMContentLoaded',function(){
+                const logo=document.getElementById('nav-main-logo');
+                const fb=document.getElementById('nav-fallback-icon');
+                if(logo&&fb){ logo.onerror=function(){ this.classList.add('hidden'); fb.classList.remove('hidden'); fb.classList.add('flex'); }; }
+              });
                     </script>
                     {% if user.is_authenticated %}
                         <div class="flex items-center gap-3">
@@ -256,7 +256,7 @@
                                 </div>
                                 <span>Nouveau Contrat</span>
                             </a>
-                            {% if user.role == 'ADMIN' %}
+                            {% if user.is_staff %}
                                 <a href="{% url 'accounts:nouveau_apporteur' %}"
                                    @click="isMenuOpen=false"
                                    class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-5 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:translate-x-1 font-medium group">
@@ -303,7 +303,7 @@
                                     </a>
                                 </li>
                             {% endif %}
-                            {% if user.role == 'ADMIN' %}
+                            {% if user.is_staff %}
                                 {% url 'accounts:liste_apporteurs' as apporteurs_url %}
                                 <li>
                                     <a href="{{ apporteurs_url }}"

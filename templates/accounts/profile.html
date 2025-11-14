@@ -96,11 +96,22 @@
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
                             <span class="text-gray-400 text-sm">Rôle</span>
-                            <span class="px-3 py-1 rounded-full text-xs font-semibold {% if user.role == 'ADMIN' %}bg-yellow-900/50 text-yellow-300 {% else %}bg-blue-900/50 text-blue-300{% endif %}">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold
+                                         {% if user.role == 'ADMIN' %}
+                                            bg-yellow-900/50 text-yellow-300
+                                         {% elif user.role == 'COMMERCIAL' %}
+                                            bg-indigo-900/50 text-indigo-300
+                                         {% else %}
+                                            bg-blue-900/50 text-blue-300
+                                         {% endif %}">
                                 {% if user.role == 'ADMIN' %}
-                                    <i class="fas fa-crown mr-1"></i>Admin
+                                    <i class="fas fa-crown mr-1"></i>Administrateur
+                                {% elif user.role == 'COMMERCIAL' %}
+                                    <i class="fas fa-briefcase mr-1"></i>Commercial
+                                {% elif user.role == 'APPORTEUR' %}
+                                    <i class="fas fa-user-tie mr-1"></i>{{ user.get_grade_display|default:"Apporteur d'affaires" }}
                                 {% else %}
-                                    <i class="fas fa-user-tie mr-1"></i>{{ user.get_grade_display }}
+                                    <i class="fas fa-user mr-1"></i>{{ user.get_role_display|default:"-" }}
                                 {% endif %}
                             </span>
                         </div>

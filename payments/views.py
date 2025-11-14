@@ -1,15 +1,16 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.views.decorators.http import require_POST
-from django.db import transaction
-from .models import PaiementApporteur
-from contracts.models import Contrat
-from accounts.models import User
 from django import forms
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q, Sum
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
+
+from accounts.models import User
+from contracts.models import Contrat
+from .models import PaiementApporteur
 
 
 # -----------------------------
@@ -35,8 +36,12 @@ class ValidationPaiementForm(forms.Form):
 # -----------------------------
 # Utils
 # -----------------------------
-def _require_apporteur(user):
-    return getattr(user, "role", None) == "APPORTEUR"
+def _require_apporteur(user) -> bool:
+    """
+    Vérifie que l'utilisateur est un apporteur (et pas commercial/admin).
+    Utilise la propriété is_apporteur du modèle User.
+    """
+    return getattr(user, "is_apporteur", False)
 
 
 # -----------------------------
@@ -44,6 +49,10 @@ def _require_apporteur(user):
 # -----------------------------
 @login_required
 def mes_paiements(request):
+    """
+    Liste des encaissements pour l'apporteur connecté.
+    Accès interdit aux commerciaux et admins.
+    """
     if not _require_apporteur(request.user):
         return redirect("accounts:profile")
 
@@ -78,8 +87,9 @@ def mes_paiements(request):
 def declarer_paiement(request, contrat_id):
     """
     L’apporteur déclare le règlement du net à reverser pour un contrat donné.
+
     Conditions:
-      - être l’apporteur du contrat
+      - être l’apporteur du contrat (role = APPORTEUR)
       - contrat valide (attestation ou carte brune)
       - encaissement EN_ATTENTE
     """
@@ -94,31 +104,32 @@ def declarer_paiement(request, contrat_id):
 
     if not contrat.is_valide:
         messages.error(
-            request, f"Contrat non valide. Attestation ou carte brune manquante."
+            request, "Contrat non valide. Attestation ou carte brune manquante."
         )
         return redirect("payments:mes_paiements")
 
+    # Normalement déjà créé par le signal, mais on garde un get_or_create idempotent
     paiement, created = PaiementApporteur.objects.get_or_create(
         contrat=contrat,
         defaults={"montant_a_payer": contrat.net_a_reverser},
     )
+
+    # Si déjà EN_ATTENTE, on recalcule le montant si nécessaire
     if not created and paiement.est_en_attente:
         if paiement.montant_a_payer != contrat.net_a_reverser:
             paiement.montant_a_payer = contrat.net_a_reverser
             paiement.save(update_fields=["montant_a_payer"])
 
     if paiement.est_paye:
-        messages.info(request, f"Ce contrat est déjà marqué comme payé.")
+        messages.info(request, "Ce contrat est déjà marqué comme payé.")
         return redirect("payments:mes_paiements")
 
     if request.method == "POST":
         form = DeclarationPaiementForm(request.POST, instance=paiement)
         if form.is_valid():
             form.save()
-
-
             messages.success(
-                request, f"Déclaration soumise. En attente de validation admin."
+                request, "Déclaration soumise. En attente de validation admin."
             )
             return redirect("payments:mes_paiements")
     else:
@@ -137,13 +148,22 @@ def declarer_paiement(request, contrat_id):
 
 
 # -----------------------------
-# Admin: liste et validation
+# Admin / Staff: liste et validation
 # -----------------------------
 @staff_member_required
 def liste_encaissements(request):
-    qs = PaiementApporteur.objects.select_related(
-        "contrat", "contrat__apporteur", "contrat__client"
-    ).order_by("-created_at")
+    """
+    Liste des encaissements côté staff (ADMIN + COMMERCIAL).
+    Les encaissements sont toujours liés à des contrats d'apporteurs.
+    """
+    qs = (
+        PaiementApporteur.objects.select_related(
+            "contrat", "contrat__apporteur", "contrat__client"
+        )
+        # sécurité logique : on ne liste que les encaissements d'apporteurs
+        .filter(contrat__apporteur__role="APPORTEUR")
+        .order_by("-created_at")
+    )
 
     st = request.GET.get("status", "")
     if st in {"EN_ATTENTE", "PAYE", "ANNULE"}:
@@ -163,16 +183,20 @@ def liste_encaissements(request):
         )
 
     total_attente = (
-            qs.filter(status="EN_ATTENTE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+        qs.filter(status="EN_ATTENTE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
     )
     total_paye = qs.filter(status="PAYE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
     total_annule = (
-            qs.filter(status="ANNULE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+        qs.filter(status="ANNULE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
     )
 
     paginator = Paginator(qs, 50)
     page = paginator.get_page(request.GET.get("page"))
-    apporteurs = User.objects.filter(role="APPORTEUR").order_by("first_name", "last_name")
+
+    # uniquement les apporteurs (les commerciaux n'ont pas de PaiementApporteur)
+    apporteurs = User.objects.filter(role="APPORTEUR").order_by(
+        "first_name", "last_name"
+    )
 
     return render(
         request,
@@ -194,6 +218,10 @@ def liste_encaissements(request):
 
 @staff_member_required
 def detail_encaissement(request, paiement_id):
+    """
+    Détail d'un encaissement pour le staff (ADMIN + COMMERCIAL).
+    La restriction sur qui peut valider est gérée dans la vue de validation.
+    """
     paiement = get_object_or_404(
         PaiementApporteur.objects.select_related(
             "contrat", "contrat__apporteur", "contrat__client"
@@ -223,7 +251,11 @@ def detail_encaissement(request, paiement_id):
 def valider_encaissement(request, paiement_id):
     """
     Marque l'encaissement comme PAYE.
-    La méthode marquer_comme_paye ne modifie plus le montant payé (car il n'existe plus).
+
+    Note:
+      - Si tu veux réserver la validation aux vrais admins uniquement
+        (et pas aux commerciaux), tu peux ajouter un garde:
+          if not request.user.is_true_admin: ...
     """
     paiement = get_object_or_404(PaiementApporteur, pk=paiement_id)
 
@@ -240,7 +272,9 @@ def valider_encaissement(request, paiement_id):
     reference = form.cleaned_data["reference_transaction"]
 
     paiement.marquer_comme_paye(
-        methode=methode, reference=reference, validated_by=request.user
+        methode=methode,
+        reference=reference,
+        validated_by=request.user,
     )
     messages.success(request, "Paiement validé.")
     return redirect("payments:detail_encaissement", paiement_id=paiement.id)

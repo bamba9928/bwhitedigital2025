@@ -5,6 +5,8 @@ from contracts.validators import SENEGAL_PHONE_VALIDATOR
 
 
 class User(AbstractUser):
+    """Modèle utilisateur personnalisé avec gestion des rôles et grades"""
+
     ROLE_CHOICES = [
         ("ADMIN", "Administrateur"),
         ("COMMERCIAL", "Commercial"),
@@ -58,21 +60,33 @@ class User(AbstractUser):
         ordering = ["-created_at"]
 
     def __str__(self):
+        """Représentation textuelle de l'utilisateur avec rôle/grade"""
         label = self.get_full_name() or self.username
         if self.role == "ADMIN":
             return f"{label} (Administrateur)"
+        if self.role == "COMMERCIAL":
+            return f"{label} (Commercial)"
         grade_display = self.get_grade_display() if self.grade else "Sans grade"
         return f"{label} ({grade_display})"
 
     def get_full_name(self):
-        return f"{self.first_name} {self.last_name}".strip() or self.username
+        """Retourne le nom complet ou le username si vide"""
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        return full_name if full_name else self.username
 
     @property
     def is_admin(self):
+        """Vérifie si l'utilisateur est administrateur"""
         return self.role == "ADMIN"
 
     @property
+    def is_commercial(self):
+        """Vérifie si l'utilisateur est commercial"""
+        return self.role == "COMMERCIAL"
+
+    @property
     def is_apporteur(self):
+        """Vérifie si l'utilisateur est apporteur"""
         return self.role == "APPORTEUR"
 
     @property
@@ -81,11 +95,12 @@ class User(AbstractUser):
         return self.role == "ADMIN"
 
     def save(self, *args, **kwargs):
-        # normaliser phone en 9 chiffres
+        """Sauvegarde avec normalisation du téléphone et cohérence des permissions"""
+        # Normaliser le numéro de téléphone en 9 chiffres
         if self.phone:
             self.phone = "".join(filter(str.isdigit, self.phone))[:9]
 
-        # cohérence staff/superuser/role
+        # Assurer la cohérence entre staff/superuser/role
         if self.is_superuser:
             self.role = "ADMIN"
             self.is_staff = True
@@ -101,4 +116,5 @@ class User(AbstractUser):
             self.is_staff = False
             if not self.grade:
                 self.grade = "FREEMIUM"
+
         super().save(*args, **kwargs)

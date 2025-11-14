@@ -2,9 +2,9 @@
 BWHITE DIGITAL — Django settings
 
 Projet : Plateforme d’assurance BWHITE DIGITAL
-Version : 2025
+Version : V1.01
 Auteur : Mouhamadou Bamba DIENG
-Contact : +221 77 249 05 30 • bigrip2016@gmail.com
+Contact : +221 77 249 05 30 • bigrip2016@gmail.com 2025
 
 Notes :
 - Configurez via les variables d’environnement (SECRET_KEY, DEBUG, ALLOWED_HOSTS, DB…).
@@ -13,12 +13,13 @@ Notes :
 - Réglez DJANGO_SETTINGS_MODULE pour cibler le bon module de settings.
 """
 
+import os
 from decimal import Decimal
 from pathlib import Path
+
 from decouple import config, Csv
-from dotenv import load_dotenv
-import os
 from django.contrib.messages import constants as messages
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")

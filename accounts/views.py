@@ -1,5 +1,6 @@
 import base64
 import csv
+
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import update_session_auth_hash
@@ -13,7 +14,6 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone
-import time
 from django.views.decorators.http import require_http_methods, require_POST
 
 from contracts.models import Contrat
@@ -25,8 +25,6 @@ from .forms import (
     AdminApporteurUpdateForm,
     BulkActionForm,
 )
-
-# Imports locaux
 from .models import User
 from .models_onboarding import ApporteurOnboarding
 
@@ -68,8 +66,6 @@ def profile(request):
             "user": request.user,
         },
     )
-
-
 @login_required
 @require_POST
 def quick_edit_profile(request):
@@ -81,8 +77,6 @@ def quick_edit_profile(request):
             {"success": True, "message": "Profil mis à jour avec succès!"}
         )
     return JsonResponse({"success": False, "errors": form.errors})
-
-
 @login_required
 def change_password(request):
     """Changement de mot de passe simple"""
@@ -101,8 +95,6 @@ def change_password(request):
         "accounts/change_password.html",
         {"title": "Changer le mot de passe", "password_form": password_form},
     )
-
-
 # ==========================================
 # GESTION APPORTEURS (Admin uniquement)
 # ==========================================
@@ -177,29 +169,24 @@ def liste_apporteurs(request):
     )
 @staff_member_required
 def nouveau_apporteur(request):
-    """Création d'un apporteur ou commercial"""
+    """Création d'un apporteur ou commercial (par staff)."""
     if request.method == "POST":
-        form = ApporteurCreationForm(request.POST)
+        form = ApporteurCreationForm(request.POST, current_user=request.user)
         if form.is_valid():
-            utilisateur = form.save(commit=False)
-            # Le rôle et le grade sont gérés dans le form.save()/clean()
-            utilisateur.created_by = request.user
-            utilisateur.save()
+            utilisateur = form.save()
             messages.success(
                 request,
-                f"Utilisateur {utilisateur.get_full_name()} ({utilisateur.get_role_display()}) créé avec succès!",
+                f"Utilisateur {utilisateur.get_full_name()} ({utilisateur.get_role_display()}) créé avec succès !",
             )
-            # Retour à la liste des apporteurs/commerciaux
             return redirect("accounts:liste_apporteurs")
     else:
-        form = ApporteurCreationForm()
+        form = ApporteurCreationForm(current_user=request.user)
 
     return render(
         request,
         "accounts/nouveau_apporteur.html",
         {"title": "Nouvel utilisateur", "form": form},
     )
-
 @staff_member_required
 def detail_apporteur(request, pk):
     """Vue détaillée d'un apporteur"""
@@ -266,8 +253,6 @@ def detail_apporteur(request, pk):
             "onboarding": onboarding,
         },
     )
-
-
 @login_required
 def apporteur_detail(request):
     """Espace contrat/conditions de l'apporteur: lecture, acceptation, upload CNI, signature"""
@@ -638,8 +623,6 @@ def check_phone_availability(request):
 def _safe_sum(queryset, field):
     """Retourne une somme numérique, jamais None."""
     return queryset.aggregate(total=Sum(field))["total"] or 0
-
-
 def _get_user_stats(user):
     today = timezone.now().date()
     first_day = today.replace(day=1)
@@ -653,7 +636,6 @@ def _get_user_stats(user):
             "commissions_mois": _safe_sum(
                 contrats.filter(created_at__gte=first_day), "commission_apporteur"
             ),
-            # encaissements côté admin
             "commissions_payees": _safe_sum(
                 PaiementApporteur.objects.filter(
                     contrat__apporteur=user, status="PAYE"
@@ -679,8 +661,15 @@ def _get_user_stats(user):
             "commissions_total": _safe_sum(contrats, "commission_apporteur"),
         }
 
-    return {}
+    if user.role == "COMMERCIAL":
+        contrats = Contrat.objects.filter(status="EMIS", apporteur=user)
+        return {
+            "total_contrats": contrats.count(),
+            "contrats_mois": contrats.filter(created_at__gte=first_day).count(),
+            "total_primes": _safe_sum(contrats, "prime_ttc"),
+        }
 
+    return {}
 
 def _get_apporteur_detailed_stats(apporteur):
     today = timezone.now().date()

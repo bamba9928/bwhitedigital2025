@@ -890,7 +890,7 @@ def annuler_contrat(request, pk):
     """
     contrat = get_object_or_404(Contrat, pk=pk)
 
-    if getattr(request.user, "role", "") != "ADMIN":
+    if not getattr(request.user, "is_true_admin", False):
         messages.error(request, "Action non autorisée.")
         return redirect("contracts:detail_contrat", pk=pk)
 

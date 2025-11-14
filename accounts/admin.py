@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+
 from .models import User
 
 
@@ -78,51 +79,70 @@ class UserAdmin(BaseUserAdmin):
     ]
 
     def set_admin(self, request, queryset):
-        queryset.update(role="ADMIN", grade=None, updated_at=timezone.now())
+        """Transforme les utilisateurs sélectionnés en Administrateur"""
+        count = queryset.update(role="ADMIN", grade=None, updated_at=timezone.now())
         self.message_user(
             request,
-            f"{queryset.count()} utilisateur(s) transformé(s) en Administrateur.",
+            f"{count} utilisateur(s) transformé(s) en Administrateur.",
         )
 
     set_admin.short_description = "Passer en Administrateur"
 
-    def set_commercial(self, request, queryset):  # <-- AJOUT
-        queryset.update(role="COMMERCIAL", grade=None, is_staff=True, updated_at=timezone.now())
+    def set_commercial(self, request, queryset):
+        """Transforme les utilisateurs sélectionnés en Commercial"""
+        count = queryset.update(
+            role="COMMERCIAL",
+            grade=None,
+            is_staff=True,
+            updated_at=timezone.now()
+        )
         self.message_user(
             request,
-            f"{queryset.count()} utilisateur(s) transformé(s) en Commercial.",
+            f"{count} utilisateur(s) transformé(s) en Commercial.",
         )
 
     set_commercial.short_description = "Passer en Commercial"
 
     def set_apporteur_freemium(self, request, queryset):
-        queryset.update(role="APPORTEUR", grade="FREEMIUM", updated_at=timezone.now())
+        """Transforme les utilisateurs sélectionnés en Apporteur Freemium"""
+        count = queryset.update(
+            role="APPORTEUR",
+            grade="FREEMIUM",
+            updated_at=timezone.now()
+        )
         self.message_user(
             request,
-            f"{queryset.count()} utilisateur(s) transformé(s) en Apporteur Freemium.",
+            f"{count} utilisateur(s) transformé(s) en Apporteur Freemium.",
         )
 
     set_apporteur_freemium.short_description = "Passer en Apporteur (Freemium)"
 
     def set_apporteur_platine(self, request, queryset):
-        queryset.update(role="APPORTEUR", grade="PLATINE", updated_at=timezone.now())
+        """Transforme les utilisateurs sélectionnés en Apporteur Platine"""
+        count = queryset.update(
+            role="APPORTEUR",
+            grade="PLATINE",
+            updated_at=timezone.now()
+        )
         self.message_user(
             request,
-            f"{queryset.count()} utilisateur(s) transformé(s) en Apporteur Platine.",
+            f"{count} utilisateur(s) transformé(s) en Apporteur Platine.",
         )
 
     set_apporteur_platine.short_description = "Passer en Apporteur (Platine)"
 
     def reset_grade(self, request, queryset):
-        queryset.update(grade=None, updated_at=timezone.now())
+        """Réinitialise le grade des utilisateurs sélectionnés"""
+        count = queryset.update(grade=None, updated_at=timezone.now())
         self.message_user(
             request,
-            f"{queryset.count()} utilisateur(s) réinitialisé(s) (grade supprimé).",
+            f"{count} utilisateur(s) réinitialisé(s) (grade supprimé).",
         )
 
     reset_grade.short_description = "Réinitialiser le grade"
 
     def get_fieldsets(self, request, obj=None):
+        """Masque le champ grade pour les ADMIN et COMMERCIAL"""
         fieldsets = super().get_fieldsets(request, obj)
 
         if obj and obj.role in ["ADMIN", "COMMERCIAL"]:

@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models, transaction  # <-- Import transaction
@@ -81,8 +82,7 @@ class PaiementApporteur(models.Model):
         ]
 
     def __str__(self):
-        # CORRIGÉ (f-string) et (Optimisation N+1)
-        # N'utilise que self.contrat_id pour éviter une requête DB supplémentaire
+
         return f"Encaissement Contrat#{self.contrat_id} - {self.get_status_display()}"
 
     @property
@@ -107,7 +107,6 @@ class PaiementApporteur(models.Model):
         if not reference or len(reference.strip()) < 6:
             raise ValueError("Référence transaction invalide.")
 
-        # CORRIGÉ: Utilisation de transaction.atomic()
         try:
             with transaction.atomic():
                 self.methode_paiement = methode
@@ -122,7 +121,6 @@ class PaiementApporteur(models.Model):
                     ]
                 )
 
-                # CORRIGÉ (f-string)
                 HistoriquePaiement.objects.create(
                     paiement=self,
                     action="VALIDATION",
@@ -142,13 +140,11 @@ class PaiementApporteur(models.Model):
         if self.status == "ANNULE":
             return
 
-        # CORRIGÉ: Utilisation de transaction.atomic()
         try:
             with transaction.atomic():
                 self.status = "ANNULE"
                 self.save(update_fields=["status", "updated_at"])
 
-                # CORRIGÉ (f-string)
                 HistoriquePaiement.objects.create(
                     paiement=self,
                     action="STATUS_CHANGE",
@@ -194,5 +190,5 @@ class HistoriquePaiement(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        # CORRIGÉ (f-string)
+
         return f"{self.get_action_display()} • {self.created_at:%Y-%m-%d %H:%M}"

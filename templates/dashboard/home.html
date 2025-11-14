@@ -11,39 +11,64 @@
             <!-- Col 1 : titre -->
             <div>
                 <h1 class="text-3xl md:text-4xl font-bold text-white flex items-center gap-3">
-                    {% if user.role == 'ADMIN' %}
+                    {% if user.is_true_admin %}
+                        {# Cas 1 - Administrateur #}
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-green to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
                             <i class="fas fa-chart-line text-gray-900"></i>
                         </div>
-                        <span class="bg-gradient-to-r from-primary-green to-emerald-400 bg-clip-text text-transparent">Administration</span>
+                        <span class="bg-gradient-to-r from-primary-green to-emerald-400 bg-clip-text text-transparent">
+                            Administration
+                        </span>
+
+                    {% elif user.is_commercial %}
+                        {# Cas 2 - Commercial #}
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <i class="fas fa-briefcase text-white"></i>
+                        </div>
+                        <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                            Espace Commercial
+                        </span>
+
                     {% else %}
+                        {# Cas 3 - Apporteur #}
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
                             <i class="fas fa-user-tie text-white"></i>
                         </div>
-                        <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Mon Tableau de Bord</span>
+                        <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                            Mon Tableau de Bord
+                        </span>
                     {% endif %}
                 </h1>
+
                 <p class="text-gray-400 mt-2 text-sm md:text-base">
-                    Bienvenue, <span class="font-semibold text-white">{{ user.get_full_name|default:user.username }}</span>
+                    Bienvenue,
+                    <span class="font-semibold text-white">
+                        {{ user.get_full_name|default:user.username }}
+                    </span>
                     <span class="inline-block ml-2">👋</span>
                 </p>
             </div>
+
             <!-- Col 2 : bouton échéances -->
             <a href="{% url 'contracts:echeances_aujourdhui' %}"
-               class="inline-flex items-center px-4 py-2 rounded-lg bg-primary-green text-black hover:opacity-90 justify-self-start md:justify-self-center">
+               class="inline-flex items-center px-4 py-2 rounded-lg bg-primary-green text-black hover:opacity-90
+                      justify-self-center md:justify-self-center
+                      w-full max-w-xs md:w-auto text-center">
                 <i class="fas fa-clock mr-2"></i> Date échéances
             </a>
             <!-- Col 3 : date du jour -->
-            <div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl border border-gray-700 shadow-lg hover:border-gray-600 transition-all duration-300 group justify-self-start md:justify-self-end">
-                <div class="w-10 h-10 rounded-lg bg-primary-green/10 flex items-center justify-center group-hover:bg-primary-green/20 transition-colors">
-                    <i class="far fa-calendar-alt text-primary-green text-lg"></i>
-                </div>
-                <div>
-                    <p class="text-gray-400 text-xs">Aujourd'hui</p>
-                    <p class="text-white text-sm font-semibold" id="current-date">{% now "l j F Y" %}</p>
+            <div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl border border-gray-700 shadow-lg hover:border-gray-600 transition-all duration-300 group
+                            justify-self-center md:justify-self-end
+                            w-full max-w-xs md:w-auto">
+                    <div class="w-10 h-10 rounded-lg bg-primary-green/10 flex items-center justify-center group-hover:bg-primary-green/20 transition-colors">
+                        <i class="far fa-calendar-alt text-primary-green text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-xs">Aujourd'hui</p>
+                        <p class="text-white text-sm font-semibold" id="current-date">{% now "l j F Y" %}</p>
+                    </div>
                 </div>
             </div>
-        </div>
         <!-- Cartes d'actions rapides modernisées -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <!-- Nouveau Contrat -->
@@ -63,7 +88,7 @@
                     </div>
                     <div>
                         <p class="text-white font-bold text-lg mb-1">Nouveau Contrat</p>
-                        <p class="text-green-300/80 text-sm">Créer un nouveau contrat client</p>
+                        <p class="text-green-300/80 text-sm">Créer un nouveau contrat</p>
                     </div>
                 </div>
             </a>
@@ -83,8 +108,8 @@
                         </div>
                     </div>
                     <div>
-                        <p class="text-white font-bold text-lg mb-1">Mes Contrats</p>
-                        <p class="text-blue-300/80 text-sm">Voir et gérer tous les contrats</p>
+                        <p class="text-white font-bold text-lg mb-1">Contrats</p>
+                        <p class="text-blue-300/80 text-sm">Gérer les contrats</p>
                     </div>
                 </div>
             </a>
@@ -104,13 +129,12 @@
                         </div>
                     </div>
                     <div>
-                        <p class="text-white font-bold text-lg mb-1">Mes Clients</p>
-                        <p class="text-purple-300/80 text-sm">Accéder à la liste des clients</p>
+                        <p class="text-white font-bold text-lg mb-1">Clients</p>
+                        <p class="text-purple-300/80 text-sm">La liste des clients</p>
                     </div>
                 </div>
             </a>
-            <!-- Ajouter Apporteur (Admin seulement) -->
-            {% if user.role == 'ADMIN' %}
+            {% if user.is_staff %}
                 <a href="{% url 'accounts:nouveau_apporteur' %}"
                    class="group relative bg-gradient-to-br from-emerald-900/40 via-emerald-800/30 to-emerald-900/40 p-6 rounded-2xl border border-emerald-700/40 hover:border-emerald-500/60 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/10 hover:scale-[1.03] active:scale-[0.98] overflow-hidden">
                     <!-- Effet de lueur -->
@@ -127,7 +151,7 @@
                         </div>
                         <div>
                             <p class="text-white font-bold text-lg mb-1">Ajouter Apporteur</p>
-                            <p class="text-emerald-300/80 text-sm">Créer un nouveau compte apporteur</p>
+                            <p class="text-emerald-300/80 text-sm">Nouveau apporteur</p>
                         </div>
                     </div>
                 </a>
@@ -150,7 +174,7 @@
                    rel="noopener noreferrer"
                    class="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-green/10 to-emerald-600/10 hover:from-primary-green/20 hover:to-emerald-600/20 text-primary-green rounded-xl transition-all duration-300 border border-primary-green/30 hover:border-primary-green/50 text-sm font-semibold hover:scale-105 active:scale-95 w-full sm:w-auto justify-center shadow-lg hover:shadow-green-500/20">
                     <i class="fas fa-external-link-alt group-hover:rotate-12 transition-transform"></i>
-                    <span>Ouvrir en grand</span>
+                    <span>Ouvrir</span>
                 </a>
             </header>
             <div class="relative bg-gray-900/50"
@@ -204,14 +228,14 @@
         </section>
         <!-- Sections dynamiques selon le rôle -->
         <section>
-            {% if user.role == 'ADMIN' %}
+            {% if user.is_staff %}
                 {% include "dashboard/partials/_filtres_admin.html" %}
             {% elif user.role == 'APPORTEUR' %}
                 {% include "dashboard/partials/_filtres_apporteur.html" %}
             {% endif %}
         </section>
         <section class="mt-8">
-            {% if user.role == 'ADMIN' %}
+            {% if user.is_staff %}
                 {% include "dashboard/partials/_stats_admin.html" %}
             {% else %}
                 {% include "dashboard/partials/_stats_apporteur.html" %}
@@ -220,7 +244,7 @@
         <section class="space-y-6 mt-8">
             {% include "dashboard/partials/_totaux_filtre.html" %}
             {% include "dashboard/partials/_derniers_contrats.html" %}
-            {% if user.role == 'ADMIN' %}
+            {% if user.is_staff %}
                 {% include "dashboard/partials/_recap_apporteurs.html" %}
             {% endif %}
         </section>
