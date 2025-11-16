@@ -7,10 +7,8 @@
         <title>
             {% block title %}Bwhite Digital{% endblock %}
         </title>
-        <!-- Alpine en premier -->
         <script defer
                 src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-        <!-- Tailwind CDN -->
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
     tailwind.config = {
@@ -32,7 +30,6 @@
     .sidebar-transition{transition:transform .3s ease-in-out;}
     /* .btn-primary-modern et .ripple sont définis dans style.css */
         </style>
-        <!-- Libs CSS -->
         <link rel="stylesheet"
               href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
         <link rel="stylesheet"
@@ -44,16 +41,16 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
               rel="stylesheet">
         <link rel="stylesheet" href="{% static 'css/style.css' %}">
-        <link rel="manifest" href="{% static 'manifest.json' %}">
+
+        <link rel="manifest" href="{% url 'manifest' %}">
+
         <meta name="theme-color" content="#00FF00">
-        <!-- iOS PWA -->
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black">
         <meta name="apple-mobile-web-app-title" content="BWHITE">
         <link rel="apple-touch-icon"
               sizes="180x180"
               href="{% static 'icons/apple-touch-icon.png' %}">
-        <!-- Favicons -->
         <link rel="icon"
               type="image/png"
               sizes="16x16"
@@ -75,7 +72,6 @@
     <body class="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-gray-200 font-inter"
           x-data="{ isMenuOpen:false }"
           :class="{ 'overflow-hidden': isMenuOpen && window.innerWidth < 1024 }">
-        <!-- Banner PWA -->
         <div id="pwa-install-banner"
              class="hidden fixed bottom-4 left-4 right-4 md:left-4 md:w-96 bg-gray-800/50 backdrop-blur-sm text-white p-6 rounded-xl shadow-2xl z-50 border border-gray-700">
             <div class="flex items-center justify-between gap-4 flex-wrap">
@@ -97,16 +93,13 @@
                 </div>
             </div>
         </div>
-        <!-- Indicateur hors ligne -->
         <div id="offline-indicator"
              class="hidden fixed top-0 left-0 w-full bg-yellow-600 text-white text-center py-2 z-50 shadow-lg">
             <i class="fas fa-wifi-slash mr-2"></i>Mode hors-ligne
         </div>
-        <!-- Navigation -->
         <nav class="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 shadow-lg">
             <div class="px-4 md:px-6 py-3">
                 <div class="flex items-center justify-between">
-                    <!-- Brand -->
                     <a href="{% url 'dashboard:home' %}"
                        class="flex items-center gap-2 group"
                        aria-label="Accueil Bwhite Digital">
@@ -134,7 +127,6 @@
                     </script>
                     {% if user.is_authenticated %}
                         <div class="flex items-center gap-3">
-                            <!-- Actions desktop -->
                             <div class="hidden lg:flex items-center gap-3">
                                 <a href="{% url 'contracts:nouveau_contrat' %}"
                                    class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl flex items-center gap-3 transition-all duration-300 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 font-semibold ripple btn-primary-modern">
@@ -147,7 +139,6 @@
                                     </a>
                                 {% endif %}
                             </div>
-                            <!-- Menu profil -->
                             <div x-data="{ open:false }" @click.outside="open=false" class="relative">
                                 <button @click="open=!open"
                                         class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition"
@@ -189,7 +180,6 @@
                                     </form>
                                 </div>
                             </div>
-                            <!-- Bouton menu mobile -->
                             <button @click="isMenuOpen=!isMenuOpen"
                                     class="lg:hidden w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-primary-green/20 hover:scale-110 active:scale-95"
                                     :aria-expanded="isMenuOpen.toString()"
@@ -201,7 +191,6 @@
                     {% endif %}
                 </div>
             </div>
-            <!-- Messages -->
             {% if messages %}
                 <div class="px-4 md:px-6 py-2 bg-gray-800 border-t border-gray-700">
                     <div class="space-y-2">
@@ -222,7 +211,6 @@
         {% endblock %}
         <div class="flex min-h-[calc(100vh-64px)]">
             {% if user.is_authenticated %}
-                <!-- Overlay Mobile -->
                 <div x-show="isMenuOpen"
                      x-transition:enter="transition-opacity duration-300"
                      x-transition:enter-start="opacity-0"
@@ -233,20 +221,17 @@
                      @click="isMenuOpen=false"
                      class="mobile-menu-overlay lg:hidden"
                      x-cloak></div>
-                <!-- Sidebar -->
                 <aside :class="{ 'translate-x-0': isMenuOpen, '-translate-x-full': !isMenuOpen }"
                        class="mobile-sidebar sidebar-transition bg-gray-900/95 border-r border-gray-800 lg:translate-x-0 lg:relative lg:inset-auto fixed inset-y-0 left-0 z-40 overflow-y-auto"
                        x-cloak
                        id="mobile-sidebar">
                     <div class="pt-20 lg:pt-4 p-4">
-                        <!-- En-tête mobile -->
                         <div class="flex items-center justify-between mb-6 lg:hidden">
                             <span class="text-xl font-bold text-primary-green">Menu</span>
                             <button @click="isMenuOpen=false" class="text-gray-400 hover:text-white p-2">
                                 <i class="fas fa-times text-xl"></i>
                             </button>
                         </div>
-                        <!-- Actions mobiles -->
                         <div class="lg:hidden mb-6 space-y-3">
                             <a href="{% url 'contracts:nouveau_contrat' %}"
                                @click="isMenuOpen=false"
@@ -267,7 +252,6 @@
                                 </a>
                             {% endif %}
                         </div>
-                        <!-- Navigation -->
                         <ul class="space-y-1">
                             {% url 'dashboard:home' as dashboard_url %}
                             <li>
@@ -325,12 +309,10 @@
                     </div>
                 </aside>
             {% endif %}
-            <!-- Contenu principal -->
             <main class="flex-1 p-4 md:p-6 overflow-y-auto w-full">
                 {% block content %}{% endblock %}
             </main>
         </div>
-        <!-- Spinner global -->
         <div id="global-spinner"
              class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center backdrop-blur-sm">
             <div class="flex flex-col items-center gap-4 animate-pulse">
@@ -338,26 +320,27 @@
                 <p class="text-white font-bold text-lg">Veuillez patienter...</p>
             </div>
         </div>
-        <!-- Libs JS -->
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script defer
                 src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script defer src="https://unpkg.com/htmx.org@1.9.10"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
-        <!-- App JS -->
         <script defer src="{% static 'js/app.js' %}"></script>
-        <!-- Helpers côté client -->
         <script>const IS_AUTH = {% if user.is_authenticated %}true{% else %}false{% endif %};</script>
-        <!-- Service Worker -->
+
         <script>
-    if ('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js').catch(()=>{
-        navigator.serviceWorker.register("{% static 'sw.js' %}");
-      });
-    }
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register("{% url 'sw.js' %}")
+                .then(function(reg) {
+                  console.log('BWHITE SW: Enregistrement réussi, scope:', reg.scope);
+                })
+                .catch(function(err) {
+                  console.error('BWHITE SW: Échec de l\'enregistrement:', err);
+                });
+            }
         </script>
-        <!-- Indicateur hors ligne -->
+
         <script>
     (function(){
       const bar=document.getElementById('offline-indicator');
@@ -367,7 +350,6 @@
       paint();
     })();
         </script>
-        <!-- PWA Installation -->
         <script>
     (function(){
       let deferredPrompt=null;

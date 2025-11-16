@@ -521,12 +521,13 @@ def emettre_contrat(request):
                 request,
                 "contracts/partials/emission_success.html",
                 {
+                    "contrat": contrat,
                     "emis": contrat,
-                    "success_message": "Contrat {contrat.numero_police} émis avec succès !",
+                    "success_message": f"Contrat {contrat.numero_police} émis avec succès !",
                 },
             )
 
-        messages.success(request, "Contrat {contrat.numero_police} émis avec succès !")
+        messages.success(request, f"Contrat {contrat.numero_police} émis avec succès !")
         return redirect("contracts:detail_contrat", pk=contrat.pk)
 
     except Exception as e:
@@ -557,13 +558,11 @@ def check_immatriculation(request):
     if not immat:
         return HttpResponse("")
 
-    # Valider le format avec le nouveau validateur
     try:
 
         validate_immatriculation(immat)
 
     except ValidationError as e:
-        # MODIFICATION (P0) : Échapper le message d'erreur pour éviter XSS
         safe_message = escape(e.message)
         return HttpResponse(
             f'<span class="text-orange-400 text-xs"><i class="fas fa-exclamation-triangle mr-1"></i>'
@@ -583,8 +582,6 @@ def check_immatriculation(request):
         '<span class="text-green-500 text-xs"><i class="fas fa-check-circle mr-1"></i>'
         "Format valide</span>"
     )
-
-
 @login_required
 @require_http_methods(["GET"])
 def check_client(request):
@@ -592,12 +589,14 @@ def check_client(request):
     telephone = request.GET.get("client_telephone", "")
     if not telephone:
         return JsonResponse({"exists": False})
-    try:
-        client = Client.objects.get(telephone=telephone)
+
+    client = Client.objects.filter(telephone=telephone).order_by('-created_at').first()
+
+    if client:
         return render(
             request, "contracts/partials/client_exists.html", {"client": client}
         )
-    except Client.DoesNotExist:
+    else:
         return JsonResponse({"exists": False})
 @login_required
 @require_http_methods(["GET"])

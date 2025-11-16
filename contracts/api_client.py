@@ -428,7 +428,6 @@ class AskiaAPIClient:
 
         id_saisie = contrat_data.get("id_saisie")
 
-        # ✅ PREMIER APPEL factorisé
         if id_saisie and (existing := self._try_recover_contract(id_saisie)):
             return {**existing, "was_existing": True}
 
@@ -463,7 +462,6 @@ class AskiaAPIClient:
                 "srwbauto/create", params=params, timeout=90, max_retries=0
             )
         except Exception:
-            # ✅ DEUXIÈME APPEL factorisé (fallback)
             if id_saisie:
                 for _ in range(3):
                     if recovered := self._try_recover_contract(id_saisie):
@@ -689,7 +687,6 @@ class AskiaAPIClient:
         return self._request_json(
             "quittance/annulerqrcode", params={"numeroFacture": numero_facture}
         )
-
 
 # Instance réutilisable
 askia_client = AskiaAPIClient()

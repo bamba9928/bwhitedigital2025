@@ -51,6 +51,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -141,13 +143,28 @@ USE_TZ = True
 # ==============================
 # Fichiers statiques et médias
 # ==============================
+# ==========================
+# 🔒 CONFIGURATION SSL / COOKIES (ACTIVER EN PROD SEULEMENT)
+# ==========================
+# ⚠️ Active uniquement si le site est servi en HTTPS (production)
+# Décommentez ces lignes en production
+# if not DEBUG:
+#     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https)
+#     CSRF_COOKIE_SECURE = True
+#     SESSION_COOKIE_SECURE = True
+#     SECURE_CONTENT_TYPE_NOSNIFF = True
+#     SECURE_SSL_REDIRECT = True
+#     SECURE_HSTS_SECONDS = 31536000
+#     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#     SECURE_HSTS_PRELOAD = True
+
+# storage staticfiles pour Whitenoise
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
     },
 }
-
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"

@@ -103,13 +103,6 @@ class ClientForm(forms.ModelForm):
                 "Préfixe invalide. Autorisés: 70, 71, 75, 76, 77, 78, 30, 33, 34."
             )
 
-        # 4) unicité, en excluant l'instance en cours d’édition
-        qs = Client.objects.filter(telephone=tel)
-        if self.instance and self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise ValidationError("Ce numéro de téléphone est déjà utilisé.")
-
         return tel
 
     def clean_prenom(self):

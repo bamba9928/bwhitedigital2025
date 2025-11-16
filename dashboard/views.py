@@ -11,6 +11,10 @@ from django.views.generic import TemplateView
 from accounts.models import User
 from contracts.models import Contrat, Client
 from payments.models import PaiementApporteur
+from django.http import JsonResponse
+from django.templatetags.static import static
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +388,6 @@ def profile(request):
     except ImportError:
         logger.error("Impossible d'importer accounts.views.profile")
         return render(request, "accounts/profile.html")
-
 
 def offline_view(request):
     return TemplateView.as_view(template_name="offline.html")(request)

@@ -32,7 +32,6 @@ class Client(models.Model):
     telephone = models.CharField(
         validators=[SENEGAL_PHONE_VALIDATOR],
         max_length=9,
-        unique=True,
         verbose_name="Téléphone",
     )
     adresse = models.CharField(
