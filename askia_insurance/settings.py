@@ -34,6 +34,7 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv(
 # Applications
 # ==============================
 INSTALLED_APPS = [
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -334,4 +335,51 @@ FEATURES = {
 }
 BUSINESS = {
     "SERVICE_PHONE": "780103636",
+}
+# ==============================
+# Configuration JAZZMIN
+# ==============================
+JAZZMIN_SETTINGS = {
+    # Titre de la fenêtre (onglet du navigateur)
+    "site_title": "BWHITE Admin",
+
+    # Titre sur l'écran de connexion (peut être long)
+    "site_header": "BWHITE DIGITAL",
+
+    # Titre court dans la barre de navigation (logo)
+    "site_brand": "BWHITE Admin",
+
+    # Logo pour l'écran de connexion
+    "login_logo": "images/logo.png",  # Doit être dans /static/
+    "login_logo_dark": "images/logo.png",
+
+    # Logo pour la barre de navigation
+    "site_logo": "images/logo.png",
+
+    # Thème
+    "theme": "darkly",  # Un thème sombre populaire qui ira bien
+
+    # Options UI
+    "show_ui_builder": True,  # Permet de tester les thèmes en direct
+
+    "topmenu_links": [
+        # Lien vers le site principal
+        {"name": "Accueil", "url": "dashboard:home", "permissions": ["auth.view_user"]},
+        # Modèle (exemple)
+        {"model": "accounts.User"},
+    ],
+
+    "icons": {
+        "auth.User": "fas fa-users-cog",
+        "accounts.User": "fas fa-users",
+        "accounts.ApporteurOnboarding": "fas fa-id-card",
+        "contracts.Contrat": "fas fa-file-signature",
+        "contracts.Client": "fas fa-user-tie",
+        "contracts.Vehicule": "fas fa-car",
+        "payments.PaiementApporteur": "fas fa-money-check-alt",
+        "payments.HistoriquePaiement": "fas fa-history",
+    },
+
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-dot-circle",
 }

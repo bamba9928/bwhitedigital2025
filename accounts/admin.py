@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .models import User
+from .models_onboarding import ApporteurOnboarding
 
 
 @admin.register(User)
@@ -152,5 +153,56 @@ class UserAdmin(BaseUserAdmin):
                     new_fieldsets.pop(i)
                     break
             return tuple(new_fieldsets)
-
         return fieldsets
+
+
+@admin.register(ApporteurOnboarding)
+class ApporteurOnboardingAdmin(admin.ModelAdmin):
+    """
+    Administration pour les dossiers d'onboarding des apporteurs.
+    """
+    list_display = (
+        "user",
+        "status",
+        "a_lu_et_approuve",
+        "approuve_at",
+        "cni_recto",
+        "signature_image",
+    )
+    list_filter = ("status", "a_lu_et_approuve", "approuve_at")
+    search_fields = ("user__username", "user__first_name", "user__last_name")
+
+    # Rendre les champs sensibles non modifiables directement
+    readonly_fields = (
+        "approuve_at",
+        "ip_accept",
+        "ua_accept",
+        "created_at",
+        "updated_at",
+    )
+
+    # Permet une recherche facile de l'utilisateur
+    autocomplete_fields = ("user",)
+
+    fieldsets = (
+        ("Utilisateur", {"fields": ("user", "status")}),
+        (
+            "Documents & Validation",
+            {
+                "fields": (
+                    "a_lu_et_approuve",
+                    "approuve_at",
+                    "cni_recto",
+                    "cni_verso",
+                    "signature_image",
+                )
+            },
+        ),
+        (
+            "Métadonnées (Audit)",
+            {
+                "fields": ("ip_accept", "ua_accept", "created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
