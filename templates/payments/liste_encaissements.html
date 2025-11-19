@@ -9,25 +9,29 @@
                 <span>Encaissements apporteurs</span>
             </h1>
         </div>
+
         <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
             <form method="get" class="flex flex-col md:flex-row flex-wrap gap-3">
                 <select name="status"
-                        class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
+                        class="px-4 py-2 bg-gray-900 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green focus:outline-none transition-colors">
                     <option value="">Tous les statuts</option>
                     <option value="EN_ATTENTE"
                             {% if filter_status == "EN_ATTENTE" %}selected{% endif %}>En attente</option>
                     <option value="PAYE" {% if filter_status == "PAYE" %}selected{% endif %}>Payés</option>
                 </select>
+
                 <input type="text"
                        name="q"
                        value="{{ query }}"
                        placeholder="Police, réf. ou client"
-                       class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
+                       class="px-4 py-2 bg-gray-900 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green focus:outline-none transition-colors">
+
                 <input type="number"
                        name="apporteur"
                        value="{{ apporteur_id }}"
                        placeholder="ID apporteur"
-                       class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
+                       class="px-4 py-2 bg-gray-900 text-white rounded-lg border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green focus:outline-none transition-colors">
+
                 <button type="submit" class="btn btn-primary flex items-center gap-2">
                     <i class="fas fa-filter"></i><span>Filtrer</span>
                 </button>
@@ -39,6 +43,7 @@
                 {% endif %}
             </form>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
                 <p class="text-sm text-gray-400 mb-2">Total éléments</p>
@@ -59,6 +64,7 @@
                 <p class="text-2xl font-bold text-green-400">{{ total_paye|default_if_none:0|floatformat:0|intcomma }} F</p>
             </div>
         </div>
+
         <div class="bg-gray-900 rounded-xl border border-gray-800 shadow-lg overflow-x-auto">
             <div class="p-6 border-b border-gray-800">
                 <h2 class="text-xl font-semibold text-white flex items-center gap-2">

@@ -4,7 +4,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>Convention de mandat BWHITE - {{ user.get_full_name|default:user.username }}</title>
+
+    <link rel="preload" href="{% static 'images/tampon_bwhite.png' %}" as="image">
+
     <style>
         /* ==================== Toolbar ==================== */
         .toolbar {
@@ -33,7 +37,8 @@
             align-items: center;
         }
 
-        .btn {
+        /* Boutons spécifiques au PDF (pour éviter les conflits avec .btn global) */
+        .pdf-btn {
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -48,37 +53,37 @@
             transition: all 0.2s ease;
         }
 
-        .btn:hover {
+        .pdf-btn:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
-        .btn-dark {
+        .pdf-btn-dark {
             background: #1e293b;
             border: 1px solid #334155;
         }
 
-        .btn-dark:hover {
+        .pdf-btn-dark:hover {
             background: #334155;
         }
 
-        .btn-primary {
+        .pdf-btn-primary {
             background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         }
 
-        .btn-primary:hover {
+        .pdf-btn-primary:hover {
             background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
         }
 
-        .btn-secondary {
+        .pdf-btn-secondary {
             background: #475569;
         }
 
-        .btn-secondary:hover {
+        .pdf-btn-secondary:hover {
             background: #64748b;
         }
 
-        .btn-icon::before {
+        .pdf-btn-icon::before {
             font-size: 16px;
         }
 
@@ -112,7 +117,7 @@
         }
 
         /* ==================== Header ==================== */
-        .header {
+        .document .header {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: #ffffff;
             padding: 40px 50px;
@@ -120,53 +125,53 @@
             overflow: hidden;
         }
 
-        .header::before {
+        .document .header::before {
             content: '';
             position: absolute;
             top: -50%;
             right: -10%;
-            width: 400px;  /* Corrigé : mm -> px */
-            height: 400px; /* Corrigé : mm -> px */
+            width: 400px;
+            height: 400px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 50%;
         }
 
-        .header::after {
+        .document .header::after {
             content: '';
             position: absolute;
             bottom: -30%;
             left: -5%;
-            width: 300px;  /* Corrigé : mm -> px */
-            height: 300px; /* Corrigé : mm -> px */
+            width: 300px;
+            height: 300px;
             background: rgba(255, 255, 255, 0.03);
             border-radius: 50%;
         }
 
-        .header-content {
+        .document .header-content {
             position: relative;
             z-index: 1;
         }
 
-        .company-name {
+        .document .company-name {
             font-size: 26pt;
             font-weight: 700;
             letter-spacing: 3px;
             margin-bottom: 10px;
             text-transform: uppercase;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* Ombre adoucie */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
         }
 
-        .document-title {
-            font-size: 16pt; /* Corrigé : "Trop grand" (19pt -> 16pt) */
-            font-weight: 400; /* Corrigé : "Pas lisible" (300 -> 400) */
+        .document .document-title {
+            font-size: 16pt;
+            font-weight: 400;
             letter-spacing: 1.2px;
-            opacity: 1; /* Corrigé : "Pas lisible" (0.95 -> 1) */
-            border-left: 4px solid rgba(255, 255, 255, 0.7); /* Épaisseur réduite */
-            padding-left: 16px; /* Padding réduit */
+            opacity: 1;
+            border-left: 4px solid rgba(255, 255, 255, 0.7);
+            padding-left: 16px;
             margin-top: 14px;
         }
 
-        .document-meta {
+        .document .document-meta {
             margin-top: 20px;
             padding-top: 16px;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -174,21 +179,22 @@
             opacity: 1;
             display: flex;
             gap: 24px;
+            flex-wrap: wrap;
         }
 
-        .document-meta-item {
+        .document .document-meta-item {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         /* ==================== Content Area ==================== */
-        .content {
+        .document .content {
             padding: 50px;
         }
 
         /* ==================== Info Card ==================== */
-        .info-card {
+        .document .info-card {
             background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
             border-left: 5px solid #1e3c72;
             border-radius: 10px;
@@ -198,7 +204,7 @@
             position: relative;
         }
 
-        .info-card::before {
+        .document .info-card::before {
             content: '';
             position: absolute;
             top: 0;
@@ -209,7 +215,7 @@
             border-radius: 10px 10px 0 0;
         }
 
-        .info-card-header {
+        .document .info-card-header {
             font-size: 15pt;
             font-weight: 600;
             color: #1e3c72;
@@ -218,7 +224,7 @@
             align-items: center;
         }
 
-        .info-card-header::before {
+        .document .info-card-header::before {
             content: '●';
             margin-right: 12px;
             font-size: 22px;
@@ -226,7 +232,7 @@
         }
 
         /* ==================== Status Badge ==================== */
-        .status-indicator {
+        .document .status-indicator {
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -240,7 +246,7 @@
             margin-top: 12px;
         }
 
-        .status-indicator::before {
+        .document .status-indicator::before {
             content: '✓';
             display: flex;
             align-items: center;
@@ -254,7 +260,7 @@
         }
 
         /* ==================== Convention Box ==================== */
-        .convention-box {
+        .document .convention-box {
             background: #ffffff;
             border: 2px solid #e0e6ed;
             border-radius: 10px;
@@ -264,14 +270,14 @@
         }
 
         /* ==================== Signature Section ==================== */
-        .signature-section {
+        .document .signature-section {
             margin-top: 52px;
             padding-top: 36px;
             border-top: 3px solid #e0e6ed;
             page-break-inside: avoid;
         }
 
-        .signature-header {
+        .document .signature-header {
             font-size: 16pt;
             font-weight: 600;
             color: #2c3e50;
@@ -280,7 +286,7 @@
             align-items: center;
         }
 
-        .signature-header::before {
+        .document .signature-header::before {
             content: '✓';
             display: inline-flex;
             align-items: center;
@@ -296,7 +302,7 @@
             box-shadow: 0 2px 8px rgba(30, 60, 114, 0.3);
         }
 
-        .signature-grid {
+        .document .signature-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 24px;
@@ -306,11 +312,11 @@
             padding: 28px;
         }
 
-        .signature-party {
+        .document .signature-party {
             text-align: center;
         }
 
-        .signature-party-title {
+        .document .signature-party-title {
             font-size: 13pt;
             font-weight: 600;
             color: #1e3c72;
@@ -319,14 +325,14 @@
             letter-spacing: 0.5px;
         }
 
-        .signature-party-name {
+        .document .signature-party-name {
             font-weight: 600;
             font-size: 12pt;
             color: #475569;
             margin-bottom: 20px;
         }
 
-        .signature-container {
+        .document .signature-container {
             min-height: 140px;
             display: flex;
             flex-direction: column;
@@ -337,27 +343,27 @@
             padding: 20px;
         }
 
-        .signature-image {
+        .document .signature-image {
             max-height: 110px;
             max-width: 320px;
             border-radius: 6px;
             box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
         }
 
-        .signature-placeholder {
+        .document .signature-placeholder {
             color: #94a3b8;
             font-style: italic;
             font-size: 12pt;
             text-align: center;
         }
 
-        .signature-divider {
+        .document .signature-divider {
             width: 2px;
             background: linear-gradient(to bottom, transparent, #cbd5e0, transparent);
             margin: 0 12px;
         }
 
-        .signature-date {
+        .document .signature-date {
             margin-top: 20px;
             padding: 16px;
             background: #ffffff;
@@ -368,14 +374,14 @@
             text-align: center;
         }
 
-        .signature-date strong {
+        .document .signature-date strong {
             color: #1e3c72;
             display: block;
             margin-bottom: 4px;
         }
 
         /* ==================== Table Styling ==================== */
-        table {
+        .document table {
             width: 100%;
             border-collapse: collapse;
             margin: 18px 0;
@@ -384,13 +390,14 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
         }
 
-        th, td {
+        .document th,
+        .document td {
             padding: 14px 18px;
             text-align: left;
             border-bottom: 1px solid #e0e6ed;
         }
 
-        th {
+        .document th {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: #ffffff;
             font-weight: 600;
@@ -399,44 +406,47 @@
             letter-spacing: 0.8px;
         }
 
-        tr:last-child td {
+        .document tr:last-child td {
             border-bottom: none;
         }
 
-        tbody tr:hover td {
+        .document tbody tr:hover td {
             background-color: #f8f9fa;
             transition: background-color 0.2s ease;
         }
 
-        td {
+        .document td {
             background: #ffffff;
             font-size: 10.5pt;
         }
 
         /* ==================== Typography ==================== */
-        h1, h2, h3, h4 {
+        .document h1,
+        .document h2,
+        .document h3,
+        .document h4 {
             color: #1e3c72;
             font-weight: 600;
             line-height: 1.4;
         }
 
-        h2 {
+        .document h2 {
             font-size: 17pt;
             margin-bottom: 14px;
         }
 
-        h3 {
+        .document h3 {
             font-size: 14pt;
             margin-bottom: 12px;
         }
 
-        p {
+        .document p {
             margin-bottom: 12px;
             text-align: justify;
         }
 
         /* ==================== Footer ==================== */
-        .footer {
+        .document .footer {
             margin-top: 52px;
             padding: 28px 50px;
             background: linear-gradient(135deg, #f8f9fa 0%, #e2e8f0 100%);
@@ -446,26 +456,26 @@
             color: #64748b;
         }
 
-        .footer-content {
+        .document .footer-content {
             max-width: 800px;
             margin: 0 auto;
         }
 
-        .footer-logo {
+        .document .footer-logo {
             font-weight: 700;
             color: #1e3c72;
             font-size: 12pt;
             letter-spacing: 1px;
         }
 
-        .footer-divider {
+        .document .footer-divider {
             width: 80px;
             height: 3px;
             background: linear-gradient(90deg, transparent, #2a5298, transparent);
             margin: 18px auto;
         }
 
-        .footer-disclaimer {
+        .document .footer-disclaimer {
             font-size: 9pt;
             color: #94a3b8;
             margin-top: 12px;
@@ -473,7 +483,7 @@
         }
 
         /* ==================== Badge ==================== */
-        .badge {
+        .document .badge {
             display: inline-block;
             padding: 5px 14px;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
@@ -487,24 +497,24 @@
         }
 
         /* ==================== Utilities ==================== */
-        .text-muted {
+        .document .text-muted {
             color: #64748b;
         }
 
-        .text-center {
+        .document .text-center {
             text-align: center;
         }
 
-        .mb-3 {
+        .document .mb-3 {
             margin-bottom: 18px;
         }
 
-        .mt-4 {
+        .document .mt-4 {
             margin-top: 28px;
         }
 
         /* ==================== Alert Box ==================== */
-        .alert {
+        .document .alert {
             padding: 16px 20px;
             border-radius: 8px;
             margin-bottom: 24px;
@@ -513,21 +523,32 @@
             gap: 12px;
         }
 
-        .alert-info {
+        .document .alert-info {
             background: #dbeafe;
             border-left: 4px solid #3b82f6;
             color: #1e40af;
         }
 
-        .alert-success {
+        .document .alert-success {
             background: #d1fae5;
             border-left: 4px solid #10b981;
             color: #065f46;
         }
 
-        .alert-icon {
+        .document .alert-icon {
             font-size: 20px;
             flex-shrink: 0;
+        }
+
+        .document .contact-link {
+            color: #2563eb;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .document .contact-link:hover {
+            color: #1d4ed8;
+            text-decoration: underline;
         }
 
         /* ==================== Print Styles ==================== */
@@ -547,14 +568,14 @@
                 box-shadow: none;
             }
 
-            .header,
-            .footer,
-            .signature-section,
-            .convention-box {
+            .document .header,
+            .document .footer,
+            .document .signature-section,
+            .document .convention-box {
                 page-break-inside: avoid;
             }
 
-            .signature-grid {
+            .document .signature-grid {
                 border-style: solid;
             }
         }
@@ -565,38 +586,67 @@
                 padding-bottom: 40px;
             }
         }
+
+        /* ==================== Responsive ==================== */
+        @media (max-width: 768px) {
+            .document .header {
+                padding: 30px 20px;
+            }
+
+            .document .content {
+                padding: 30px 20px;
+            }
+
+            .document .signature-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .document .document-meta {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .toolbar-left,
+            .toolbar-right {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
 
-<!-- Toolbar (masquée à l'impression) -->
 <nav class="toolbar" aria-label="Actions du document">
     <div class="toolbar-left">
         <button type="button"
                 id="back-btn"
-                class="btn btn-dark"
+                class="pdf-btn pdf-btn-dark"
                 aria-label="Retour à la page précédente">
             ← Retour
         </button>
     </div>
     <div class="toolbar-right">
-        <a class="btn btn-primary"
+        <a class="pdf-btn pdf-btn-primary"
            href="{% url 'accounts:contrat_pdf' %}"
            aria-label="Télécharger le document en PDF">
             📄 Télécharger PDF
         </a>
         <button type="button"
                 id="print-btn"
-                class="btn btn-secondary"
+                class="pdf-btn pdf-btn-secondary"
                 aria-label="Imprimer le document">
             🖨 Imprimer
         </button>
     </div>
 </nav>
 
-<!-- Document principal -->
 <main class="document">
-    <!-- En-tête -->
     <header class="header">
         <div class="header-content">
             <h1 class="company-name">BWHITE</h1>
@@ -606,19 +656,17 @@
                     📅 Date : {% now "d/m/Y" %}
                 </div>
                 <div class="document-meta-item">
-                    📋 Réf : {{ onboarding.id|default:"N/A" }}
+                    📋 Réf : {% if onboarding %}{{ onboarding.id }}{% else %}N/A{% endif %}
                 </div>
                 <div class="document-meta-item">
-                    ✨ Version : {{ onboarding.version_conditions|default:"1.0" }}
+                    ✨ Version : {% if onboarding %}{{ onboarding.version_conditions|default:"1.0" }}{% else %}1.0{% endif %}
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Contenu principal -->
     <section class="content">
-        <!-- Statut du document -->
-        {% if onboarding.approuve_at %}
+        {% if onboarding and onboarding.approuve_at %}
         <div class="alert alert-success">
             <span class="alert-icon">✓</span>
             <div>
@@ -636,7 +684,6 @@
         </div>
         {% endif %}
 
-        <!-- Informations sur le document -->
         <div class="info-card">
             <h3 class="info-card-header">Informations sur le document</h3>
             <p class="text-muted" style="margin: 0; line-height: 1.8;">
@@ -645,44 +692,42 @@
                 Il définit les droits, obligations et modalités de rémunération applicables dans le cadre de cette collaboration professionnelle.
             </p>
             <div style="margin-top: 16px;">
-                <span class="badge">Version {{ onboarding.version_conditions|escape|default:"1.0" }}</span>
+                <span class="badge">Version {% if onboarding %}{{ onboarding.version_conditions|escape|default:"1.0" }}{% else %}1.0{% endif %}</span>
             </div>
         </div>
 
-        <!-- Contenu de la convention -->
         <div class="convention-box">
-            {% include "accounts/partials/conditions_apporteur_v1.html" with user=user version=onboarding.version_conditions today=onboarding.approuve_at %}
+            {% if onboarding %}
+                {% include "accounts/partials/conditions_apporteur_v1.html" with user=user version=onboarding.version_conditions today=onboarding.approuve_at %}
+            {% else %}
+                <p class="text-muted text-center">Le contenu de la convention n'est pas encore disponible.</p>
+            {% endif %}
         </div>
 
-        <!-- Section signatures -->
         <div class="signature-section">
             <h3 class="signature-header">Signatures des parties</h3>
 
             <div class="signature-grid">
-                <!-- Le mandant -->
                 <div class="signature-party">
                     <div class="signature-party-title">Le Mandant</div>
                     <div class="signature-party-name">BWHITE SÉNÉGAL</div>
                     <div class="signature-container">
                         <img src="{% static 'images/tampon_bwhite.png' %}"
                              class="signature-image"
-                             alt="Tampon officiel BWHITE"
-                             loading="lazy">
+                             alt="Tampon officiel BWHITE SÉNÉGAL">
                     </div>
                 </div>
 
-                <!-- L'agent mandataire -->
                 <div class="signature-party">
                     <div class="signature-party-title">L'Agent Mandataire</div>
                     <div class="signature-party-name">
                         {{ user.get_full_name|escape|default:user.username }}
                     </div>
                     <div class="signature-container">
-                        {% if onboarding.signature_image %}
+                        {% if onboarding and onboarding.signature_image %}
                             <img src="{{ onboarding.signature_image.url }}"
                                  class="signature-image"
-                                 alt="Signature de {{ user.get_full_name|escape|default:user.username }}"
-                                 loading="lazy">
+                                 alt="Signature de {{ user.get_full_name|escape|default:user.username }}">
                         {% else %}
                             <p class="signature-placeholder">
                                 ✍ Signature non fournie ou en attente de validation
@@ -692,16 +737,14 @@
                 </div>
             </div>
 
-            <!-- Date de signature -->
-            {% if onboarding.approuve_at %}
+            {% if onboarding and onboarding.approuve_at %}
             <div class="signature-date">
-                <strong>Signé électroniquement</strong>
-                Le {{ onboarding.approuve_at|date:"d F Y à H:i" }} par {{ user.get_full_name|escape|default:user.username }}.
+                <strong>Date de signature</strong>
+                Fait le {{ onboarding.approuve_at|date:"d/m/Y" }} à Dakar
             </div>
             {% endif %}
         </div>
 
-        <!-- Coordonnées de l'agent -->
         {% if user.email or user.phone %}
         <div class="info-card mt-4">
             <h3 class="info-card-header">Coordonnées de l'agent</h3>
@@ -722,13 +765,25 @@
                     {% if user.email %}
                     <tr>
                         <td style="font-weight: 600;">📧 Email</td>
-                        <td><a href="mailto:{{ user.email }}" style="color: #2563eb; text-decoration: none;">{{ user.email|escape }}</a></td>
+                        <td>
+                            <a href="mailto:{{ user.email }}"
+                               class="contact-link"
+                               aria-label="Envoyer un email à {{ user.email }}">
+                                {{ user.email|escape }}
+                            </a>
+                        </td>
                     </tr>
                     {% endif %}
                     {% if user.phone %}
                     <tr>
                         <td style="font-weight: 600;">📱 Téléphone</td>
-                        <td><a href="tel:{{ user.phone }}" style="color: #2563eb; text-decoration: none;">{{ user.phone|escape }}</a></td>
+                        <td>
+                            <a href="tel:{{ user.phone }}"
+                               class="contact-link"
+                               aria-label="Appeler {{ user.phone }}">
+                                {{ user.phone|escape }}
+                            </a>
+                        </td>
                     </tr>
                     {% endif %}
                 </tbody>
@@ -737,7 +792,6 @@
         {% endif %}
     </section>
 
-    <!-- Pied de page -->
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-logo">BWHITE DIGITAL</div>
@@ -753,7 +807,6 @@
     </footer>
 </main>
 
-<!-- Scripts -->
 <script>
     (function () {
         'use strict';
@@ -780,11 +833,24 @@
 
         // Message de confirmation avant impression
         window.addEventListener('beforeprint', function() {
-            console.log('Impression du document en cours...');
+            console.log('✓ Préparation de l\'impression du document...');
         });
 
         window.addEventListener('afterprint', function() {
-            console.log('Impression terminée ou annulée.');
+            console.log('✓ Impression terminée ou annulée.');
+        });
+
+        // Gestion des erreurs de chargement d'images
+        const images = document.querySelectorAll('.signature-image');
+        images.forEach(function(img) {
+            img.addEventListener('error', function() {
+                console.error('Erreur de chargement de l\'image:', this.src);
+                this.style.display = 'none';
+                const placeholder = document.createElement('p');
+                placeholder.className = 'signature-placeholder';
+                placeholder.textContent = '⚠ Image non disponible';
+                this.parentElement.appendChild(placeholder);
+            });
         });
     })();
 </script>

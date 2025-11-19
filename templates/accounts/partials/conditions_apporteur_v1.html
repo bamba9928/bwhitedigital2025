@@ -1,216 +1,206 @@
-<h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 8px;">CONVENTION DE MANDAT</h3>
-<p style="font-size: 0.875rem; color: #374151;">
-    Entre les soussignés, en date du {{ today|date:"d/m/Y" }} —
-    Mandant : <strong>BWHITE SÉNÉGAL</strong>, siège social : Annexe Dakar,
-    KM14 Rte de Rufisque, près du TER à Keur Mbaye Fall — Dakar (Sénégal),
-    <br>
-    RCCM Dakar n° <strong>SN.DKR.2019.M.32102</strong> — Contacts : 33 894 87 23 / 77 967 62 04 —
-    Représentée par le Directeur Général <strong>Maguette Gueye</strong>
-    (ci-après « le Mandant »).
-    <br>
-    Et l’agent mandataire : <strong>{{ user.get_full_name }}</strong>
-    (ci-après « l’Agent mandataire »).
-</p>
+{% load humanize %}
+<div class="space-y-6 text-gray-800 leading-relaxed text-justify text-sm">
 
-<hr style="margin: 12px 0; border: 0; border-top: 1px solid #e0e6ed;">
+    <div class="text-center mb-6">
+        <h3 class="text-lg font-bold text-gray-900 uppercase border-b-2 border-gray-200 pb-2 inline-block">CONVENTION DE MANDAT</h3>
+    </div>
 
-<ol style="margin-left: 20px; list-style-type: decimal; padding-left: 20px; font-size: 0.875rem; line-height: 1.6;">
+    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+        <p class="mb-2 font-bold">ENTRE LES SOUSSIGNÉS :</p>
 
-    <li style="margin-bottom: 12px;">
-        <strong>Article 1 : Objet</strong> [cite: 13]
-        <p style="margin-top: 4px;">Le présent mandat a pour objet de confier à l’Agent Mandataire, les missions suivantes :</p> [cite: 14]
-        <ul style="margin-left: 20px; list-style-type: disc; padding-left: 20px;">
-            <li>Présenter aux clients ou prospects les contrats d’assurance ci-après désignés « les produits ».les produits que l’agent Mandataires peut présenter sont indiqués en annexe .Les changements, les modifications ou nouveaux produits qu’il pourra présenter seront portés à la connaissance de l’agent Mandataire par voie circulaire .Il est précisé que dès la première souscription faite après une modification des offres, cette modification est réputée être acceptée par l’agent Mandataire ;</li> [cite: 15, 16]
-            <li>Mettre en relation des clients ou prospects avec le Mandant par tous moyens, notamment en prenant l’initiative de rendez-vous auxquels il pourra assister ;</li> [cite: 17]
-        </ul>
-        <p style="margin-top: 4px;">Le Mandat s’exerce conformément aux stipulations contractuelles exposées ci-après.</p> [cite: 18]
-        <p style="margin-top: 4px;">Le Mandataire s’engage à :</p> [cite: 19]
-        <ul style="margin-left: 20px; list-style-type: disc; padding-left: 20px;">
-            <li>Prendre connaissance de la réglementation relative aux procédures de lutte contre le blanchiment des capitaux et le financement du terrorisme et s’engage à s’y conformer, en respectant, par ailleurs les stipulations de l’article 10 de la présente convention ;</li> [cite: 20]
-            <li>Respecter toutes les procédures particulières imposées par la compagnie d’assurance ;</li> [cite: 21]
-            <li>Accepter toute inspection sur place diligentée par l’entreprise d’assurance.</li> [cite: 22]
-        </ul>
-    </li>
+        <div class="mb-4">
+            <p class="font-semibold underline mb-1">D’UNE PART,</p>
+            <p>En tant que mandant : <strong>BWHITE SÉNÉGAL</strong></p>
+            <p>Siège Social ANNEXE : DAKAR KM14 Rte de Rufisque, près du TER à hauteur de Keur Mbaye Fall / Dakar-Sénégal</p>
+            <p>Immatriculée au RCCM de Dakar sous le N° <strong>SN.DKR.2019.M.32102</strong></p>
+            <p>Contact : 33 894 87 23 // 77 967 62 04</p>
+            <p>Représentée par Monsieur le Directeur Général <strong>Maguette GUEYE</strong></p>
+            <p class="text-gray-600 italic">(Ci-après dénommé « Le Mandant »)</p>
+        </div>
 
-    <li style="margin-bottom: 12px;">
-        <strong>Article 2 : Durée</strong> [cite: 23]
-        <p style="margin-top: 4px;">Le présent mandat prend effet à compter de la date de sa signature pour une durée indéterminée , sauf résiliation</p> [cite: 24]
-    </li>
+        <div>
+            <p class="font-semibold underline mb-1">ET D’AUTRE PART,</p>
+            <p>L’Agent Mandataire : <strong>{{ user.get_full_name|default:user.username|upper }}</strong></p>
+            <p>Téléphone : {{ user.phone }}</p>
+            <p class="text-gray-600 italic">(Ci-après dénommé « L’Agent Mandataire »)</p>
+        </div>
+    </div>
 
-    <li style="margin-bottom: 12px;">
-        <strong>Article 3 : Modalités d’exercice</strong> [cite: 25]
-        <p style="margin-top: 4px;">L’Agent Mandataire : est libre selon l’organisation qu’il détermine et sous sa seule responsabilité dans l’exercice de son mandat.</p> [cite: 26]
-        <p style="margin-top: 4px;">Il exerce son activité d’agent Mandataire sans aucune exclusivité territoriale.</p> [cite: 27]
-    </li>
+    <p class="font-bold text-center my-4 uppercase">IL EST CONVENU ET ARRÊTÉ CE QUI SUIT :</p>
 
-    <li style="margin-bottom: 12px;">
-        <strong>Article 4 : Obligations de l’Agent Mandataire</strong> [cite: 28]
-        <p style="margin-top: 4px;">L’Agent Mandataire s’engage à :</p> [cite: 29]
-        <ul style="margin-left: 20px; list-style-type: disc; padding-left: 20px;">
-            <li>Respecter tous lois et règlements existants ou à venir applicables à l’exercice de l’activité ainsi que les prescriptions techniques particulières relatives aux opérations d’assurance du Mandant ;</li> [cite: 30]
-            <li>Toute affaire réalisée en violation des règles professionnelles et/ou des conditions de souscriptions posées par le Mandant sera annulée et la totalité des commissions versées à l’agent mandataire sera reprise.</li> [cite: 32]
-            <li>Transmettre au Mandant tout contrat demandé en cas de besoin dans les délais impartis.</li> [cite: 33]
-            <li>Maintenir la confidentialité des informations relatives aux clients et aux activités du Mandant.</li> [cite: 34]
-            <li>L’agent ne peut encaisser un montant égal ou supérieur à un million de franc et est tenu d’encaisser les primes TTC d’assurances au comptant, avant chaque souscription.</li> [cite: 35]
-            <li>Transmettre les informations de la carte a grise relatif au client pendant la souscription en s’assurant de leurs exactitudes.</li> [cite: 36]
-            <li>A chaque souscription, le reversement du Montant à payer doit être effectué juste après avoir libérer le client avec les moyens de paiement proposés.</li> [cite: 37]
-            <li>En cas de non-respect des délais de reversement qui ne peuvent dépasser 3heures de temps pendant la journée, le Mandant se réserve le droit de bloquer le compte de l’Agent Mandataire définitivement ou jusqu’à régularisation.</li> [cite: 38]
-            <li>Au-delà de 00H : le reversement doit se faire au plus tard le lendemain avant 12H</li> [cite: 39]
-            <li>Tout contrat émis sans reversement des fonds au bout de 48H sera annulés et toutes les responsabilités reviendront à l’agent mandataire (le mandant se donne le droit d’appeler le client pour lui faire savoir que son contrat d’assurance n’est plus valable pour faute de reversement)</li> [cite: 40]
-            <li>Un contrat émis au delà de 48H ne pourrait faire l’objet d’annulation</li> [cite: 41]
-            <li>La catégorie TPC ne peut etre considerer comme particulier</li> [cite: 42]
-            <li>La date d’une souscription ne peut jamais être reculée.</li> [cite: 43]
-        </ul>
-    </li>
+    <div class="space-y-4">
 
-    <li style="margin-bottom: 12px;">
-        <strong>Obligations du Mandant</strong> [cite: 44]
-        <p style="margin-top: 4px;">Le Mandant s’engage à :</p> [cite: 45]
-        <ul style="margin-left: 20px; list-style-type: disc; padding-left: 20px;">
-            <li>Fournir à l’Agent Mandataire des supports techniques et commerciaux.</li> [cite: 46]
-            <li>Assurer le versement des commissions conformément aux modalités prévues en annexe</li> [cite: 47]
-            <li>Réaliser un suivi et un accompagnement dans l’exercice des missions du Mandataire.</li> [cite: 48]
-        </ul>
-    </li>
+        <section>
+            <h4 class="font-bold text-gray-900 uppercase mb-1">Article 1 : Objet</h4>
+            <p>Le présent mandat a pour objet de confier à l’Agent Mandataire, les missions suivantes :</p>
+            <ul class="list-disc pl-5 mt-2 space-y-1">
+                <li>Présenter aux clients ou prospects les contrats d’assurance ci-après désignés « les produits ». Les produits que l’agent Mandataire peut présenter sont indiqués en annexe. Les changements, les modifications ou nouveaux produits qu’il pourra présenter seront portés à la connaissance de l’agent Mandataire par voie circulaire. Il est précisé que dès la première souscription faite après une modification des offres, cette modification est réputée être acceptée par l’agent Mandataire ;</li>
+                <li>Mettre en relation des clients ou prospects avec le Mandant par tous moyens, notamment en prenant l’initiative de rendez-vous auxquels il pourra assister ;</li>
+            </ul>
+            <p class="mt-2">Le Mandat s’exerce conformément aux stipulations contractuelles exposées ci-après.</p>
+            <p>Le Mandataire s’engage à :</p>
+            <ul class="list-disc pl-5 mt-2 space-y-1">
+                <li>Prendre connaissance de la réglementation relative aux procédures de lutte contre le blanchiment des capitaux et le financement du terrorisme et s’engage à s’y conformer, en respectant, par ailleurs les stipulations de l’article 10 de la présente convention ;</li>
+                <li>Respecter toutes les procédures particulières imposées par la compagnie d’assurance ;</li>
+                <li>Accepter toute inspection sur place diligentée par l’entreprise d’assurance.</li>
+            </ul>
+        </section>
 
-    <li style="margin-bottom: 12px;">
-        <strong>Article 6 : Rémunération</strong> [cite: 49]
-        <p style="margin-top: 4px;">L’Agent Mandataire perçoit des commissions calculées sur la base des primes nette encaissées. Ces commissions sont :</p> [cite: 50]
-        <ul style="margin-left: 20px; list-style-type: disc; padding-left: 20px;">
-            <li>Payées instantanément à chaque souscription selon le pourcentage défini en annexe en bas</li> [cite: 51]
-            <li>Acquises aussi longtemps que les contrats restent dans le portefeuille du Mandant.</li> [cite: 52]
-        </ul>
-        <p style="margin-top: 4px;">Les frais de transactions sont supportés par le mandataire</p> [cite: 53]
-        <p style="margin-top: 4px;">En cas d’annulation après un paiement, si le contrat n’est pas repris les fonds encaisses doivent être aussitôt reversés.</p> [cite: 54]
-    </li>
+        <section>
+            <h4 class="font-bold text-gray-900 uppercase mb-1">Article 2 : Durée</h4>
+            <p>Le présent mandat prend effet à compter de la date de sa signature pour une durée indéterminée, sauf résiliation.</p>
+        </section>
 
-    <li style="margin-bottom: 12px;">
-        <strong>Article 8 : Résiliation</strong> [cite: 55]
-        <p style="margin-top: 4px;">Le mandat peut être résilié à tout moment par l’une des parties, notifié par écrit.</p> [cite: 56]
-    </li>
+        <section>
+            <h4 class="font-bold text-gray-900 uppercase mb-1">Article 3 : Modalités d’exercice</h4>
+            <p>L’Agent Mandataire est libre selon l’organisation qu’il détermine et sous sa seule responsabilité dans l’exercice de son mandat.</p>
+            <p>Il exerce son activité d’agent Mandataire sans aucune exclusivité territoriale.</p>
+        </section>
 
-    <li style="margin-bottom: 12px;">
-        <strong>Article 9 : Litiges</strong> [cite: 57]
-        <p style="margin-top: 4px;">Tout différend relatif à l’exécution ou à l’interprétation de la présente convention sera réglé à l’amiable ou soumis aux tribunaux compétents de Dakar..</p> [cite: 58]
-    </li>
+        <section>
+            <h4 class="font-bold text-gray-900 uppercase mb-1">Article 4 : Obligations de l’Agent Mandataire</h4>
+            <p>L’Agent Mandataire s’engage à :</p>
+            <ul class="list-disc pl-5 mt-2 space-y-2">
+                <li>Respecter tous lois et règlements existants ou à venir applicables à l’exercice de l’activité ainsi que les prescriptions techniques particulières relatives aux opérations d’assurance du Mandant ;</li>
+                <li>Toute affaire réalisée en violation des règles professionnelles et/ou des conditions de souscriptions posées par le Mandant sera annulée et la totalité des commissions versées à l’agent mandataire sera reprise.</li>
+                <li>Transmettre au Mandant tout contrat demandé en cas de besoin dans les délais impartis.</li>
+                <li>Maintenir la confidentialité des informations relatives aux clients et aux activités du Mandant.</li>
+                <li class="text-red-700 font-medium bg-red-50 p-1 rounded">L’agent ne peut encaisser un montant égal ou supérieur à un million de francs et est tenu d’encaisser les primes TTC d’assurances au comptant, avant chaque souscription.</li>
+                <li>Transmettre les informations de la carte grise relatif au client pendant la souscription en s’assurant de leurs exactitudes.</li>
+                <li class="font-medium">A chaque souscription, le reversement du Montant à payer doit être effectué juste après avoir libéré le client avec les moyens de paiement proposés.</li>
+                <li>En cas de non-respect des délais de reversement qui ne peuvent dépasser 3 heures de temps pendant la journée, le Mandant se réserve le droit de bloquer le compte de l’Agent Mandataire définitivement ou jusqu’à régularisation.</li>
+                <li class="text-red-700 font-medium bg-red-50 p-1 rounded">Au-delà de 00H : le reversement doit se faire au plus tard le lendemain avant 12H.</li>
+                <li class="text-red-700 font-medium bg-red-50 p-1 rounded">Tout contrat émis sans reversement des fonds au bout de 48H sera annulé et toutes les responsabilités reviendront à l’agent mandataire (le mandant se donne le droit d’appeler le client pour lui faire savoir que son contrat d’assurance n’est plus valable pour faute de reversement).</li>
+                <li>Un contrat émis au-delà de 48H ne pourrait faire l’objet d’annulation.</li>
+                <li>La catégorie TPC ne peut être considérée comme particulier.</li>
+                <li>La date d’une souscription ne peut jamais être reculée.</li>
+            </ul>
+        </section>
 
-    </ol>
+        <section>
+            <h4 class="font-bold text-gray-900 uppercase mb-1">Article 5 : Obligations du Mandant</h4>
+            <p>Le Mandant s’engage à :</p>
+            <ul class="list-disc pl-5 mt-2 space-y-1">
+                <li>Fournir à l’Agent Mandataire des supports techniques et commerciaux.</li>
+                <li>Assurer le versement des commissions conformément aux modalités prévues en annexe.</li>
+                <li>Réaliser un suivi et un accompagnement dans l’exercice des missions du Mandataire.</li>
+            </ul>
+        </section>
 
-<hr style="margin: 16px 0; border: 0; border-top: 1px solid #e0e6ed;">
+        <section>
+            <h4 class="font-bold text-gray-900 uppercase mb-1">Article 6 : Rémunération</h4>
+            <p>L’Agent Mandataire perçoit des commissions calculées sur la base des primes nettes encaissées. Ces commissions sont :</p>
+            <ul class="list-disc pl-5 mt-2 space-y-1">
+                <li>Payées instantanément à chaque souscription selon le pourcentage défini en annexe en bas.</li>
+                <li>Acquises aussi longtemps que les contrats restent dans le portefeuille du Mandant.</li>
+                <li>Les frais de transactions sont supportés par le mandataire.</li>
+                <li>En cas d’annulation après un paiement, si le contrat n’est pas repris les fonds encaissés doivent être aussitôt reversés.</li>
+            </ul>
+        </section>
 
-<h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px;">ANNEXE — Produits et taux de commission</h4>
+        <section>
+            <h4 class="font-bold text-gray-900 uppercase mb-1">Article 8 : Résiliation</h4>
+            <p>Le mandat peut être résilié à tout moment par l’une des parties, notifié par écrit.</p>
+        </section>
 
-<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
-    <thead style="background-color: #f3f4f6; text-align: left;">
-        <tr>
-            <th style="padding: 8px 12px; border: 1px solid #e5e7eb;">Risque / Produit</th>
-            <th style="padding: 8px 12px; border: 1px solid #e5e7eb;">Taux / Conditions</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Automobile — Freemium</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">10% + 1 500 FCFA (1 à 10 contrats/jour)</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Automobile — Platine</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">18% + 2 000 FCFA (&gt; 10 contrats/jour)</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Flotte</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">12%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Incendie et Pertes d’Exploitation</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">12%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Globale Dommages</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">12%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Multirisque Professionnelle</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">12%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Multirisque Immeuble</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">12%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Multirisque Habitation</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">12%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Tous Risques Informatique</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">12%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Responsabilité Civile</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">10,8%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Bris de Machines</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">7,5%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Tous Risques Chantier</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">7,5%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Décennale</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">7,5%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Toutes Facultés</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">9,6%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Individuelle Accidents / Personnes Transportées</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">10,8%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Dégâts des Eaux / Vol / Bris de Glaces</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">10,8%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Vol Coffre / Sur la Personne</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">10,8%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Corps de Plaisance</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">10,5%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Corps de Pêche</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">9%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Corps de Commerce</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">10,5%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Matériel Portuaire</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">9%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Maladie Individuelle et Famille</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">7,2%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Maladie Groupe</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">9%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Assistance</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">4,8%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Caution de Soumission</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">6%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">Autres Cautions</td>
-            <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">3%</td>
-        </tr>
-    </tbody>
-</table>
+        <section>
+            <h4 class="font-bold text-gray-900 uppercase mb-1">Article 9 : Litiges</h4>
+            <p>Tout différend relatif à l’exécution ou à l’interprétation de la présente convention sera réglé à l’amiable ou soumis aux tribunaux compétents de Dakar.</p>
+        </section>
+
+    </div>
+
+    <div class="mt-8 break-inside-avoid">
+        <h4 class="font-bold text-gray-900 uppercase border-b border-gray-300 pb-2 mb-4 text-center">ANNEXE : GRILLE TARIFAIRE</h4>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs border-collapse border border-gray-300">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="border border-gray-300 px-3 py-2 text-left w-2/3">RISQUE</th>
+                        <th class="border border-gray-300 px-3 py-2 text-center w-1/3">TAUX</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">FLOTTE</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">12%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">
+                            AUTOMOBILE (Freemium)<br>
+                            <span class="text-gray-500 text-[10px]">1 à 10 contrats/jour</span>
+                        </td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">10% + 1 500 F</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">
+                            AUTOMOBILE (Platine)<br>
+                            <span class="text-gray-500 text-[10px]">Plus de 10 contrats/jour</span>
+                        </td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">18% + 2 000 F</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">INCENDIE ET P.E / GLOBALE DOMMAGES</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">12%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">MULTIRISQUE (Pro, Immeuble, Habitation)</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">12%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">TOUS RISQUES INFORMATIQUE</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">12%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">RESPONSABILITE CIVILE</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">10,8%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">BRIS DE MACHINES / CHANTIER / DECENNALE</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">7,50%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">TOUTES FACULTES</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">9,6%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">IND ACCIDENTS / PERSONNES TRANSPORTEES</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">10,8%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">DEGATS DES EAUX / VOL / BRIS DE GLACES</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">10,8%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">VOL COFFRE / SUR LA PERSONNE</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">10,8%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">CORPS DE PLAISANCE / COMMERCE</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">10,5%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">CORPS DE PÊCHE / MATERIEL PORTUAIRE</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">9%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">MALADIE (Individuelle / Groupe)</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">7,2% / 9%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">ASSISTANCE</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">4,8%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">CAUTION DE SOUMISSION</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">6%</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2">AUTRES CAUTIONS</td>
+                        <td class="border border-gray-300 px-3 py-2 text-center font-bold">3%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

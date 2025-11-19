@@ -7,7 +7,6 @@ from .models_onboarding import ApporteurOnboarding
 from .forms_onboarding import OnboardingForm
 import base64
 from django.core.files.base import ContentFile
-from django.utils import timezone
 from django.contrib import messages
 import logging
 logger = logging.getLogger(__name__)

@@ -1,72 +1,121 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize widget_tweaks %}
+
 {% block title %}Déclarer mon paiement{% endblock %}
+
 {% block content %}
+    <style>
+        /* Force le background sombre et le texte clair même sur les navigateurs récalcitrants */
+        .form-dark-theme select,
+        .form-dark-theme input,
+        .form-dark-theme textarea {
+            background-color: #1f2937 !important; /* bg-gray-800 */
+            border-color: #374151 !important; /* border-gray-700 */
+            color: #e5e7eb !important; /* text-gray-200 */
+        }
+
+        /* Style des options de la liste déroulante */
+        .form-dark-theme select option {
+            background-color: #1f2937;
+            color: #fff;
+        }
+
+        /* Focus */
+        .form-dark-theme select:focus,
+        .form-dark-theme input:focus,
+        .form-dark-theme textarea:focus {
+            border-color: #16a34a !important; /* green-600 */
+            box-shadow: 0 0 0 1px #16a34a !important;
+            outline: none;
+        }
+
+        /* Placeholder */
+        .form-dark-theme ::placeholder {
+            color: #9ca3af; /* gray-400 */
+        }
+    </style>
+
     <div class="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <h1 class="text-2xl font-bold text-white flex items-center gap-3">
             <i class="fas fa-paper-plane text-primary-green"></i>
             Déclarer mon paiement
         </h1>
-        <!-- Contrat -->
-        <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-            <div class="grid sm:grid-cols-2 gap-4 text-sm">
+
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 shadow-lg">
+            <div class="grid sm:grid-cols-2 gap-5 text-sm">
                 <div>
-                    <p class="text-gray-400">Police</p>
-                    <p class="text-white font-semibold">{{ contrat.numero_police|default:"-" }}</p>
+                    <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Police</p>
+                    <p class="text-white font-semibold text-lg">{{ contrat.numero_police|default:"-" }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-400">Client</p>
-                    <p class="text-white font-semibold">{{ contrat.client.nom_complet }}</p>
+                    <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Client</p>
+                    <p class="text-white font-semibold text-lg">{{ contrat.client.nom_complet }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-400">Prime TTC</p>
-                    <p class="text-green-400 font-semibold">{{ contrat.prime_ttc|floatformat:0|intcomma }} F</p>
+                    <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Prime TTC</p>
+                    <p class="text-green-400 font-bold text-lg">{{ contrat.prime_ttc|floatformat:0|intcomma }} F</p>
                 </div>
                 <div>
-                    <p class="text-gray-400">Net à reverser</p>
-                    <p class="text-blue-400 font-semibold">{{ paiement.montant_a_payer|floatformat:0|intcomma }} F</p>
+                    <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Net à reverser</p>
+                    <p class="text-blue-400 font-bold text-lg">{{ paiement.montant_a_payer|floatformat:0|intcomma }} F</p>
                 </div>
             </div>
         </div>
-        <!-- Formulaire -->
+
         <form method="post"
-              class="bg-gray-900 rounded-xl border border-gray-800 p-5 space-y-4">
+              class="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-5 shadow-lg form-dark-theme">
             {% csrf_token %}
-            {% if form.non_field_errors %}<div class="text-red-400 text-sm">{{ form.non_field_errors }}</div>{% endif %}
-            <div class="grid md:grid-cols-2 gap-4">
+
+            {% if form.non_field_errors %}
+                <div class="p-3 rounded-lg bg-red-900/30 border border-red-800 text-red-300 text-sm flex items-start gap-2">
+                    <i class="fas fa-exclamation-circle mt-0.5"></i>
+                    <div>{{ form.non_field_errors }}</div>
+                </div>
+            {% endif %}
+
+            <div class="grid md:grid-cols-2 gap-5">
                 <div>
-                    <label class="block text-sm text-gray-300 mb-1">Méthode de paiement</label>
-                    {{ form.methode_paiement }}
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Méthode de paiement</label>
+                    {{ form.methode_paiement|add_class:"w-full px-4 py-2.5 rounded-lg border text-sm transition-colors" }}
                     {% if form.methode_paiement.errors %}
-                        <p class="text-red-400 text-xs mt-1">{{ form.methode_paiement.errors.0 }}</p>
+                        <p class="text-red-400 text-xs mt-1 pl-1">{{ form.methode_paiement.errors.0 }}</p>
                     {% endif %}
                 </div>
+
                 <div>
-                    <label class="block text-sm text-gray-300 mb-1">Référence transaction</label>
-                    {{ form.reference_transaction }}
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Référence transaction</label>
+                    {{ form.reference_transaction|add_class:"w-full px-4 py-2.5 rounded-lg border text-sm transition-colors"|attr:"placeholder:ID de la transaction / Chèque / Virement" }}
                     {% if form.reference_transaction.errors %}
-                        <p class="text-red-400 text-xs mt-1">{{ form.reference_transaction.errors.0 }}</p>
+                        <p class="text-red-400 text-xs mt-1 pl-1">{{ form.reference_transaction.errors.0 }}</p>
                     {% endif %}
                 </div>
+
                 <div>
-                    <label class="block text-sm text-gray-300 mb-1">N° compte / Wallet</label>
-                    {{ form.numero_compte }}
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">N° compte / Wallet</label>
+                    {{ form.numero_compte|add_class:"w-full px-4 py-2.5 rounded-lg border text-sm transition-colors"|attr:"placeholder:Ex: 77 123 45 67" }}
                     {% if form.numero_compte.errors %}
-                        <p class="text-red-400 text-xs mt-1">{{ form.numero_compte.errors.0 }}</p>
+                        <p class="text-red-400 text-xs mt-1 pl-1">{{ form.numero_compte.errors.0 }}</p>
                     {% endif %}
                 </div>
+
                 <div class="md:col-span-2">
-                    <label class="block text-sm text-gray-300 mb-1">Notes</label>
-                    {{ form.notes }}
-                    {% if form.notes.errors %}<p class="text-red-400 text-xs mt-1">{{ form.notes.errors.0 }}</p>{% endif %}
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Notes / Commentaires</label>
+                    {{ form.notes|add_class:"w-full px-4 py-2.5 rounded-lg border text-sm transition-colors"|attr:"rows:3"|attr:"placeholder:Détails supplémentaires si nécessaire..." }}
+                    {% if form.notes.errors %}
+                        <p class="text-red-400 text-xs mt-1 pl-1">{{ form.notes.errors.0 }}</p>
+                    {% endif %}
                 </div>
             </div>
-            <div class="flex items-center justify-end gap-3 pt-2">
+
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-800">
                 <a href="{% url 'payments:mes_paiements' %}"
-                   class="px-4 py-2 rounded-lg border border-gray-700 text-gray-200 hover:bg-gray-800">Annuler</a>
+                   class="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium">
+                    Annuler
+                </a>
                 <button type="submit"
-                        class="px-5 py-2 rounded-lg bg-primary-green/90 text-black font-semibold hover:bg-primary-green">
-                    Soumettre la déclaration
+                        class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold hover:bg-green-500 shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
+                    <span>Soumettre la déclaration</span>
+                    <i class="fas fa-paper-plane text-sm"></i>
                 </button>
             </div>
         </form>
