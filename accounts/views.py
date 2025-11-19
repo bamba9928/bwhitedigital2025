@@ -66,6 +66,8 @@ def profile(request):
             "user": request.user,
         },
     )
+
+
 @login_required
 @require_POST
 def quick_edit_profile(request):
@@ -77,6 +79,8 @@ def quick_edit_profile(request):
             {"success": True, "message": "Profil mis à jour avec succès!"}
         )
     return JsonResponse({"success": False, "errors": form.errors})
+
+
 @login_required
 def change_password(request):
     """Changement de mot de passe simple"""
@@ -95,12 +99,14 @@ def change_password(request):
         "accounts/change_password.html",
         {"title": "Changer le mot de passe", "password_form": password_form},
     )
+
+
 # ==========================================
 # GESTION APPORTEURS (Admin uniquement)
 # ==========================================
 @staff_member_required
 def liste_apporteurs(request):
-    """Liste + filtres apporteurs"""
+    """Liste + filtres apporteurs (Stats corrigées : uniquement contrats avec docs)"""
     search = request.GET.get("search", "")
     grade = request.GET.get("grade", "")
     status = request.GET.get("status", "")
@@ -121,15 +127,24 @@ def liste_apporteurs(request):
     elif status == "inactif":
         apporteurs = apporteurs.filter(is_active=False)
 
+    # On reproduit la logique de emis_avec_doc() via des Q objects pour l'annotation
+    q_valid_status = Q(contrats_apportes__status__in=["EMIS", "ACTIF", "EXPIRE"])
+    q_has_docs = (
+            (Q(contrats_apportes__link_attestation__isnull=False) & ~Q(contrats_apportes__link_attestation="")) |
+            (Q(contrats_apportes__link_carte_brune__isnull=False) & ~Q(contrats_apportes__link_carte_brune=""))
+    )
+    # Le filtre final pour les aggregations
+    filter_valid_contracts = q_valid_status & q_has_docs
+
     apporteurs = apporteurs.annotate(
         nb_contrats=Count(
             "contrats_apportes",
-            filter=Q(contrats_apportes__status__in=["EMIS", "ACTIF", "EXPIRE"]),
+            filter=filter_valid_contracts,
             distinct=True,
         ),
         total_commissions=Sum(
             "contrats_apportes__commission_apporteur",
-            filter=Q(contrats_apportes__status__in=["EMIS", "ACTIF", "EXPIRE"]),
+            filter=filter_valid_contracts,
         ),
         montant_attente=Sum(
             "contrats_apportes__encaissement__montant_a_payer",
@@ -167,6 +182,8 @@ def liste_apporteurs(request):
             "total_count": paginator.count,
         },
     )
+
+
 @staff_member_required
 def nouveau_apporteur(request):
     """Création d'un apporteur ou commercial (par staff)."""
@@ -187,6 +204,8 @@ def nouveau_apporteur(request):
         "accounts/nouveau_apporteur.html",
         {"title": "Nouvel utilisateur", "form": form},
     )
+
+
 @staff_member_required
 def detail_apporteur(request, pk):
     """Vue détaillée d'un apporteur"""
@@ -211,10 +230,10 @@ def detail_apporteur(request, pk):
                 )
         elif action == "valider_onboarding" and onboarding:
             if (
-                onboarding.a_lu_et_approuve
-                and onboarding.cni_recto
-                and onboarding.cni_verso
-                and onboarding.signature_image
+                    onboarding.a_lu_et_approuve
+                    and onboarding.cni_recto
+                    and onboarding.cni_verso
+                    and onboarding.signature_image
             ):
                 onboarding.status = "VALIDE"
                 onboarding.save()
@@ -230,9 +249,14 @@ def detail_apporteur(request, pk):
         return redirect("accounts:detail_apporteur", pk=pk)
 
     stats = _get_apporteur_detailed_stats(apporteur)
-    derniers_contrats = apporteur.contrats_apportes.select_related(
-        "client", "vehicule"
-    ).order_by("-created_at")[:10]
+    # Liste des derniers contrats : filtrés aussi pour n'afficher que ceux avec docs
+    derniers_contrats = (
+        Contrat.objects.emis_avec_doc()
+        .filter(apporteur=apporteur)
+        .select_related("client", "vehicule")
+        .order_by("-created_at")[:10]
+    )
+
     paiements_attente = (
         PaiementApporteur.objects.filter(
             contrat__apporteur=apporteur, status="EN_ATTENTE"
@@ -253,6 +277,8 @@ def detail_apporteur(request, pk):
             "onboarding": onboarding,
         },
     )
+
+
 @login_required
 def apporteur_detail(request):
     """Espace contrat/conditions de l'apporteur: lecture, acceptation, upload CNI, signature"""
@@ -536,7 +562,7 @@ def import_apporteurs(request):
                     email = row["email"].lower().strip()
                     phone = "".join(filter(str.isdigit, row["phone"]))
                     if User.objects.filter(
-                        Q(username=username) | Q(email=email) | Q(phone=phone)
+                            Q(username=username) | Q(email=email) | Q(phone=phone)
                     ).exists():
                         raise ValueError("Doublon détecté")
                     User.objects.create_user(
@@ -596,6 +622,7 @@ def check_email_availability(request):
         }
     )
 
+
 @require_http_methods(["GET"])
 def check_phone_availability(request):
     phone = "".join(filter(str.isdigit, request.GET.get("phone", "")))
@@ -618,17 +645,24 @@ def check_phone_availability(request):
 
 
 # ==========================================
-# UTILITAIRES STATS
+# UTILITAIRES STATS (MODIFIÉS pour ne compter que AVEC DOCS)
 # ==========================================
 def _safe_sum(queryset, field):
     """Retourne une somme numérique, jamais None."""
     return queryset.aggregate(total=Sum(field))["total"] or 0
+
+
 def _get_user_stats(user):
+    """
+    Stats pour l'utilisateur connecté.
+    CORRECTION : Utilise emis_avec_doc() pour filtrer les contrats.
+    """
     today = timezone.now().date()
     first_day = today.replace(day=1)
 
     if user.role == "APPORTEUR":
-        contrats = user.contrats_apportes.filter(status="EMIS")
+        # CORRECTION : Uniquement contrats avec docs
+        contrats = Contrat.objects.emis_avec_doc().filter(apporteur=user)
         return {
             "total_contrats": contrats.count(),
             "contrats_mois": contrats.filter(created_at__gte=first_day).count(),
@@ -637,10 +671,8 @@ def _get_user_stats(user):
                 contrats.filter(created_at__gte=first_day), "commission_apporteur"
             ),
             "commissions_payees": _safe_sum(
-                PaiementApporteur.objects.filter(
-                    contrat__apporteur=user, status="PAYE"
-                ),
-                "montant_a_payer",
+                Contrat.objects.filter(apporteur=user, encaissement__status="PAYE"),
+                "commission_apporteur"
             ),
             "commissions_attente": _safe_sum(
                 PaiementApporteur.objects.filter(
@@ -651,7 +683,8 @@ def _get_user_stats(user):
         }
 
     if user.role == "ADMIN":
-        contrats = Contrat.objects.filter(status="EMIS")
+        # CORRECTION : Uniquement contrats avec docs
+        contrats = Contrat.objects.emis_avec_doc()
         return {
             "apporteurs_total": User.objects.filter(role="APPORTEUR").count(),
             "apporteurs_actifs": User.objects.filter(
@@ -662,7 +695,8 @@ def _get_user_stats(user):
         }
 
     if user.role == "COMMERCIAL":
-        contrats = Contrat.objects.filter(status="EMIS", apporteur=user)
+        # CORRECTION : Uniquement contrats avec docs
+        contrats = Contrat.objects.emis_avec_doc().filter(apporteur=user)
         return {
             "total_contrats": contrats.count(),
             "contrats_mois": contrats.filter(created_at__gte=first_day).count(),
@@ -671,10 +705,17 @@ def _get_user_stats(user):
 
     return {}
 
+
 def _get_apporteur_detailed_stats(apporteur):
+    """
+    Stats détaillées pour la fiche apporteur (vue admin).
+    CORRECTION : Utilise emis_avec_doc() pour filtrer les contrats.
+    """
     today = timezone.now().date()
     first_day = today.replace(day=1)
-    contrats_emis = apporteur.contrats_apportes.filter(status="EMIS")
+
+    # CORRECTION : Uniquement contrats avec docs
+    contrats_emis = Contrat.objects.emis_avec_doc().filter(apporteur=apporteur)
 
     return {
         "total_contrats": contrats_emis.count(),

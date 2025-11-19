@@ -641,7 +641,6 @@ def load_sous_categories(request):
         },
     )
 
-
 @login_required
 def liste_contrats(request):
     """Liste les contrats (filtrables), visibles uniquement s'ils disposent de documents (via emis_avec_doc)."""
@@ -705,19 +704,26 @@ def liste_contrats(request):
 
 @login_required
 def liste_clients(request):
-    """Liste des clients avec nombre de contrats valides."""
+    """Liste des clients avec nombre de contrats valides (émis/actifs/expirés + docs)."""
+
+    # On reproduit la logique stricte de emis_avec_doc() pour l'annotation SQL
+    q_status = Q(contrats__status__in=["EMIS", "ACTIF", "EXPIRE"])
+    q_docs = (
+            (Q(contrats__link_attestation__isnull=False) & ~Q(contrats__link_attestation="")) |
+            (Q(contrats__link_carte_brune__isnull=False) & ~Q(contrats__link_carte_brune=""))
+    )
+
+    # Annotation corrigée
     clients = Client.objects.annotate(
         nb_contrats=Count(
             "contrats",
-            filter=Q(contrats__status="EMIS")
-            & (
-                Q(contrats__link_attestation__isnull=False)
-                | Q(contrats__link_carte_brune__isnull=False)
-            ),
+            filter=q_status & q_docs,
+            distinct=True
         )
     )
 
     if getattr(request.user, "role", "") == "APPORTEUR":
+        # L'apporteur ne voit que ses clients à lui
         clients = clients.filter(contrats__apporteur=request.user).distinct()
 
     search_query = request.GET.get("search", "").strip()
@@ -877,8 +883,6 @@ def renouveler_contrat_auto(request, pk: int):
 
     messages.success(request, "Contrat {new_police} renouvelé avec succès.")
     return redirect("contracts:detail_contrat", pk=nouveau_contrat.pk)
-
-
 @login_required
 @require_http_methods(["POST"])
 @transaction.atomic
