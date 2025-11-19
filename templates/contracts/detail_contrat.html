@@ -146,9 +146,30 @@
                 {% endif %}
             </div>
         {% else %}
-            <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-xl p-4 text-yellow-300">
-                <i class="fas fa-info-circle mr-2"></i>
-                Les documents ASKIA ne sont pas encore disponibles pour ce contrat.
+            <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-start gap-3">
+                    <div class="p-2 bg-yellow-600/20 rounded-lg text-yellow-400 mt-1">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-yellow-300 font-semibold">Documents indisponibles</h3>
+                        <p class="text-yellow-200/70 text-sm mt-1">
+                            Les liens vers l'attestation et la carte brune n'ont pas été reçus lors de l'émission.
+                            Vous pouvez tenter de les récupérer manuellement.
+                        </p>
+                    </div>
+                </div>
+
+                {% if contrat.numero_facture %}
+                    <form method="post" action="{% url 'contracts:recuperer_documents' contrat.pk %}">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="whitespace-nowrap px-5 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-semibold rounded-lg shadow-lg shadow-yellow-900/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
+                            <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                            <span>Récupérer les documents</span>
+                        </button>
+                    </form>
+                {% endif %}
             </div>
         {% endif %}
 

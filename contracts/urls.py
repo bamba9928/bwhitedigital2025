@@ -16,6 +16,7 @@ urlpatterns = [
         name="telecharger_documents",
     ),
     path("contrats/<int:pk>/annuler/", views.annuler_contrat, name="annuler_contrat"),
+    path("contrats/<int:pk>/recuperer-docs/", views.recuperer_documents, name="recuperer_documents"),
     path(
         "echeances/aujourdhui/", views.echeances_aujourdhui, name="echeances_aujourdhui"
     ),

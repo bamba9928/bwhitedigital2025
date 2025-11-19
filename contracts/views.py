@@ -15,8 +15,8 @@ from django.db.models import Q, Count
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.utils.html import escape  # <-- AJOUT (P0)
-from django.views.decorators.http import require_http_methods
+from django.utils.html import escape
+from django.views.decorators.http import require_http_methods, require_POST
 
 from .api_client import askia_client
 from .forms import ClientForm, VehiculeForm, ContratSimulationForm, BASE_SELECT_CLASS
@@ -1019,3 +1019,67 @@ def detail_client(request, pk):
             "contrats": contrats,
         },
     )
+@login_required
+@require_POST
+@transaction.atomic
+def recuperer_documents(request, pk):
+    """Tente de récupérer les PDF (Attestation/Carte Brune) depuis Askia et régularise le paiement si nécessaire."""
+    contrat = get_object_or_404(Contrat, pk=pk)
+
+    # Sécurité : Vérifier les droits
+    if getattr(request.user, "role", "") == "APPORTEUR" and contrat.apporteur != request.user:
+        messages.error(request, "Action non autorisée.")
+        return redirect("dashboard:home")
+
+    if not contrat.numero_facture:
+        messages.error(request, "Ce contrat n'a pas de numéro de facture Askia.")
+        return redirect("contracts:detail_contrat", pk=pk)
+
+    try:
+        # 1. Appel API
+        docs = askia_client.get_documents(contrat.numero_facture)
+        attestation = docs.get("attestation", "").strip()
+        carte_brune = docs.get("carte_brune", "").strip()
+
+        updated = False
+        if attestation and attestation != contrat.link_attestation:
+            contrat.link_attestation = attestation
+            updated = True
+
+        if carte_brune and carte_brune != contrat.link_carte_brune:
+            contrat.link_carte_brune = carte_brune
+            updated = True
+
+        if updated:
+            contrat.save(update_fields=["link_attestation", "link_carte_brune", "updated_at"])
+            messages.success(request, "Documents récupérés avec succès !")
+
+            # 2. RATTRAPAGE PAIEMENT (Si le contrat devient valide maintenant)
+            # Le signal post_save ne se déclenche pas pour une update, donc on le fait manuellement ici
+            if contrat.is_valide and not hasattr(contrat, "encaissement"):
+                from payments.models import PaiementApporteur, HistoriquePaiement
+
+                # On ne crée le paiement que pour les apporteurs
+                if contrat.apporteur and getattr(contrat.apporteur, "role", "") == "APPORTEUR":
+                    montant_du = contrat.net_a_reverser
+                    if montant_du > 0:
+                        paiement = PaiementApporteur.objects.create(
+                            contrat=contrat,
+                            montant_a_payer=montant_du,
+                            status="EN_ATTENTE"
+                        )
+                        HistoriquePaiement.objects.create(
+                            paiement=paiement,
+                            action="CREATION",
+                            effectue_par=request.user,
+                            details="Rattrapage automatique après récupération des documents"
+                        )
+                        logger.info(f"Rattrapage Paiement créé pour contrat {contrat.numero_police}")
+        else:
+            messages.warning(request, "Aucun nouveau document disponible sur le serveur pour le moment.")
+
+    except Exception as e:
+        logger.error(f"Erreur récupération docs {pk}: {e}")
+        messages.error(request, f"Erreur lors de la récupération : {e}")
+
+    return redirect("contracts:detail_contrat", pk=pk)
