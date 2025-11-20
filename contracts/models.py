@@ -29,11 +29,23 @@ class Client(models.Model):
 
     prenom = models.CharField(max_length=100, verbose_name="Prénom")
     nom = models.CharField(max_length=100, verbose_name="Nom")
+
+    # MODIFICATION : unique=True retiré pour permettre plusieurs clients sur le même numéro
     telephone = models.CharField(
         validators=[SENEGAL_PHONE_VALIDATOR],
         max_length=9,
-        verbose_name="Téléphone",
+        verbose_name="Téléphone principal",
+        db_index=True
     )
+
+    telephone_secondaire = models.CharField(
+        validators=[SENEGAL_PHONE_VALIDATOR],
+        max_length=9,
+        blank=True,
+        null=True,
+        verbose_name="Téléphone secondaire"
+    )
+
     adresse = models.CharField(
         max_length=255,
         verbose_name="Adresse",
@@ -42,6 +54,7 @@ class Client(models.Model):
         ],
     )
     email = models.EmailField(blank=True, null=True, verbose_name="Email")
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -164,9 +177,7 @@ class Vehicule(models.Model):
         # Normalisation + validation immatriculation
         if self.immatriculation:
             try:
-
                 validate_immatriculation(self.immatriculation)
-
                 self.immatriculation = normalize_immat_for_storage(self.immatriculation)
             except ValidationError as e:
                 errors["immatriculation"] = e
@@ -191,9 +202,9 @@ class Vehicule(models.Model):
         if self.modele:
             self.modele = self.modele.strip().upper()
         if (
-            self.valeur_venale
-            and self.valeur_neuve
-            and self.valeur_venale > self.valeur_neuve
+                self.valeur_venale
+                and self.valeur_neuve
+                and self.valeur_venale > self.valeur_neuve
         ):
             errors["valeur_venale"] = [
                 "La valeur vénale ne peut pas être supérieure à la valeur à neuf"
@@ -210,44 +221,29 @@ class Vehicule(models.Model):
     @property
     def immatriculation_formatted(self) -> str:
         """Formate l’immatriculation à l’affichage depuis la valeur stockée sans tirets."""
-        # (Votre logique ici est parfaite et n'a pas besoin de changer)
         if not self.immatriculation:
             return ""
         immat = self.immatriculation.upper()
 
         # Régional: DK0000H ou DK0000HA
         if (
-            len(immat) >= 8
-            and immat[:2]
-            in [
-                "AB",
-                "AC",
-                "DK",
-                "TH",
-                "SL",
-                "DB",
-                "LG",
-                "TC",
-                "KL",
-                "KD",
-                "ZG",
-                "FK",
-                "KF",
-                "KG",
-                "MT",
-                "SD",
-            ]
-            and immat[2:6].isdigit()
-            and immat[6:].isalpha()
+                len(immat) >= 8
+                and immat[:2]
+                in [
+            "AB", "AC", "DK", "TH", "SL", "DB", "LG", "TC", "KL", "KD",
+            "ZG", "FK", "KF", "KG", "MT", "SD",
+        ]
+                and immat[2:6].isdigit()
+                and immat[6:].isalpha()
         ):
             return f"{immat[:2]}-{immat[2:6]}-{immat[6:]}"
 
         # Ancien: AA001AA
         if (
-            len(immat) == 7
-            and immat[:2].isalpha()
-            and immat[2:5].isdigit()
-            and immat[5:].isalpha()
+                len(immat) == 7
+                and immat[:2].isalpha()
+                and immat[2:5].isdigit()
+                and immat[5:].isalpha()
         ):
             return f"{immat[:2]}-{immat[2:5]}-{immat[5:]}"
 
@@ -261,19 +257,19 @@ class Vehicule(models.Model):
 
         # EP: 0001EP01
         if (
-            len(immat) == 8
-            and immat[:4].isdigit()
-            and immat[4:6] == "EP"
-            and immat[6:].isdigit()
+                len(immat) == 8
+                and immat[:4].isdigit()
+                and immat[4:6] == "EP"
+                and immat[6:].isdigit()
         ):
             return f"{immat[:4]}-{immat[4:]}"
 
         # Apporteur: 001AP0001
         if (
-            len(immat) == 9
-            and immat[:3].isdigit()
-            and immat[3:5] == "AP"
-            and immat[5:].isdigit()
+                len(immat) == 9
+                and immat[:3].isdigit()
+                and immat[3:5] == "AP"
+                and immat[5:].isdigit()
         ):
             return f"{immat[:3]}-AP-{immat[5:]}"
 
@@ -327,7 +323,7 @@ class ContratManager(Manager):
         return self.get_queryset().emis_avec_doc()
 
     def due_today(self):
-        """Contrats arrivant à échéance aujourd'Vhui."""
+        """Contrats arrivant à échéance aujourd'hui."""
         return self.get_queryset().due_today()
 
 
@@ -390,7 +386,7 @@ class Contrat(models.Model):
     taxes = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     prime_ttc = models.DecimalField(max_digits=10, decimal_places=2)
 
-    # NOUVELLE LOGIQUE COMMISSION
+    # Commissions
     commission_askia = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -513,7 +509,7 @@ class Contrat(models.Model):
         """Calcule la date d'échéance basée sur la date d'effet et la durée."""
         if self.date_effet and self.duree:
             self.date_echeance = (
-                self.date_effet + relativedelta(months=self.duree) - timedelta(days=1)
+                    self.date_effet + relativedelta(months=self.duree) - timedelta(days=1)
             )
 
     def save(self, *args, **kwargs):
@@ -536,7 +532,7 @@ class Contrat(models.Model):
         """Contrat actif à la date du jour."""
         today = date.today()
         return self.status in ["EMIS", "ACTIF"] and self.date_effet <= today <= (
-            self.date_echeance or today
+                self.date_echeance or today
         )
 
     @property
@@ -550,7 +546,7 @@ class Contrat(models.Model):
     def is_valide(self):
         """Contrat émis/actif/expiré avec au moins un document."""
         return self.status in ["EMIS", "ACTIF", "EXPIRE"] and (
-            self.link_attestation or self.link_carte_brune
+                self.link_attestation or self.link_carte_brune
         )
 
     @property

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime, date, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from dateutil.relativedelta import relativedelta
 from django.contrib import messages
@@ -49,10 +49,10 @@ def _is_hx(request) -> bool:
 
 
 def _render_error(
-    request, message: str, redirect_name: str = "contracts:nouveau_contrat"
+        request, message: str, redirect_name: str = "contracts:nouveau_contrat"
 ):
     """Rendu d'une erreur (partiel HTMX ou message + redirect)."""
-    logger.warning("Erreur rendue à l'utilisateur : %s", message)  # Log de l'erreur
+    logger.warning("Erreur rendue à l'utilisateur : %s", message)
     if _is_hx(request):
         return render(request, "contracts/partials/error.html", {"error": message})
     messages.error(request, message)
@@ -67,8 +67,8 @@ def _phone_normalize(s: str) -> str:
     """Garde uniquement les chiffres, retire indicatif SN, retourne 9 chiffres."""
     if not isinstance(s, str):
         return ""
-    digits = re.sub(r"\D", "", s)  # supprime espaces, +, -, etc.
-    digits = re.sub(r"^(00221|221)", "", digits)  # retire 00221 ou 221
+    digits = re.sub(r"\D", "", s)
+    digits = re.sub(r"^(00221|221)", "", digits)
     return digits
 
 
@@ -112,6 +112,8 @@ LABELS = {
     "adresse": "Adresse",
     "date_effet": "Date d'effet",
 }
+
+
 def _g(req, key, default=""):
     v = req.POST.get(key, default)
     return v.strip() if isinstance(v, str) else v
@@ -129,6 +131,8 @@ def _parse_date(value: str) -> date | None:
             except ValueError:
                 continue
     return None
+
+
 @login_required
 @require_http_methods(["POST"])
 def simuler_tarif(request):
@@ -154,13 +158,21 @@ def simuler_tarif(request):
                 "Champs manquants : " + ", ".join(LABELS.get(k, k) for k in missing),
             )
 
-        # 1) Téléphone : normalisation + validation stricte
+        # 1) Téléphone
         try:
             tel_norm = _phone_validate_or_err(_g(request, "telephone"))
         except ValueError as e:
             return _render_error(request, str(e))
 
-        # 2) Date d'effet valide, non passée, <= 60 jours
+        tel_sec_raw = _g(request, "telephone_secondaire")
+        tel_sec_norm = ""
+        if tel_sec_raw:
+            try:
+                tel_sec_norm = _phone_validate_or_err(tel_sec_raw)
+            except ValueError:
+                pass
+
+        # 2) Date d'effet
         date_effet_str = _g(request, "date_effet")
         date_effet = _parse_date(date_effet_str)
         if not date_effet:
@@ -171,7 +183,7 @@ def simuler_tarif(request):
         if date_effet < today:
             return _render_error(
                 request,
-                "La date d'effet ne peut pas être dans le passé (fourni: {date_effet:%d/%m/%Y}, aujourd'hui: {today:%d/%m/%Y}).",
+                f"La date d'effet ne peut pas être dans le passé (fourni: {date_effet:%d/%m/%Y}).",
             )
         if date_effet > today + timedelta(days=60):
             return _render_error(
@@ -222,6 +234,7 @@ def simuler_tarif(request):
             "prenom": (request.POST.get("prenom") or "").upper().strip(),
             "nom": (request.POST.get("nom") or "").upper().strip(),
             "telephone": tel_norm,
+            "telephone_secondaire": tel_sec_norm,
             "adresse": (request.POST.get("adresse") or "").strip(),
         }
         vehicule_display = {
@@ -237,7 +250,7 @@ def simuler_tarif(request):
             simulation = askia_client.get_simulation_auto(vehicule_data, duree)
         except Exception as e:
             logger.error("Erreur simulation Askia | %s", str(e), exc_info=True)
-            return _render_error(request, "Erreur API Askia : {e}")
+            return _render_error(request, f"Erreur API Askia : {e}")
 
         prime_nette = Decimal(str(simulation["prime_nette"]))
         prime_ttc = Decimal(str(simulation["prime_ttc"]))
@@ -245,7 +258,7 @@ def simuler_tarif(request):
         fga = Decimal(str(simulation.get("fga", 0)))
         taxes = Decimal(str(simulation.get("taxes", 0)))
 
-        # 7) Commissions via le modèle
+        # 7) Commissions via le modèle (simulation temporaire)
         temp = Contrat(
             prime_nette=prime_nette,
             prime_ttc=prime_ttc,
@@ -298,12 +311,14 @@ def simuler_tarif(request):
 
     except Exception as e:
         logger.error("Erreur inattendue simuler_tarif | %s", str(e), exc_info=True)
-        return _render_error(request, "Erreur inattendue: {e}")
+        return _render_error(request, f"Erreur inattendue: {e}")
+
+
 @login_required
 @require_http_methods(["POST"])
 @transaction.atomic
 def emettre_contrat(request):
-    """Émet le contrat à partir de la simulation stockée en session, avec récupération robuste en cas d'erreur Askia."""
+    """Émet le contrat à partir de la simulation stockée en session."""
     try:
         simulation_data = request.session.get("simulation_data")
         if not simulation_data:
@@ -316,7 +331,7 @@ def emettre_contrat(request):
         vehicule_data_api = simulation_data.get("vehicule") or {}
         vehicule_display = simulation_data.get("vehicule_display") or {}
 
-        # 2) Reconstruire payloads formulaires pour revalidation serveur
+        # 2) Reconstruire payloads formulaires
         vehicule_form_data = {
             "immatriculation": vehicule_display.get("immatriculation"),
             "marque": vehicule_data_api.get("marque"),
@@ -339,40 +354,58 @@ def emettre_contrat(request):
         if not client_form.is_valid():
             first_error = list(client_form.errors.values())[0][0]
             logger.warning("Échec validation client: %s", first_error)
-            return _render_error(request, "Client invalide: {first_error}")
+            return _render_error(request, f"Client invalide: {first_error}")
 
         if not vehicule_form.is_valid():
             first_error = list(vehicule_form.errors.values())[0][0]
             logger.warning("Échec validation véhicule: %s", first_error)
-            return _render_error(request, "Véhicule invalide: {first_error}")
+            return _render_error(request, f"Véhicule invalide: {first_error}")
 
-        # 3) Données nettoyées
         client_clean = client_form.cleaned_data
         vehicule_clean = vehicule_form.cleaned_data
 
-        # ---------- CLIENT ----------
-        client, _ = Client.objects.get_or_create(
+        # ---------- CLIENT (LOGIQUE FLEXIBLE MULTI-COMPTES) ----------
+        # On cherche un client qui a EXACTEMENT ce numéro ET ce nom ET ce prénom.
+        # Cela permet à un même numéro d'appartenir à plusieurs fiches (ex: père de famille).
+        client = Client.objects.filter(
             telephone=client_clean["telephone"],
-            defaults={
-                "prenom": client_clean["prenom"],
-                "nom": client_clean["nom"],
-                "adresse": client_clean["adresse"],
-                "created_by": request.user,
-            },
-        )
+            nom__iexact=client_clean["nom"].strip(),
+            prenom__iexact=client_clean["prenom"].strip()
+        ).first()
+
+        if not client:
+            # Si pas de match exact, on crée une nouvelle fiche
+            client = Client.objects.create(
+                telephone=client_clean["telephone"],
+                telephone_secondaire=client_clean.get("telephone_secondaire", ""),
+                prenom=client_clean["prenom"],
+                nom=client_clean["nom"],
+                adresse=client_clean["adresse"],
+                created_by=request.user,
+            )
+        else:
+            # Client existant : on met à jour l'adresse ou le tél secondaire si nécessaire
+            fields_to_update = []
+            if client.adresse != client_clean["adresse"]:
+                client.adresse = client_clean["adresse"]
+                fields_to_update.append("adresse")
+
+            nv_tel_sec = client_clean.get("telephone_secondaire", "")
+            if nv_tel_sec and client.telephone_secondaire != nv_tel_sec:
+                client.telephone_secondaire = nv_tel_sec
+                fields_to_update.append("telephone_secondaire")
+
+            if fields_to_update:
+                client.save(update_fields=fields_to_update)
+
+        # Création/Récupération code Askia
         if not client.code_askia:
             try:
-                client.code_askia = askia_client.create_client(
-                    client_data
-                )  # données d’origine côté API
+                client.code_askia = askia_client.create_client(client_data)
                 client.save(update_fields=["code_askia"])
             except Exception as e:
-                logger.error(
-                    "Échec création client | Tel=%s | %s",
-                    client_data.get("telephone"),
-                    e,
-                )
-                return _render_error(request, "Erreur création client ASKIA : {e}")
+                logger.error("Échec création client API | %s", e)
+                return _render_error(request, f"Erreur création client ASKIA : {e}")
 
         # ---------- VÉHICULE ----------
         immat = vehicule_clean["immatriculation"]
@@ -383,11 +416,10 @@ def emettre_contrat(request):
         # ---------- DATES ----------
         date_effet = simulation_data["date_effet"]
         if isinstance(date_effet, str):
-            # ISO "YYYY-MM-DD" car stocké via to_jsonable
             date_effet = datetime.strptime(date_effet, "%Y-%m-%d").date()
         if not isinstance(date_effet, date):
             return _render_error(request, "Date d'effet invalide.")
-        # garde-fou: la date d'effet ne doit pas être passée au moment de l'émission
+
         if date_effet < timezone.localdate():
             return _render_error(
                 request,
@@ -404,7 +436,7 @@ def emettre_contrat(request):
             "duree": duree,
             "immatriculation": immat,
             "id_saisie": simulation_data.get("id_saisie"),
-            **vehicule_data_api,  # valeurs d’origine attendues par l’API
+            **vehicule_data_api,
         }
 
         result = {}
@@ -446,11 +478,9 @@ def emettre_contrat(request):
                         break
 
             if not result or not numero_police or not numero_facture:
-                logger.error(
-                    "Émission KO et aucune récupération possible | %s", error_msg
-                )
+                logger.error("Émission KO | %s", error_msg)
                 return _render_error(
-                    request, "Erreur API Askia lors de l'émission : {error_msg}"
+                    request, f"Erreur API Askia lors de l'émission : {error_msg}"
                 )
 
         # ---------- DOCUMENTS ----------
@@ -508,14 +538,6 @@ def emettre_contrat(request):
         # Nettoyage session
         request.session.pop("simulation_data", None)
 
-        logger.info(
-            "Contrat créé | Police=%s | Client=%s | Apporteur=%s",
-            numero_police,
-            client.nom_complet,
-            request.user.username,
-        )
-
-        # ---------- Rendu ----------
         if _is_hx(request):
             return render(
                 request,
@@ -532,14 +554,18 @@ def emettre_contrat(request):
 
     except Exception as e:
         logger.error("Erreur inattendue émission contrat | %s", e, exc_info=True)
-        return _render_error(request, "Erreur inattendue lors de l'émission : {str(e)}")
+        return _render_error(
+            request, f"Erreur inattendue lors de l'émission : {str(e)}"
+        )
+
+
 @login_required
 def detail_contrat(request, pk):
     """Vue détaillée d'un contrat."""
     contrat = get_object_or_404(Contrat, pk=pk)
     if (
-        getattr(request.user, "role", "") == "APPORTEUR"
-        and contrat.apporteur != request.user
+            getattr(request.user, "role", "") == "APPORTEUR"
+            and contrat.apporteur != request.user
     ):
         messages.error(request, "Vous n'avez pas accès à ce contrat.")
         return redirect("dashboard:home")
@@ -548,9 +574,11 @@ def detail_contrat(request, pk):
         "contracts/detail_contrat.html",
         {
             "contrat": contrat,
-            "title": "Contrat {contrat.numero_police}",
+            "title": f"Contrat {contrat.numero_police}",
         },
     )
+
+
 @require_http_methods(["GET"])
 def check_immatriculation(request):
     """Validation instantanée de l'immatriculation (HTMX)."""
@@ -559,9 +587,7 @@ def check_immatriculation(request):
         return HttpResponse("")
 
     try:
-
         validate_immatriculation(immat)
-
     except ValidationError as e:
         safe_message = escape(e.message)
         return HttpResponse(
@@ -582,6 +608,8 @@ def check_immatriculation(request):
         '<span class="text-green-500 text-xs"><i class="fas fa-check-circle mr-1"></i>'
         "Format valide</span>"
     )
+
+
 @login_required
 @require_http_methods(["GET"])
 def check_client(request):
@@ -598,6 +626,8 @@ def check_client(request):
         )
     else:
         return JsonResponse({"exists": False})
+
+
 @login_required
 @require_http_methods(["GET"])
 def load_sous_categories(request):
@@ -641,6 +671,7 @@ def load_sous_categories(request):
         },
     )
 
+
 @login_required
 def liste_contrats(request):
     """Liste les contrats (filtrables), visibles uniquement s'ils disposent de documents (via emis_avec_doc)."""
@@ -648,10 +679,11 @@ def liste_contrats(request):
         "client", "vehicule", "apporteur"
     )
 
+    # L'apporteur ne voit que ses propres contrats
     if getattr(request.user, "role", "") == "APPORTEUR":
         contrats = contrats.filter(apporteur=request.user)
 
-    # Filtres
+    # Filtres standards
     statut = request.GET.get("status")
     if statut:
         contrats = contrats.filter(status=statut)
@@ -666,6 +698,7 @@ def liste_contrats(request):
     client_id = request.GET.get("client")
     tel = (request.GET.get("tel") or "").strip()
     search_query = (request.GET.get("search") or "").strip()
+
     if client_id and client_id.isdigit():
         contrats = contrats.filter(client_id=client_id)
     elif tel:
@@ -680,7 +713,10 @@ def liste_contrats(request):
         )
 
     apporteur_id = request.GET.get("apporteur")
-    if getattr(request.user, "role", "") == "ADMIN" and apporteur_id:
+    is_staff = getattr(request.user, "is_staff", False)
+    user_role = getattr(request.user, "role", "")
+
+    if (is_staff or user_role in ["ADMIN", "COMMERCIAL"]) and apporteur_id:
         contrats = contrats.filter(apporteur_id=apporteur_id)
 
     contrats = contrats.order_by("-created_at")
@@ -704,16 +740,13 @@ def liste_contrats(request):
 
 @login_required
 def liste_clients(request):
-    """Liste des clients avec nombre de contrats valides (émis/actifs/expirés + docs)."""
-
-    # On reproduit la logique stricte de emis_avec_doc() pour l'annotation SQL
+    """Liste des clients avec nombre de contrats valides."""
     q_status = Q(contrats__status__in=["EMIS", "ACTIF", "EXPIRE"])
     q_docs = (
             (Q(contrats__link_attestation__isnull=False) & ~Q(contrats__link_attestation="")) |
             (Q(contrats__link_carte_brune__isnull=False) & ~Q(contrats__link_carte_brune=""))
     )
 
-    # Annotation corrigée
     clients = Client.objects.annotate(
         nb_contrats=Count(
             "contrats",
@@ -723,7 +756,6 @@ def liste_clients(request):
     )
 
     if getattr(request.user, "role", "") == "APPORTEUR":
-        # L'apporteur ne voit que ses clients à lui
         clients = clients.filter(contrats__apporteur=request.user).distinct()
 
     search_query = request.GET.get("search", "").strip()
@@ -748,15 +780,14 @@ def liste_clients(request):
             "search_query": search_query,
         },
     )
-# =========================
-# Échéances + Renouvellement
-# =========================
+
+
 @login_required
 def echeances_aujourdhui(request):
     """Contrats AUTOMOBILE CLASSIQUE dont l'échéance est aujourd'hui."""
     qs = Contrat.objects.filter(
         date_echeance=timezone.now().date(),
-        status__in=["EMIS", "ACTIF"],  # On ne renouvelle que ce qui est actif/émis
+        status__in=["EMIS", "ACTIF"],
     ).select_related("client", "vehicule")
 
     if getattr(request.user, "role", "") != "ADMIN":
@@ -785,15 +816,15 @@ def renouveler_contrat_auto(request, pk: int):
         return redirect("dashboard:home")
 
     if (
-        getattr(request.user, "role", "") != "ADMIN"
-        and contrat_ancien.apporteur_id != request.user.id
+            getattr(request.user, "role", "") != "ADMIN"
+            and contrat_ancien.apporteur_id != request.user.id
     ):
         messages.error(request, "Vous n'êtes pas autorisé à renouveler ce contrat.")
         return redirect("dashboard:home")
 
     dure = int(
         request.POST.get("dure", contrat_ancien.duree)
-    )  # Réutilise l'ancienne durée par défaut
+    )
 
     due_date = contrat_ancien.date_echeance
     effet_date = due_date + timedelta(days=1)
@@ -810,7 +841,6 @@ def renouveler_contrat_auto(request, pk: int):
         "gb": 0,
     }
 
-    # Appeler l'API de renouvellement
     try:
         data = askia_client.renew_contrat_auto(
             cli_code=contrat_ancien.client.code_askia,
@@ -820,14 +850,12 @@ def renouveler_contrat_auto(request, pk: int):
             **opts,
         )
     except Exception as e:
-        messages.error(request, "Le renouvellement API a échoué : {e}")
+        messages.error(request, f"Le renouvellement API a échoué : {e}")
         return redirect("contracts:liste_contrats")
 
-    # 1. Mettre l'ancien contrat en 'EXPIRE'
     contrat_ancien.status = "EXPIRE"
     contrat_ancien.save(update_fields=["status", "updated_at"])
 
-    # 2. Préparer les données pour le NOUVEAU contrat
     numero_facture = data.get("numeroFacture")
     new_police = data.get("numeroPolice")
     new_due_date = effet_date + relativedelta(months=dure) - timedelta(days=1)
@@ -838,11 +866,10 @@ def renouveler_contrat_auto(request, pk: int):
     fga = askia_client._safe_decimal(data.get("fga"))
     taxes = askia_client._safe_decimal(data.get("taxe"))
 
-    # Recalculer TOUTES les commissions
     temp_contrat = Contrat(
         prime_nette=prime_nette, prime_ttc=prime_ttc, apporteur=contrat_ancien.apporteur
     )
-    temp_contrat.calculate_commission()  # Utilise la logique du modèle
+    temp_contrat.calculate_commission()
 
     liens = data.get("lien", {}) or {}
     facture = liens.get("linkFacture", "")
@@ -853,11 +880,10 @@ def renouveler_contrat_auto(request, pk: int):
         except Exception as e:
             logger.warning("Récupération facture après renouv KO | %s", e)
 
-    # 3. Créer le nouveau contrat
     nouveau_contrat = Contrat.objects.create(
         client=contrat_ancien.client,
         vehicule=contrat_ancien.vehicule,
-        apporteur=contrat_ancien.apporteur,  # Garde l'apporteur original
+        apporteur=contrat_ancien.apporteur,
         numero_police=new_police,
         numero_facture=numero_facture,
         duree=dure,
@@ -868,7 +894,6 @@ def renouveler_contrat_auto(request, pk: int):
         fga=fga,
         taxes=taxes,
         prime_ttc=prime_ttc,
-        # Commissions recalculées
         commission_askia=temp_contrat.commission_askia,
         commission_apporteur=temp_contrat.commission_apporteur,
         commission_bwhite=temp_contrat.commission_bwhite,
@@ -881,8 +906,10 @@ def renouveler_contrat_auto(request, pk: int):
         link_facture=facture,
     )
 
-    messages.success(request, "Contrat {new_police} renouvelé avec succès.")
+    messages.success(request, f"Contrat {new_police} renouvelé avec succès.")
     return redirect("contracts:detail_contrat", pk=nouveau_contrat.pk)
+
+
 @login_required
 @require_http_methods(["POST"])
 @transaction.atomic
@@ -893,6 +920,13 @@ def annuler_contrat(request, pk):
     """
     contrat = get_object_or_404(Contrat, pk=pk)
 
+    # --- VERIFICATION DELAI 48H ---
+    delta = timezone.now() - contrat.created_at
+    if delta > timedelta(hours=48):
+        messages.error(request, "Impossible d'annuler ce contrat : le délai de 48h est dépassé.")
+        return redirect("contracts:detail_contrat", pk=pk)
+    # --------------------------------
+
     if not getattr(request.user, "is_true_admin", False):
         messages.error(request, "Action non autorisée.")
         return redirect("contracts:detail_contrat", pk=pk)
@@ -902,15 +936,11 @@ def annuler_contrat(request, pk):
         return redirect("contracts:detail_contrat", pk=pk)
 
     api_success = False
-    ""
+    api_msg = ""
 
-    # 1. Appel API Annulation
     if contrat.numero_facture:
         try:
-            # Appel de l'endpoint documenté
             resp = askia_client.annuler_attestation(contrat.numero_facture)
-
-            # Vérification stricte de la réponse
             code = str(resp.get("code", ""))
             status = str(resp.get("status", "")).upper()
 
@@ -919,7 +949,7 @@ def annuler_contrat(request, pk):
                 api_msg = resp.get("message", "Succès API")
             else:
                 api_success = False
-                api_msg = resp.get("message") or "Erreur API: {status}"
+                api_msg = resp.get("message") or f"Erreur API: {status}"
 
         except Exception as e:
             logger.error(
@@ -931,7 +961,6 @@ def annuler_contrat(request, pk):
         api_success = True
         api_msg = "Annulation locale (pas de N° facture Askia)"
 
-    # 2. Mise à jour locale
     old_status = contrat.status
     new_status = "ANNULE" if api_success else "ANNULE_LOCAL"
 
@@ -964,7 +993,6 @@ def annuler_contrat(request, pk):
         api_success,
     )
 
-    # 3. Annulation du paiement apporteur associé
     try:
         from payments.models import PaiementApporteur, HistoriquePaiement
 
@@ -976,7 +1004,7 @@ def annuler_contrat(request, pk):
                 paiement=p,
                 action="STATUS_CHANGE",
                 effectue_par=request.user,
-                details="Annulation suite à l'annulation du contrat {contrat.numero_police}",
+                details=f"Annulation suite à l'annulation du contrat {contrat.numero_police}",
             )
     except Exception as e:
         logger.warning(
@@ -984,11 +1012,11 @@ def annuler_contrat(request, pk):
         )
 
     if api_success:
-        messages.success(request, "Contrat annulé avec succès. (API: {api_msg})")
+        messages.success(request, f"Contrat annulé avec succès. (API: {api_msg})")
     else:
         messages.warning(
             request,
-            "⚠️ Contrat annulé LOCALEMENT. Échec API Askia: {api_msg}. Statut: 'Annulé (Local)'.",
+            f"⚠️ Contrat annulé LOCALEMENT. Échec API Askia: {api_msg}. Statut: 'Annulé (Local)'.",
         )
 
     return redirect("contracts:detail_contrat", pk=pk)
@@ -1018,11 +1046,13 @@ def detail_client(request, pk):
         request,
         "contracts/detail_client.html",
         {
-            "title": "Fiche Client - {client.nom_complet}",
+            "title": f"Fiche Client - {client.nom_complet}",
             "client": client,
             "contrats": contrats,
         },
     )
+
+
 @login_required
 @require_POST
 @transaction.atomic
@@ -1058,27 +1088,38 @@ def recuperer_documents(request, pk):
             contrat.save(update_fields=["link_attestation", "link_carte_brune", "updated_at"])
             messages.success(request, "Documents récupérés avec succès !")
 
-            # 2. RATTRAPAGE PAIEMENT (Si le contrat devient valide maintenant)
-            # Le signal post_save ne se déclenche pas pour une update, donc on le fait manuellement ici
+            # 2. RATTRAPAGE PAIEMENT
             if contrat.is_valide and not hasattr(contrat, "encaissement"):
                 from payments.models import PaiementApporteur, HistoriquePaiement
 
-                # On ne crée le paiement que pour les apporteurs
-                if contrat.apporteur and getattr(contrat.apporteur, "role", "") == "APPORTEUR":
-                    montant_du = contrat.net_a_reverser
-                    if montant_du > 0:
-                        paiement = PaiementApporteur.objects.create(
-                            contrat=contrat,
-                            montant_a_payer=montant_du,
-                            status="EN_ATTENTE"
-                        )
-                        HistoriquePaiement.objects.create(
-                            paiement=paiement,
-                            action="CREATION",
-                            effectue_par=request.user,
-                            details="Rattrapage automatique après récupération des documents"
-                        )
-                        logger.info(f"Rattrapage Paiement créé pour contrat {contrat.numero_police}")
+                apporteur = contrat.apporteur
+                prime_ttc = Decimal(contrat.prime_ttc or 0)
+                commission = Decimal(contrat.commission_apporteur or 0)
+                montant_du = Decimal("0.00")
+
+                # Logique identique au signal pour le rattrapage
+                if getattr(apporteur, "is_apporteur", False):
+                    montant_du = prime_ttc - commission
+                elif getattr(apporteur, "is_commercial", False) or getattr(apporteur, "is_admin", False):
+                    # Commercial/Admin = tout le TTC
+                    montant_du = prime_ttc
+
+                # Arrondi final et création
+                montant_du = montant_du.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+                if montant_du > 0:
+                    p = PaiementApporteur.objects.create(
+                        contrat=contrat,
+                        montant_a_payer=montant_du,
+                        status="EN_ATTENTE"
+                    )
+                    HistoriquePaiement.objects.create(
+                        paiement=p,
+                        action="CREATION",
+                        effectue_par=request.user,
+                        details="Rattrapage automatique après récupération des documents"
+                    )
+                    logger.info(f"Rattrapage Paiement créé pour contrat {contrat.numero_police}")
         else:
             messages.warning(request, "Aucun nouveau document disponible sur le serveur pour le moment.")
 

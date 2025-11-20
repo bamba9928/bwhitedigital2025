@@ -35,7 +35,7 @@ LARGE_INPUT_CLASS = (
 class ClientForm(forms.ModelForm):
     class Meta:
         model = Client
-        fields = ["prenom", "nom", "telephone", "adresse"]
+        fields = ["prenom", "nom", "telephone", "telephone_secondaire", "adresse"]
         labels = {
             "prenom": "Prénom",
             "nom": "Nom",
@@ -71,11 +71,21 @@ class ClientForm(forms.ModelForm):
                     "required": "required",
                 }
             ),
-            "adresse": forms.Textarea(
+            "telephone_secondaire": forms.TextInput(
+                attrs={
+                    "class": BASE_INPUT_CLASS,
+                    "placeholder": "77XXXXXXX",
+                    "autocomplete": "tel",
+                    "pattern": r"^(70|71|75|76|77|78|30|33|34)\d{7}$",
+                    "inputmode": "numeric",
+                    "maxlength": "9",
+                }
+            ),
+            "adresse": forms.TextInput(
                 attrs={
                     "class": BASE_INPUT_CLASS,
                     "placeholder": "Adresse complète",
-                    "rows": 2,
+                    "rows": 1,
                     "autocomplete": "street-address",
                     "required": "required",
                     "minlength": "2",
@@ -103,6 +113,20 @@ class ClientForm(forms.ModelForm):
                 "Préfixe invalide. Autorisés: 70, 71, 75, 76, 77, 78, 30, 33, 34."
             )
 
+        return tel
+
+    def clean_telephone_secondaire(self):
+        tel_raw = (self.cleaned_data.get("telephone_secondaire") or "").strip()
+        if not tel_raw:
+            return ""  # champ vide accepté
+
+        tel = normalize_phone_for_storage(tel_raw)
+        if len(tel) != 9:
+            raise ValidationError("Le numéro de téléphone doit contenir exactement 9 chiffres.")
+        try:
+            SENEGAL_PHONE_VALIDATOR(tel)
+        except ValidationError:
+            raise ValidationError("Préfixe invalide. Autorisés: 70, 71, 75, 76, 77, 78, 30, 33, 34.")
         return tel
 
     def clean_prenom(self):

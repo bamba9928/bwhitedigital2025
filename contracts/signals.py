@@ -16,12 +16,8 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=Contrat, dispatch_uid="contracts_create_or_get_paiement_v2")
 def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwargs):
     """
-    Crée l’encaissement exactement une fois si :
-      - le contrat est créé,
-      - valide,
-      - lié à un apporteur (role='APPORTEUR'),
-      - statut éligible (non ANNULE/BROUILLON/DEVIS),
-      - montant > 0.
+    Crée l’encaissement exactement une fois.
+    Gère la différence entre APPORTEUR (paie le net) et COMMERCIAL/ADMIN (paie tout le TTC).
     """
     if not created:
         return
@@ -45,23 +41,42 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
 
     apporteur = getattr(instance, "apporteur", None)
 
-    # ✅ Important : n'autoriser que les VRAIS apporteurs (pas les commerciaux)
-    if not apporteur or not getattr(apporteur, "is_apporteur", False):
+    if not apporteur:
         return
 
+    # Récupération des modèles
     PaiementApporteur = apps.get_model("payments", "PaiementApporteur")
     HistoriquePaiement = apps.get_model("payments", "HistoriquePaiement")
 
+    # Récupération des montants de base
     prime_ttc = Decimal(getattr(instance, "prime_ttc", 0) or 0)
-    commission_apporteur = Decimal(getattr(instance, "commission_apporteur", 0) or 0)
+    commission = Decimal(getattr(instance, "commission_apporteur", 0) or 0)
+    montant_du = Decimal("0.00")
 
-    montant_du = (prime_ttc - commission_apporteur).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
+    # --- LOGIQUE MÉTIER ---
+
+    # Cas 1 : Apporteur standard
+    if getattr(apporteur, "is_apporteur", False):
+        # Il garde sa commission à la source, il ne reverse que la différence
+        montant_du = prime_ttc - commission
+
+    # Cas 2 : Commercial ou Admin (Vente directe)
+    elif getattr(apporteur, "is_commercial", False) or getattr(apporteur, "is_admin", False):
+        # Ils n'ont pas de commission source, ils encaissent le client et doivent TOUT reverser
+        montant_du = prime_ttc
+
+    # Cas autre (sécurité)
+    else:
+        return
+
+    # Arrondi final
+    montant_du = montant_du.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
     if montant_du <= 0:
         logger.info(
-            "Contrat %s: montant_du <= 0, encaissement non créé.",
+            "Contrat %s: montant_du <= 0 (%s), encaissement non créé.",
             instance.numero_police or instance.pk,
+            montant_du
         )
         return
 
@@ -85,8 +100,9 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
             details=f"Encaissement créé pour contrat {instance.numero_police or instance.pk}",
         )
         logger.info(
-            "Encaissement créé | Contrat: %s | montant_a_payer: %s",
+            "Encaissement créé | Contrat: %s | Rôle: %s | Montant dû: %s",
             instance.numero_police or instance.pk,
+            apporteur.role,
             paiement.montant_a_payer,
         )
     else:
@@ -104,12 +120,11 @@ def update_contrat_dates_and_status(sender, instance: Contrat, **kwargs):
     if instance.date_effet and instance.duree and not instance.date_echeance:
         instance.calculate_date_echeance()
 
-    # ✅ Commission apporteur : uniquement si l'apporteur est un vrai apporteur
-    if (
-        getattr(instance, "commission_apporteur", None) in (None, 0)
-        and getattr(instance, "apporteur", None)
-        and getattr(instance.apporteur, "is_apporteur", False)
-    ):
+    # Calcul des commissions
+    # Note : On laisse calculate_commission s'exécuter même pour les commerciaux
+    # car cette méthode (dans models.py) gère le fait de mettre commission_apporteur à 0
+    # si ce n'est pas un apporteur, mais calcule quand même la part BWHITE/ASKIA.
+    if getattr(instance, "commission_askia", None) in (None, 0):
         instance.calculate_commission()
 
     # Datation émission

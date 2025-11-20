@@ -59,7 +59,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <a href="{% url 'contracts:detail_contrat' pk=contrat.pk %}"
                    class="sm:col-span-2 w-full bg-green-600 hover:bg-green-500 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 text-center flex justify-center items-center gap-2">
-                    <i class="fas fa-eye"></i> Voir le dossier complet
+                    <i class="fas fa-eye"></i> Détail Du Contrat
                 </a>
 
                 {% with att=contrat.link_attestation|default_if_none:'' carte=contrat.link_carte_brune|default_if_none:'' %}
@@ -76,15 +76,10 @@
                         {% if carte %}
                             <a href="{{ carte }}" target="_blank" rel="noopener noreferrer"
                                class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition-colors text-sm font-medium">
-                                <i class="fas fa-id-card text-yellow-500"></i> Carte Brune
+                                <i class="fas fa-id-card text-yellow-500"></i> CEDEAO
                             </a>
                         {% endif %}
 
-                        <a href="{% url 'contracts:telecharger_documents' pk=contrat.pk %}"
-                           download
-                           class="{% if not att or not carte %}sm:col-span-2{% endif %} flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition-colors text-sm font-medium">
-                            <i class="fas fa-download text-blue-400"></i> Tout télécharger
-                        </a>
 
                     {# --- CAS 2 : Documents manquants (Bouton Récupérer) --- #}
                     {% else %}

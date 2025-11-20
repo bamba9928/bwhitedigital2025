@@ -1,9 +1,13 @@
 {% load widget_tweaks %}
-<div class="form-section">
+
+<div class="form-section"
+     x-data="{ showSecondary: {% if client_form.telephone_secondaire.value %}true{% else %}false{% endif %} }">
     <h2 class="text-2xl font-semibold text-white mb-4 flex items-center">
         <i class="fas fa-user mr-2 text-blue-400"></i> Informations Client
     </h2>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Prénom -->
         <div class="field-group">
             <label for="{{ client_form.prenom.id_for_label }}"
                    class="block text-gray-300 text-sm font-medium mb-2">
@@ -15,6 +19,8 @@
                 <p class="text-red-500 text-xs mt-1">{{ client_form.prenom.errors.0 }}</p>
             {% endif %}
         </div>
+
+        <!-- Nom -->
         <div class="field-group">
             <label for="{{ client_form.nom.id_for_label }}"
                    class="block text-gray-300 text-sm font-medium mb-2">
@@ -22,20 +28,64 @@
                 Nom <span class="text-red-400">*</span>
             </label>
             {{ client_form.nom|attr:"required:required" }}
-            {% if client_form.nom.errors %}<p class="text-red-500 text-xs mt-1">{{ client_form.nom.errors.0 }}</p>{% endif %}
+            {% if client_form.nom.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ client_form.nom.errors.0 }}</p>
+            {% endif %}
         </div>
+
+        <!-- Téléphone principal (colonne 1) -->
         <div class="field-group">
-            <label for="{{ client_form.telephone.id_for_label }}"
-                   class="block text-gray-300 text-sm font-medium mb-2">
-                <i class="fas fa-phone mr-1 text-blue-400"></i>
-                Téléphone <span class="text-red-400">*</span>
-            </label>
+            <div class="flex justify-between items-end mb-2">
+                <label for="{{ client_form.telephone.id_for_label }}"
+                       class="block text-gray-300 text-sm font-medium">
+                    <i class="fas fa-phone mr-1 text-blue-400"></i>
+                    Téléphone <span class="text-red-400">*</span>
+                </label>
+                <button type="button"
+                        x-show="!showSecondary"
+                        @click="showSecondary = true"
+                        class="text-xs text-blue-400 hover:text-blue-300 hover:underline transition-colors focus:outline-none">
+                    <i class="fas fa-plus-circle mr-1"></i>Ajouter un second numéro
+                </button>
+            </div>
             {{ client_form.telephone|attr:"required:required" }}
             {% if client_form.telephone.errors %}
                 <p class="text-red-500 text-xs mt-1">{{ client_form.telephone.errors.0 }}</p>
             {% endif %}
         </div>
-        <div class="field-group">
+
+        <!-- Téléphone secondaire (colonne 2, même ligne que le principal) -->
+        <div class="field-group"
+             x-show="showSecondary"
+             x-cloak
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 transform -translate-y-2"
+             x-transition:enter-end="opacity-100 transform translate-y-0">
+
+            <div class="flex justify-between items-end mb-2">
+                <label for="{{ client_form.telephone_secondaire.id_for_label }}"
+                       class="block text-gray-300 text-sm font-medium">
+                    <i class="fas fa-mobile-alt mr-1 text-blue-300"></i>
+                    Tél. Secondaire
+                </label>
+                <button type="button"
+                        @click="showSecondary = false;
+                                document.getElementById('{{ client_form.telephone_secondaire.id_for_label }}').value = ''"
+                        class="text-xs text-gray-500 hover:text-red-400 transition-colors focus:outline-none">
+                    <i class="fas fa-times mr-1"></i>Masquer
+                </button>
+            </div>
+
+            {{ client_form.telephone_secondaire }}
+            {% if client_form.telephone_secondaire.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ client_form.telephone_secondaire.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Adresse : prend la place vide (col 2) si pas de secondaire,
+             et toute la ligne si secondaire affiché -->
+        <div class="field-group"
+             :class="showSecondary ? 'md:col-span-2' : ''">
             <label for="{{ client_form.adresse.id_for_label }}"
                    class="block text-gray-300 text-sm font-medium mb-2">
                 <i class="fas fa-map-marker-alt mr-1 text-blue-400"></i>
