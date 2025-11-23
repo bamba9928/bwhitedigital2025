@@ -1,49 +1,56 @@
-# Python
+# --- Python ---
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+dist/
+*.egg-info/
+
+# --- Virtual Environments ---
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Django
+# --- Django ---
 *.log
 *.pot
 *.pyc
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-media/
+
+# Static collection (output of collectstatic)
 staticfiles/
 
-# IDE
+# Media files (User uploads)
+# Ignore content, but keep the folder structure if .gitkeep exists
+media/*
+!media/.gitkeep
+
+# --- IDE & Editor ---
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+Thumbs.db
 
-# Environment variables
+# --- Environment variables (SECURITY) ---
 .env
 .env.local
 .env.*.local
 
-# PyCharm
-.idea/
-*.iml
-*.iws
-*.ipr
-
-# Testing
+# --- Testing & Quality ---
 .coverage
 htmlcov/
 .pytest_cache/
+.mypy_cache/
 
-# Backup files
+# --- Backup files ---
 *.bak
 *.backup
