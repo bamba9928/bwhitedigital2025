@@ -312,11 +312,8 @@ def simuler_tarif(request):
     except Exception as e:
         logger.error("Erreur inattendue simuler_tarif | %s", str(e), exc_info=True)
         return _render_error(request, f"Erreur inattendue: {e}")
-
-
 @login_required
 @require_http_methods(["POST"])
-@transaction.atomic
 def emettre_contrat(request):
     """Émet le contrat à partir de la simulation stockée en session."""
     try:
@@ -364,9 +361,7 @@ def emettre_contrat(request):
         client_clean = client_form.cleaned_data
         vehicule_clean = vehicule_form.cleaned_data
 
-        # ---------- CLIENT (LOGIQUE FLEXIBLE MULTI-COMPTES) ----------
-        # On cherche un client qui a EXACTEMENT ce numéro ET ce nom ET ce prénom.
-        # Cela permet à un même numéro d'appartenir à plusieurs fiches (ex: père de famille).
+        # ---------- CLIENT local (hors transaction longue) ----------
         client = Client.objects.filter(
             telephone=client_clean["telephone"],
             nom__iexact=client_clean["nom"].strip(),
@@ -374,7 +369,6 @@ def emettre_contrat(request):
         ).first()
 
         if not client:
-            # Si pas de match exact, on crée une nouvelle fiche
             client = Client.objects.create(
                 telephone=client_clean["telephone"],
                 telephone_secondaire=client_clean.get("telephone_secondaire", ""),
@@ -384,7 +378,6 @@ def emettre_contrat(request):
                 created_by=request.user,
             )
         else:
-            # Client existant : on met à jour l'adresse ou le tél secondaire si nécessaire
             fields_to_update = []
             if client.adresse != client_clean["adresse"]:
                 client.adresse = client_clean["adresse"]
@@ -398,7 +391,7 @@ def emettre_contrat(request):
             if fields_to_update:
                 client.save(update_fields=fields_to_update)
 
-        # Création/Récupération code Askia
+        # ---------- ASKIA client (hors transaction) ----------
         if not client.code_askia:
             try:
                 client.code_askia = askia_client.create_client(client_data)
@@ -429,7 +422,7 @@ def emettre_contrat(request):
         duree = int(simulation_data["duree"])
         date_echeance = date_effet + relativedelta(months=duree) - timedelta(days=1)
 
-        # ---------- ÉMISSION ASKIA ----------
+        # ---------- ÉMISSION ASKIA (hors transaction) ----------
         contrat_payload = {
             "client_code": client.code_askia,
             "date_effet": date_effet,
@@ -446,9 +439,7 @@ def emettre_contrat(request):
         try:
             logger.info(
                 "Tentative émission contrat | Client=%s | Immat=%s | IdSaisie=%s",
-                client.code_askia,
-                immat,
-                contrat_payload.get("id_saisie"),
+                client.code_askia, immat, contrat_payload.get("id_saisie")
             )
             result = askia_client.create_contrat_auto(contrat_payload)
             numero_police = result.get("numero_police") or result.get("numeroPolice")
@@ -483,14 +474,13 @@ def emettre_contrat(request):
                     request, f"Erreur API Askia lors de l'émission : {error_msg}"
                 )
 
-        # ---------- DOCUMENTS ----------
+        # ---------- DOCUMENTS (hors transaction) ----------
         attestation = ""
         carte_brune = ""
 
-        if isinstance(result, dict):
-            liens_directs = result.get("lien") or {}
-            attestation = liens_directs.get("linkAttestation", "") or attestation
-            carte_brune = liens_directs.get("linkCarteBrune", "") or carte_brune
+        liens_directs = (result or {}).get("lien") or {}
+        attestation = liens_directs.get("linkAttestation", "") or attestation
+        carte_brune = liens_directs.get("linkCarteBrune", "") or carte_brune
 
         if not (attestation or carte_brune):
             try:
@@ -503,37 +493,37 @@ def emettre_contrat(request):
         if not (attestation or carte_brune):
             logger.warning(
                 "Contrat émis sans documents | Police=%s | Facture=%s",
-                numero_police,
-                numero_facture,
+                numero_police, numero_facture
             )
 
-        # ---------- PERSISTANCE LOCALE ----------
+        # ---------- PERSISTANCE LOCALE (transaction courte) ----------
         tarif = simulation_data["tarif"]
-        contrat = Contrat.objects.create(
-            client=client,
-            vehicule=vehicule,
-            apporteur=request.user,
-            numero_police=numero_police,
-            numero_facture=numero_facture,
-            duree=duree,
-            date_effet=date_effet,
-            date_echeance=date_echeance,
-            prime_nette=Decimal(str(tarif["prime_nette"])),
-            accessoires=Decimal(str(tarif["accessoires"])),
-            fga=Decimal(str(tarif["fga"])),
-            taxes=Decimal(str(tarif["taxes"])),
-            prime_ttc=Decimal(str(tarif["prime_ttc"])),
-            commission_askia=Decimal(str(tarif.get("commission_askia", 0))),
-            commission_apporteur=Decimal(str(tarif.get("commission_apporteur", 0))),
-            commission_bwhite=Decimal(str(tarif.get("commission_bwhite", 0))),
-            net_a_reverser=Decimal(str(tarif.get("net_a_reverser", 0))),
-            status="EMIS",
-            id_saisie_askia=simulation_data.get("id_saisie"),
-            emis_at=timezone.now(),
-            askia_response=result.get("raw_response", simulation_data),
-            link_attestation=attestation,
-            link_carte_brune=carte_brune,
-        )
+        with transaction.atomic():
+            contrat = Contrat.objects.create(
+                client=client,
+                vehicule=vehicule,
+                apporteur=request.user,
+                numero_police=numero_police,
+                numero_facture=numero_facture,
+                duree=duree,
+                date_effet=date_effet,
+                date_echeance=date_echeance,
+                prime_nette=Decimal(str(tarif["prime_nette"])),
+                accessoires=Decimal(str(tarif["accessoires"])),
+                fga=Decimal(str(tarif["fga"])),
+                taxes=Decimal(str(tarif["taxes"])),
+                prime_ttc=Decimal(str(tarif["prime_ttc"])),
+                commission_askia=Decimal(str(tarif.get("commission_askia", 0))),
+                commission_apporteur=Decimal(str(tarif.get("commission_apporteur", 0))),
+                commission_bwhite=Decimal(str(tarif.get("commission_bwhite", 0))),
+                net_a_reverser=Decimal(str(tarif.get("net_a_reverser", 0))),
+                status="EMIS",
+                id_saisie_askia=simulation_data.get("id_saisie"),
+                emis_at=timezone.now(),
+                askia_response=(result.get("raw_response") if isinstance(result, dict) else simulation_data),
+                link_attestation=attestation,
+                link_carte_brune=carte_brune,
+            )
 
         # Nettoyage session
         request.session.pop("simulation_data", None)
@@ -557,7 +547,6 @@ def emettre_contrat(request):
         return _render_error(
             request, f"Erreur inattendue lors de l'émission : {str(e)}"
         )
-
 
 @login_required
 def detail_contrat(request, pk):
@@ -797,7 +786,6 @@ def echeances_aujourdhui(request):
 
 
 @login_required
-@transaction.atomic
 def renouveler_contrat_auto(request, pk: int):
     """
     Renouvelle un contrat auto en appelant l'API Askia 'renouv'
@@ -912,7 +900,6 @@ def renouveler_contrat_auto(request, pk: int):
 
 @login_required
 @require_http_methods(["POST"])
-@transaction.atomic
 def annuler_contrat(request, pk):
     """
     Annule un contrat via l'API Askia 'annulerqrcode'.
