@@ -263,8 +263,8 @@ LOGGING = {
 # ⚙️ CONFIGURATION DES SESSIONS
 # ==========================
 
-# Durée max d’inactivité avant expiration (10 minutes = 600s)
-# SESSION_COOKIE_AGE = 600
+# Durée max d’inactivité
+# SESSION_COOKIE_AGE = 3600
 
 # Renouvelle le compteur de session à chaque requête (inactivité réelle)
 # SESSION_SAVE_EVERY_REQUEST = True

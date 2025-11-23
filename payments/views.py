@@ -27,10 +27,30 @@ class DeclarationPaiementForm(forms.ModelForm):
             "notes": forms.Textarea(attrs={"rows": 3, "class": "form-textarea"}),
         }
 
+    def clean_reference_transaction(self):
+        ref = (self.cleaned_data.get("reference_transaction") or "").strip()
+        if not ref:
+            raise forms.ValidationError("La référence de transaction est obligatoire.")
+        return ref
+
+    def clean_numero_compte(self):
+        num = (self.cleaned_data.get("numero_compte") or "").strip()
+        if not num:
+            raise forms.ValidationError("Le numéro de compte / wallet est obligatoire.")
+        return num
+
 
 class ValidationPaiementForm(forms.Form):
-    methode_paiement = forms.ChoiceField(choices=PaiementApporteur.METHODE)
+    methode_paiement = forms.ChoiceField(
+        choices=PaiementApporteur.METHODE, required=True
+    )
     reference_transaction = forms.CharField(max_length=64, required=True)
+
+    def clean_reference_transaction(self):
+        ref = (self.cleaned_data.get("reference_transaction") or "").strip()
+        if not ref:
+            raise forms.ValidationError("Référence obligatoire.")
+        return ref
 
 
 # -----------------------------
@@ -38,10 +58,10 @@ class ValidationPaiementForm(forms.Form):
 # -----------------------------
 def _require_apporteur(user) -> bool:
     """
-    Vérifie que l'utilisateur est un apporteur (et pas commercial/admin).
-    Utilise la propriété is_apporteur du modèle User.
+    Vérifie que l'utilisateur est bien un apporteur.
+    Ne dépend pas d'une propriété optionnelle.
     """
-    return getattr(user, "is_apporteur", False)
+    return user.is_authenticated and getattr(user, "role", None) == "APPORTEUR"
 
 
 # -----------------------------
@@ -64,7 +84,7 @@ def mes_paiements(request):
         .order_by("-created_at")
     )
 
-    status = request.GET.get("status", "").upper()
+    status = (request.GET.get("status") or "").upper()
     if status in {"EN_ATTENTE", "PAYE", "ANNULE"}:
         qs = qs.filter(status=status)
 
@@ -102,32 +122,42 @@ def declarer_paiement(request, contrat_id):
         apporteur=request.user,
     )
 
-    if not contrat.is_valide:
+    if not getattr(contrat, "is_valide", False):
         messages.error(
             request, "Contrat non valide. Attestation ou carte brune manquante."
         )
         return redirect("payments:mes_paiements")
 
-    # Normalement déjà créé par le signal, mais on garde un get_or_create idempotent
     paiement, created = PaiementApporteur.objects.get_or_create(
         contrat=contrat,
-        defaults={"montant_a_payer": contrat.net_a_reverser},
+        defaults={
+            "montant_a_payer": contrat.net_a_reverser,
+            "status": "EN_ATTENTE",
+        },
     )
 
-    # Si déjà EN_ATTENTE, on recalcule le montant si nécessaire
+    # Si déjà créé et en attente, on resynchronise le montant
     if not created and paiement.est_en_attente:
         if paiement.montant_a_payer != contrat.net_a_reverser:
             paiement.montant_a_payer = contrat.net_a_reverser
             paiement.save(update_fields=["montant_a_payer"])
 
+    # Bloque les statuts finaux
     if paiement.est_paye:
         messages.info(request, "Ce contrat est déjà marqué comme payé.")
+        return redirect("payments:mes_paiements")
+
+    if paiement.est_annule:
+        messages.error(request, "Ce paiement a été annulé. Contacte l’admin.")
         return redirect("payments:mes_paiements")
 
     if request.method == "POST":
         form = DeclarationPaiementForm(request.POST, instance=paiement)
         if form.is_valid():
-            form.save()
+            paiement = form.save(commit=False)
+            # sécurité: on force l'état attendu côté apporteur
+            paiement.status = "EN_ATTENTE"
+            paiement.save()
             messages.success(
                 request, "Déclaration soumise. En attente de validation admin."
             )
@@ -160,20 +190,15 @@ def liste_encaissements(request):
         PaiementApporteur.objects.select_related(
             "contrat", "contrat__apporteur", "contrat__client"
         )
-        # sécurité logique : on ne liste que les encaissements d'apporteurs
         .filter(contrat__apporteur__role="APPORTEUR")
         .order_by("-created_at")
     )
-
-    st = request.GET.get("status", "")
-    if st in {"EN_ATTENTE", "PAYE", "ANNULE"}:
-        qs = qs.filter(status=st)
 
     apporteur_id = request.GET.get("apporteur")
     if apporteur_id:
         qs = qs.filter(contrat__apporteur_id=apporteur_id)
 
-    q = request.GET.get("q", "").strip()
+    q = (request.GET.get("q") or "").strip()
     if q:
         qs = qs.filter(
             Q(contrat__numero_police__icontains=q)
@@ -182,18 +207,31 @@ def liste_encaissements(request):
             | Q(contrat__client__nom__icontains=q)
         )
 
+    # Totaux calculés sur le jeu filtré (apporteur + recherche),
+    # mais indépendants du filtre status d'affichage.
+    base_qs = qs
+
     total_attente = (
-        qs.filter(status="EN_ATTENTE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+        base_qs.filter(status="EN_ATTENTE")
+        .aggregate(s=Sum("montant_a_payer"))["s"]
+        or 0
     )
-    total_paye = qs.filter(status="PAYE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+    total_paye = (
+        base_qs.filter(status="PAYE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+    )
     total_annule = (
-        qs.filter(status="ANNULE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+        base_qs.filter(status="ANNULE")
+        .aggregate(s=Sum("montant_a_payer"))["s"]
+        or 0
     )
+
+    st = (request.GET.get("status") or "").upper()
+    if st in {"EN_ATTENTE", "PAYE", "ANNULE"}:
+        qs = qs.filter(status=st)
 
     paginator = Paginator(qs, 50)
     page = paginator.get_page(request.GET.get("page"))
 
-    # uniquement les apporteurs (les commerciaux n'ont pas de PaiementApporteur)
     apporteurs = User.objects.filter(role="APPORTEUR").order_by(
         "first_name", "last_name"
     )
@@ -220,7 +258,6 @@ def liste_encaissements(request):
 def detail_encaissement(request, paiement_id):
     """
     Détail d'un encaissement pour le staff (ADMIN + COMMERCIAL).
-    La restriction sur qui peut valider est gérée dans la vue de validation.
     """
     paiement = get_object_or_404(
         PaiementApporteur.objects.select_related(
@@ -228,12 +265,14 @@ def detail_encaissement(request, paiement_id):
         ),
         pk=paiement_id,
     )
+
     vform = ValidationPaiementForm(
         initial={
             "methode_paiement": paiement.methode_paiement or "OM",
             "reference_transaction": paiement.reference_transaction,
         }
     )
+
     return render(
         request,
         "payments/detail_encaissement.html",
@@ -251,16 +290,21 @@ def detail_encaissement(request, paiement_id):
 def valider_encaissement(request, paiement_id):
     """
     Marque l'encaissement comme PAYE.
-
-    Note:
-      - Si tu veux réserver la validation aux vrais admins uniquement
-        (et pas aux commerciaux), tu peux ajouter un garde:
-          if not request.user.is_true_admin: ...
+    Réservé aux vrais admins.
     """
     paiement = get_object_or_404(PaiementApporteur, pk=paiement_id)
 
+    # garde "vrai admin"
+    if not getattr(request.user, "is_true_admin", False):
+        messages.error(request, "Seuls les administrateurs peuvent valider un paiement.")
+        return redirect("payments:detail_encaissement", paiement_id=paiement.id)
+
     if paiement.est_paye:
         messages.info(request, "Déjà validé.")
+        return redirect("payments:detail_encaissement", paiement_id=paiement.id)
+
+    if paiement.est_annule:
+        messages.error(request, "Ce paiement est annulé et ne peut plus être validé.")
         return redirect("payments:detail_encaissement", paiement_id=paiement.id)
 
     form = ValidationPaiementForm(request.POST)
@@ -276,5 +320,6 @@ def valider_encaissement(request, paiement_id):
         reference=reference,
         validated_by=request.user,
     )
+
     messages.success(request, "Paiement validé.")
     return redirect("payments:detail_encaissement", paiement_id=paiement.id)

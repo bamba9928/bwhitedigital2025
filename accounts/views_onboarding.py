@@ -14,46 +14,37 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def apporteur_detail(request):
+    """Espace contrat/conditions de l'apporteur"""
     user = request.user
+    if user.role != "APPORTEUR":
+        return redirect("accounts:profile")
+
     ob, _ = ApporteurOnboarding.objects.get_or_create(user=user)
+
+    # Protection statut
+    if ob.status in ["VALIDE", "REJETE"] and request.method == "POST":
+        messages.error(request, "Onboarding déjà traité par l'admin.")
+        return redirect("accounts:apporteur_detail")
 
     if request.method == "POST":
         form = OnboardingForm(request.POST, request.FILES, instance=ob)
+        if not request.POST.get("a_lu_et_approuve"):
+            form.add_error(None, "Vous devez accepter le contrat et les conditions.")
 
         if form.is_valid():
-
-            ob = form.save(commit=False)
-
-            data_url = request.POST.get("signature_image")
-            if data_url and data_url.startswith("data:image/"):
-                try:
-                    header, b64 = data_url.split(",", 1)
-                    ext = "png" if "png" in header else "jpg"
-                    ob.signature_image = ContentFile(
-                        base64.b64decode(b64),
-
-                        name=f"sig_{user.id}_{int(timezone.now().timestamp())}.{ext}",
-                    )
-                except Exception as e:
-                    logger.error("Échec décodage signature pour user %s: %s", user.id, e)
-                    messages.error(request, "La sauvegarde de l'image signature a échoué. Veuillez réessayer.")
-                    return redirect("accounts:apporteur_detail")
-
-            ob.a_lu_et_approuve = True
+            # Traçage
             ob.approuve_at = timezone.now()
-
             xff = request.META.get("HTTP_X_FORWARDED_FOR")
-            ob.ip_accept = (
-                xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR")
-            )
+            ob.ip_accept = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR")
             ob.ua_accept = request.META.get("HTTP_USER_AGENT", "")
 
+            # Statut
             if ob.status not in ("VALIDE", "REJETE"):
                 ob.status = "SOUMIS"
 
             ob.save()
+            messages.success(request, "Données soumises avec succès.")
             return redirect("accounts:apporteur_detail")
-
     else:
         form = OnboardingForm(instance=ob)
 
@@ -63,16 +54,12 @@ def apporteur_detail(request):
         request=request,
     )
 
-    return render(
-        request,
-        "accounts/apporteur_detail.html",
-        {
-            "title": "Mon contrat Apporteur",
-            "onboarding": ob,
-            "form": form,
-            "conditions_html": conditions_html,
-        },
-    )
+    return render(request, "accounts/apporteur_detail.html", {
+        "title": "Mon contrat Apporteur",
+        "onboarding": ob,
+        "form": form,
+        "conditions_html": conditions_html,
+    })
 @login_required
 def contrat_pdf(request):
     """Téléchargement du contrat en PDF; fallback HTML imprimable."""
