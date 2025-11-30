@@ -108,7 +108,7 @@ def home(request):
     # Restrictions rôle
     if request.user.role == "APPORTEUR":
         contrats = contrats.filter(apporteur=request.user)
-    elif request.user.is_staff and apporteur_id:  # MODIFIÉ (Admin OU Commercial)
+    elif request.user.is_staff and apporteur_id:  # Admin OU Commercial
         contrats = contrats.filter(apporteur__id=apporteur_id)
 
     # Filtres
@@ -130,7 +130,7 @@ def home(request):
     # --- Définition du Contexte ---
 
     # Admin et Commercial (is_staff)
-    if request.user.is_staff:  # MODIFIÉ
+    if request.user.is_staff:
         total_contrats = contrats.count()
         total_clients = Client.objects.count()
         total_apporteurs = User.objects.filter(role="APPORTEUR").count()
@@ -147,18 +147,30 @@ def home(request):
             # L'Admin voit le profit BWHITE
             commission_field_for_stats = "commission_bwhite"
         else:
-            # Le Commercial voit la commission de l'apporteur
+            # POINT 9 : Le Commercial voit la commission de l'apporteur (pour suivi)
+            # MAIS ses totaux financiers doivent refléter le Chiffre d'Affaire (TTC)
             commission_field_for_stats = "commission_apporteur"
 
-        # Stats spécifiques au VRAI Admin
+        # Stats spécifiques au VRAI Admin / Commercial
         resume_admin = {}
         if request.user.is_true_admin:
+            # Logique Admin (inchangée)
             contrats_admin = contrats.filter(apporteur=request.user)
             resume_admin = contrats_admin.aggregate(
                 nb_contrats=Count("id"),
                 total_primes=Sum("prime_ttc"),
                 total_commissions=Sum("commission_bwhite"),  # Profit BWHITE
                 total_net=Sum("net_a_reverser"),
+            )
+        elif request.user.role == "COMMERCIAL":
+            # POINT 9 & 7 : Logique Commercial
+            # Pour un commercial, le "A payer" est égal au TTC (pas de commission source)
+            contrats_comm = contrats.filter(apporteur=request.user)
+            resume_admin = contrats_comm.aggregate(
+                nb_contrats=Count("id"),
+                total_primes=Sum("prime_ttc"),              # CA généré
+                total_commissions=Sum("commission_apporteur"),  # 0 pour lui
+                total_net=Sum("prime_ttc"),                 # Montant à reverser = TTC
             )
 
         # Top 5 apporteurs (visible par Admin et Commercial)
@@ -167,10 +179,8 @@ def home(request):
             .values("apporteur__id", "apporteur__first_name", "apporteur__last_name")
             .annotate(
                 total_primes=Sum("prime_ttc"),
-                total_commissions=Sum(
-                    "commission_apporteur"
-                ),  # Ce que l'apporteur gagne
-                total_net=Sum("net_a_reverser"),  # Ce que BWHITE doit à Askia
+                total_commissions=Sum("commission_apporteur"),  # Ce que l'apporteur gagne
+                total_net=Sum("net_a_reverser"),               # Ce que BWHITE doit à Askia
             )
             .order_by("-total_primes")[:5]
         )
@@ -182,25 +192,27 @@ def home(request):
             .annotate(
                 nb_contrats=Count("id"),
                 total_primes=Sum("prime_ttc"),
-                total_commissions_apporteur=Sum(
-                    "commission_apporteur"
-                ),  # Dû à l'apporteur
-                total_commissions_bwhite=Sum("commission_bwhite"),  # Profit BWHITE
-                total_net=Sum("net_a_reverser"),  # Dû à Askia
+                total_commissions_apporteur=Sum("commission_apporteur"),  # Dû à l'apporteur
+                total_commissions_bwhite=Sum("commission_bwhite"),        # Profit BWHITE
+                total_net=Sum("net_a_reverser"),                          # Dû à Askia
             )
             .order_by("-total_primes")
         )
 
         context = {
-            "title": "Dashboard Staff",  # Titre géré par le template
+            "title": "Dashboard Staff",
             "today": today,
             "total_contrats": total_contrats,
             "total_clients": total_clients,
             "total_apporteurs": total_apporteurs,
             "paiements_attente": paiements_attente,
             "montant_attente": montant_attente,
-            "resume_admin": resume_admin,  # Sera vide pour le Commercial
-            **_compute_stats(contrats, today, commission_field=commission_field_for_stats),
+            "resume_admin": resume_admin,  # Admin : net_a_reverser / Commercial : TTC
+            **_compute_stats(
+                contrats,
+                today,
+                commission_field=commission_field_for_stats,
+            ),
             "top_apporteurs": top_apporteurs,
             "recap_apporteurs": recap_apporteurs,
             "periode": periode,
@@ -376,8 +388,6 @@ def statistiques(request):
     }
 
     return render(request, "dashboard/statistiques.html", context)
-
-
 @login_required
 def profile(request):
     # Géré par 'accounts/views.py', mais on garde un fallback si l'URL est ici

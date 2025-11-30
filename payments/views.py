@@ -7,12 +7,9 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
-
 from accounts.models import User
 from contracts.models import Contrat
 from .models import PaiementApporteur
-
-
 # -----------------------------
 # Forms
 # -----------------------------
@@ -178,8 +175,6 @@ def declarer_paiement(request, contrat_id):
             "form": form,
         },
     )
-
-
 # -----------------------------
 # Admin / Staff: liste et validation
 # -----------------------------
@@ -189,7 +184,6 @@ def liste_encaissements(request):
     Liste des encaissements côté staff (ADMIN + COMMERCIAL).
     Affiche TOUS les encaissements, y compris ceux des admins et commerciaux.
     """
-    # MODIFICATION : Suppression du filtre par rôle APPORTEUR pour voir tout le monde
     qs = (
         PaiementApporteur.objects.select_related(
             "contrat", "contrat__apporteur", "contrat__client"
@@ -285,8 +279,6 @@ def detail_encaissement(request, paiement_id):
             "vform": vform,
         },
     )
-
-
 @staff_member_required
 @require_POST
 @transaction.atomic
@@ -297,7 +289,6 @@ def valider_encaissement(request, paiement_id):
     """
     paiement = get_object_or_404(PaiementApporteur, pk=paiement_id)
 
-    # MODIFICATION : Autorisation Staff (Commercial inclus)
     if not request.user.is_staff:
         messages.error(request, "Action non autorisée.")
         return redirect("payments:detail_encaissement", paiement_id=paiement.id)
