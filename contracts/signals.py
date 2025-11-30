@@ -31,11 +31,12 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
         )
         return
 
+    # Si le contrat n'est pas encore valide (docs manquants), on attend (géré par récup docs)
+    # SAUF si l'API a bien retourné les docs dès la création
     if not getattr(instance, "is_valide", False):
         logger.warning(
-            "Contrat %s INVALIDE - Raison: %s | Paiement NON créé",
+            "Contrat %s INVALIDE (Docs manquants) - Paiement NON créé immédiatement.",
             instance.numero_police or instance.pk,
-            getattr(instance, "raison_invalide", None),
         )
         return
 
@@ -53,16 +54,16 @@ def create_or_get_paiement_apporteur(sender, instance: Contrat, created, **kwarg
     commission = Decimal(getattr(instance, "commission_apporteur", 0) or 0)
     montant_du = Decimal("0.00")
 
-    # --- LOGIQUE MÉTIER ---
+    # --- LOGIQUE MÉTIER DE PAIEMENT ---
 
     # Cas 1 : Apporteur standard
-    if getattr(apporteur, "is_apporteur", False):
-        # Il garde sa commission à la source, il ne reverse que la différence
+    # Il garde sa commission à la source, il ne reverse que la différence
+    if getattr(apporteur, "role", "") == "APPORTEUR":
         montant_du = prime_ttc - commission
 
     # Cas 2 : Commercial ou Admin (Vente directe)
+    # Ils n'ont pas de commission source sur le paiement, ils encaissent le client et doivent TOUT reverser à la caisse
     elif getattr(apporteur, "is_commercial", False) or getattr(apporteur, "is_admin", False):
-        # Ils n'ont pas de commission source, ils encaissent le client et doivent TOUT reverser
         montant_du = prime_ttc
 
     # Cas autre (sécurité)
@@ -120,12 +121,10 @@ def update_contrat_dates_and_status(sender, instance: Contrat, **kwargs):
     if instance.date_effet and instance.duree and not instance.date_echeance:
         instance.calculate_date_echeance()
 
-    # Calcul des commissions
-    # Note : On laisse calculate_commission s'exécuter même pour les commerciaux
-    # car cette méthode (dans models.py) gère le fait de mettre commission_apporteur à 0
-    # si ce n'est pas un apporteur, mais calcule quand même la part BWHITE/ASKIA.
-    if getattr(instance, "commission_askia", None) in (None, 0):
-        instance.calculate_commission()
+    # Calcul des commissions systématique
+    # La méthode calculate_commission() du modèle gère maintenant
+    # la distinction Admin/Commercial vs Apporteur
+    instance.calculate_commission()
 
     # Datation émission
     if instance.status == "EMIS" and not instance.emis_at:
@@ -177,7 +176,8 @@ def log_paiement_status_change(sender, instance, created, **kwargs):
         HistoriquePaiement.objects.create(
             paiement=instance,
             action="STATUS_CHANGE",
-            effectue_par=getattr(instance, "validated_by", None),
+            # effectue_par est souvent géré dans la vue, ici on log le système si None
+            effectue_par=None,
             details=f"Statut changé de {old_label} vers {new_label}",
         )
 

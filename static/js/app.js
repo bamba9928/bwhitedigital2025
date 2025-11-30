@@ -390,7 +390,7 @@
     toggleDependentFields() {
       const categorieSelect = document.getElementById('id_categorie');
       const sousCatWrapper = document.getElementById('sous-categorie-wrapper');
-      // const chargeUtileWrapper = document.getElementById('charge-utile-wrapper'); // <-- CORRIGÉ (Supprimé)
+      // const chargeUtileWrapper = document.getElementById('charge-utile-wrapper');
       if (!categorieSelect) return;
 
       let val = categorieSelect.value;
@@ -439,7 +439,7 @@
         }
       }
 
-      // Charge utile toujours caché → on force juste la valeur <-- CORRIGÉ (Logique simplifiée)
+      // Charge utile toujours caché → on force juste la valeur
       const chargeUtileField = document.getElementById('id_charge_utile');
       if (chargeUtileField) {
         chargeUtileField.disabled = false;      // ne jamais désactiver un champ à soumettre
@@ -536,14 +536,14 @@
       }, { signal: this.signal });
 
       // Détection succès émission pour purge session
-      document.body.addEventListener('htmx:afterOnLoad', (e) => {
-        const body = e.detail?.xhr?.responseText || '';
-        const successIndicators = ['bg-green-','Contrat émis','Émission réussie','success-message','alert-success'];
-        if (successIndicators.some(ind => body.includes(ind))) {
-          this.clearFormData();
-          if (this.app?.toast) this.app.toast('Contrat émis avec succès !', 'success', 5000);
-        }
-      }, { signal: this.signal });
+        document.body.addEventListener('htmx:afterOnLoad', (e) => {
+          const body = e.detail?.xhr?.responseText || '';
+          const successIndicators = ['bg-green-','Contrat émis','Émission réussie','success-message','alert-success'];
+          if (successIndicators.some(ind => body.includes(ind))) {
+            this.clearFormData();
+            // Toast supprimé - le message est géré dans le template
+          }
+        }, { signal: this.signal });
 
       // Bouton "restaurer"
       document.body.addEventListener('click', (e) => {

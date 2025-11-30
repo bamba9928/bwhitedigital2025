@@ -1,9 +1,25 @@
 {% load humanize %}
+
 <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-7 text-white">
     <h2 class="text-2xl font-semibold mb-4">
         <i class="fas fa-receipt text-blue-400 mr-2"></i>
         Devis
     </h2>
+
+    {# MESSAGE D'ACTION REQUISE - ENCAISSEMENT #}
+    <div class="mb-6 p-4 rounded-lg border border-yellow-500/60 bg-yellow-900/40">
+        <div class="flex items-start gap-3">
+            <i class="fas fa-exclamation-triangle text-yellow-300 text-xl mt-0.5"></i>
+            <div>
+                <p class="text-yellow-100 font-semibold text-sm">⚠️ Action requise</p>
+                <p class="text-yellow-200 text-xs mt-1">
+                    Encaissement du montant TTC nécessaire avant validation
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {# BADGES DATE ET DURÉE #}
     <div class="flex flex-wrap gap-2 mb-6 text-xs">
         {% if date_effet %}
             <span class="bg-gray-700 px-3 py-1 rounded-full">
@@ -16,6 +32,8 @@
             </span>
         {% endif %}
     </div>
+
+    {# GRILLE DES MONTANTS #}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div class="bg-gray-700 p-4 rounded-lg">
             <p class="text-gray-300 text-sm">Prime nette</p>
@@ -31,27 +49,41 @@
         </div>
         <div class="bg-gray-700 p-4 rounded-lg">
             <p class="text-gray-300 text-sm">FGA</p>
-            <p class="text-xl font-bold text-indigo-400">{{ simulation.fga|default_if_none:0|floatformat:0|intcomma }} FCFA</p>
+            <p class="text-xl font-bold text-indigo-400">
+                {{ simulation.fga|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
         </div>
         <div class="bg-gray-700 p-4 rounded-lg">
             <p class="text-gray-300 text-sm">Taxes</p>
-            <p class="text-xl font-bold text-red-400">{{ simulation.taxes|default_if_none:0|floatformat:0|intcomma }} FCFA</p>
+            <p class="text-xl font-bold text-red-400">
+                {{ simulation.taxes|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
         </div>
         <div class="bg-gradient-to-br from-yellow-600 to-yellow-700 p-4 rounded-lg col-span-1 md:col-span-2 border border-yellow-500">
             <p class="text-yellow-100 text-sm font-semibold">Prime TTC</p>
-            <p class="text-3xl font-bold text-white">{{ simulation.prime_ttc|default_if_none:0|floatformat:0|intcomma }} FCFA</p>
+            <p class="text-3xl font-bold text-white">
+                {{ simulation.prime_ttc|default_if_none:0|floatformat:0|intcomma }} FCFA
+            </p>
         </div>
+
+        {# COMMISSION APPORTEUR #}
         {% if is_apporteur %}
             <div class="bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
                 <p class="text-gray-300 text-sm">Ma Commission</p>
-                <p class="text-xl font-bold text-green-300">{{ commission|default_if_none:0|floatformat:0|intcomma }} FCFA</p>
+                <p class="text-xl font-bold text-green-300">
+                    {{ commission|default_if_none:0|floatformat:0|intcomma }} FCFA
+                </p>
             </div>
             <div class="bg-gradient-to-br from-orange-600 to-orange-700 p-4 rounded-lg col-span-1 md:col-span-2 border border-orange-500">
                 <p class="text-orange-100 text-sm font-semibold">Net à reverser</p>
-                <p class="text-2xl font-bold text-white">{{ net_a_reverser|default_if_none:0|floatformat:0|intcomma }} FCFA</p>
+                <p class="text-2xl font-bold text-white">
+                    {{ net_a_reverser|default_if_none:0|floatformat:0|intcomma }} FCFA
+                </p>
             </div>
         {% endif %}
     </div>
+
+    {# BOUTONS D'ACTION #}
     <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
         <button type="button"
                 id="btn-modifier-simulation"
@@ -81,10 +113,10 @@
         </div>
     </div>
 </div>
+
 <script>
 (function() {
-
-  // le bouton "Modifier" ---
+  // Bouton "Modifier"
   const modBtn = document.getElementById('btn-modifier-simulation');
   if (modBtn) {
     modBtn.addEventListener('click', function() {
@@ -92,27 +124,28 @@
       const formWrapper = document.getElementById('contrat-form-wrapper');
 
       if (simResult) {
-        simResult.classList.add('hidden'); // Cache ce bloc de résultat
-        simResult.innerHTML = ''; // Vide le contenu pour être propre
+        simResult.classList.add('hidden');
+        simResult.innerHTML = '';
       }
       if (formWrapper) {
-        formWrapper.classList.remove('hidden'); // Ré-affiche le formulaire
-        // Fait remonter l'utilisateur en haut du formulaire
+        formWrapper.classList.remove('hidden');
         formWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     });
   }
 
-  // ---  script existant pour le bouton "Envoyer" ---
+  // Bouton "Envoyer" - Protection double-clic
   const emitBtn = document.getElementById('btn-emettre-contrat');
-  const btnText = document.getElementById('btn-text');
   if (!emitBtn) return;
 
   let locked = false;
 
   document.addEventListener('htmx:beforeRequest', function (e) {
     if (e.detail.elt === emitBtn) {
-      if (locked) { e.preventDefault(); return; }
+      if (locked) {
+        e.preventDefault();
+        return;
+      }
       locked = true;
       emitBtn.disabled = true;
     }

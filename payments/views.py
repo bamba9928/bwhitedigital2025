@@ -128,18 +128,21 @@ def declarer_paiement(request, contrat_id):
         )
         return redirect("payments:mes_paiements")
 
+    # Calcul du montant à payer par l'apporteur : TTC - Commission
+    montant_a_payer_apporteur = contrat.prime_ttc - contrat.commission_apporteur
+
     paiement, created = PaiementApporteur.objects.get_or_create(
         contrat=contrat,
         defaults={
-            "montant_a_payer": contrat.net_a_reverser,
+            "montant_a_payer": montant_a_payer_apporteur,
             "status": "EN_ATTENTE",
         },
     )
 
-    # Si déjà créé et en attente, on resynchronise le montant
+    # Si déjà créé et en attente, on resynchronise le montant si nécessaire
     if not created and paiement.est_en_attente:
-        if paiement.montant_a_payer != contrat.net_a_reverser:
-            paiement.montant_a_payer = contrat.net_a_reverser
+        if paiement.montant_a_payer != montant_a_payer_apporteur:
+            paiement.montant_a_payer = montant_a_payer_apporteur
             paiement.save(update_fields=["montant_a_payer"])
 
     # Bloque les statuts finaux
@@ -184,13 +187,13 @@ def declarer_paiement(request, contrat_id):
 def liste_encaissements(request):
     """
     Liste des encaissements côté staff (ADMIN + COMMERCIAL).
-    Les encaissements sont toujours liés à des contrats d'apporteurs.
+    Affiche TOUS les encaissements, y compris ceux des admins et commerciaux.
     """
+    # MODIFICATION : Suppression du filtre par rôle APPORTEUR pour voir tout le monde
     qs = (
         PaiementApporteur.objects.select_related(
             "contrat", "contrat__apporteur", "contrat__client"
         )
-        .filter(contrat__apporteur__role="APPORTEUR")
         .order_by("-created_at")
     )
 
@@ -240,7 +243,7 @@ def liste_encaissements(request):
         request,
         "payments/liste_encaissements.html",
         {
-            "title": "Encaissements apporteurs",
+            "title": "Gestion des Paiements",
             "page_obj": page,
             "paiements": page,
             "total_attente": total_attente,
@@ -290,13 +293,13 @@ def detail_encaissement(request, paiement_id):
 def valider_encaissement(request, paiement_id):
     """
     Marque l'encaissement comme PAYE.
-    Réservé aux vrais admins.
+    Autorisé pour ADMIN et COMMERCIAL (Validation manuelle des paiements hors plateforme).
     """
     paiement = get_object_or_404(PaiementApporteur, pk=paiement_id)
 
-    # garde "vrai admin"
-    if not getattr(request.user, "is_true_admin", False):
-        messages.error(request, "Seuls les administrateurs peuvent valider un paiement.")
+    # MODIFICATION : Autorisation Staff (Commercial inclus)
+    if not request.user.is_staff:
+        messages.error(request, "Action non autorisée.")
         return redirect("payments:detail_encaissement", paiement_id=paiement.id)
 
     if paiement.est_paye:
@@ -321,5 +324,5 @@ def valider_encaissement(request, paiement_id):
         validated_by=request.user,
     )
 
-    messages.success(request, "Paiement validé.")
+    messages.success(request, "Paiement validé avec succès.")
     return redirect("payments:detail_encaissement", paiement_id=paiement.id)

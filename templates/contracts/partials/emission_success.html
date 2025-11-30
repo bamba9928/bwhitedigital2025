@@ -1,7 +1,6 @@
 {% load humanize %}
 
-<div class="bg-gray-900 rounded-xl border border-gray-800 shadow-2xl overflow-hidden relative max-w-2xl mx-auto">
-
+<div class="bg-gray-900 rounded-xl border border-gray-800 shadow-2xl overflow-hidden relative max-w-2xl mx-auto animate-fadeIn">
     <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent opacity-75"></div>
 
     {% if error %}
@@ -14,33 +13,31 @@
         </div>
     {% else %}
         <div class="p-8">
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-green-500/10 rounded-full mb-5 ring-1 ring-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-green-500/10 rounded-full mb-4 ring-1 ring-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
                     <i class="fas fa-check text-4xl text-green-500"></i>
                 </div>
                 <h2 class="text-2xl font-bold text-white tracking-tight">
-                    {{ success_message|default:"Opération réussie !" }}
+                    Félicitations !
                 </h2>
-                <p class="text-gray-400 text-sm mt-2">Le dossier a été traité et validé avec succès.</p>
+                <p class="text-green-400 font-medium mt-2 bg-green-900/20 py-2 px-4 rounded-lg inline-block border border-green-800">
+                    {{ success_message|default:"Merci d'encaisser le montant TTC svp avant de valider" }}
+                </p>
             </div>
 
-            <div class="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50 mb-8">
+            <div class="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50 mb-6">
                 <div class="grid grid-cols-2 gap-y-6 gap-x-4">
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">N° Police</p>
-                        <p class="text-white font-mono font-semibold text-lg tracking-tight">
-                            {{ contrat.numero_police|default:"—" }}
-                        </p>
+                        <p class="text-white font-mono font-bold">{{ contrat.numero_police|default:"—" }}</p>
                     </div>
                     <div class="text-right">
                         <p class="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">Prime TTC</p>
-                        <p class="text-green-400 font-bold text-lg">
+                        <p class="text-green-400 font-bold text-xl">
                             {{ contrat.prime_ttc|default_if_none:0|floatformat:0|intcomma }} <span class="text-sm font-normal text-gray-400">FCFA</span>
                         </p>
                     </div>
-
                     <div class="col-span-2 border-t border-dashed border-gray-700/70"></div>
-
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">Client</p>
                         <p class="text-gray-200 font-semibold truncate">
@@ -56,49 +53,43 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <a href="{% url 'contracts:detail_contrat' pk=contrat.pk %}"
-                   class="sm:col-span-2 w-full bg-green-600 hover:bg-green-500 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 text-center flex justify-center items-center gap-2">
-                    <i class="fas fa-eye"></i> Détail Du Contrat
-                </a>
+            <div class="space-y-3">
+                {% if user.role == 'APPORTEUR' %}
+                    <a href="{% url 'payments:declarer_paiement' contrat.id %}"
+                       class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-yellow-900/20 transition-all transform hover:-translate-y-0.5 flex justify-center items-center gap-2 text-lg">
+                        <i class="fas fa-money-bill-wave"></i> Payer maintenant
+                    </a>
+                {% endif %}
 
-                {% with att=contrat.link_attestation|default_if_none:'' carte=contrat.link_carte_brune|default_if_none:'' %}
-
-                    {# --- CAS 1 : Documents disponibles --- #}
-                    {% if att or carte %}
-                        {% if att %}
-                            <a href="{{ att }}" target="_blank" rel="noopener noreferrer"
-                               class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition-colors text-sm font-medium">
-                                <i class="fas fa-file-pdf text-red-400"></i> Attestation
-                            </a>
-                        {% endif %}
-
-                        {% if carte %}
-                            <a href="{{ carte }}" target="_blank" rel="noopener noreferrer"
-                               class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition-colors text-sm font-medium">
-                                <i class="fas fa-id-card text-yellow-500"></i> CEDEAO
-                            </a>
-                        {% endif %}
-
-
-                    {# --- CAS 2 : Documents manquants (Bouton Récupérer) --- #}
-                    {% else %}
-                        <div class="sm:col-span-2 mt-2 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg text-center">
-                            <p class="text-yellow-200 text-sm mb-3">
-                                <i class="fas fa-exclamation-triangle mr-1"></i> Documents en attente de génération
-                            </p>
-                            <form method="post" action="{% url 'contracts:recuperer_documents' contrat.pk %}">
-                                {% csrf_token %}
-                                <button type="submit"
-                                        class="w-full px-5 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-semibold rounded-lg shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                                    <i class="fas fa-sync-alt animate-reverse"></i>
-                                    <span>Tenter de récupérer les documents</span>
-                                </button>
-                            </form>
-                        </div>
+                {% with att=contrat.link_attestation|default:'' carte=contrat.link_carte_brune|default:'' %}
+                <div class="grid grid-cols-2 gap-3">
+                    {% if att %}
+                        <a href="{{ att }}" target="_blank"
+                           class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 transition-colors font-medium text-center text-sm">
+                            <i class="fas fa-download text-red-400"></i> Télécharger attestation
+                        </a>
                     {% endif %}
+                    {% if carte %}
+                        <a href="{{ carte }}" target="_blank"
+                           class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 transition-colors font-medium text-center text-sm">
+                            <i class="fas fa-download text-yellow-500"></i> Télécharger CEDEAO
+                        </a>
+                    {% endif %}
+                </div>
 
+                {% if whatsapp_text %}
+                    <a href="https://wa.me/?text= {{ whatsapp_text|urlencode }}"
+                       target="_blank"
+                       class="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2 mt-2">
+                        <i class="fab fa-whatsapp text-xl"></i> Partager sur WhatsApp
+                    </a>
+                {% endif %}
                 {% endwith %}
+
+                <a href="{% url 'contracts:detail_contrat' pk=contrat.pk %}"
+                   class="block text-center text-gray-400 hover:text-white text-sm mt-4 underline">
+                    Détails du contrat
+                </a>
             </div>
         </div>
     {% endif %}

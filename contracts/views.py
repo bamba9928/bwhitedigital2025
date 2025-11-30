@@ -307,6 +307,7 @@ def simuler_tarif(request):
             "date_effet": date_effet,
             "is_apporteur": getattr(request.user, "role", "") == "APPORTEUR",
         }
+
         return render(request, "contracts/partials/simulation_result.html", context)
 
     except Exception as e:
@@ -523,10 +524,14 @@ def emettre_contrat(request):
                 askia_response=(result.get("raw_response") if isinstance(result, dict) else simulation_data),
                 link_attestation=attestation,
                 link_carte_brune=carte_brune,
+                link_facture=result.get("link_facture", "") or result.get("facture", ""),
             )
 
         # Nettoyage session
         request.session.pop("simulation_data", None)
+
+        # Message de succès pour l'ÉMISSION
+        success_msg = "Contrat émis avec succès"
 
         if _is_hx(request):
             return render(
@@ -535,38 +540,18 @@ def emettre_contrat(request):
                 {
                     "contrat": contrat,
                     "emis": contrat,
-                    "success_message": f"Contrat {contrat.numero_police} émis avec succès !",
+                    "success_message": success_msg,
+                    "is_emission": True,
                 },
             )
 
-        messages.success(request, f"Contrat {contrat.numero_police} émis avec succès !")
+        messages.success(request, f"Contrat {contrat.numero_police} émis avec succès.")
         return redirect("contracts:detail_contrat", pk=contrat.pk)
-
     except Exception as e:
         logger.error("Erreur inattendue émission contrat | %s", e, exc_info=True)
         return _render_error(
             request, f"Erreur inattendue lors de l'émission : {str(e)}"
         )
-
-@login_required
-def detail_contrat(request, pk):
-    """Vue détaillée d'un contrat."""
-    contrat = get_object_or_404(Contrat, pk=pk)
-    if (
-            getattr(request.user, "role", "") == "APPORTEUR"
-            and contrat.apporteur != request.user
-    ):
-        messages.error(request, "Vous n'avez pas accès à ce contrat.")
-        return redirect("dashboard:home")
-    return render(
-        request,
-        "contracts/detail_contrat.html",
-        {
-            "contrat": contrat,
-            "title": f"Contrat {contrat.numero_police}",
-        },
-    )
-
 
 @require_http_methods(["GET"])
 def check_immatriculation(request):
@@ -662,6 +647,71 @@ def load_sous_categories(request):
 
 
 @login_required
+def detail_contrat(request, pk):
+    """Vue détaillée d'un contrat."""
+    contrat = get_object_or_404(Contrat, pk=pk)
+
+    # Vérification des permissions
+    if (
+            getattr(request.user, "role", "") == "APPORTEUR"
+            and contrat.apporteur != request.user
+    ):
+        messages.error(request, "Vous n'avez pas accès à ce contrat.")
+        return redirect("dashboard:home")
+
+    # Génération du message WhatsApp
+    whatsapp_text = _generer_message_whatsapp(contrat)
+
+    return render(
+        request,
+        "contracts/detail_contrat.html",
+        {
+            "title": f"Contrat {contrat.numero_police}",
+            "contrat": contrat,
+            "whatsapp_text": whatsapp_text,
+        },
+    )
+def _generer_message_whatsapp(contrat):
+    """Génère le message WhatsApp pour un contrat."""
+    if not (contrat.link_attestation or contrat.link_carte_brune):
+        return ""
+
+    # Immat formatée si dispo, sinon brute
+    immat = getattr(contrat.vehicule, "immatriculation_formatted", "") or contrat.vehicule.immatriculation
+
+    parts = [
+        "Bonjour,",
+        "",
+        "Vos documents d'assurance sont prêts.",
+        "Veuillez télécharger votre Attestation d'assurance et la Carte Brune :",
+        "",
+        f"◆ Véhicule : {contrat.vehicule.get_marque_display()} {contrat.vehicule.modele}",
+        f"◆ Immatriculation : {immat}",
+        f"◆ N° Police : {contrat.numero_police}",
+        f"◆ Valide jusqu'au : {contrat.date_echeance.strftime('%d/%m/%Y')}",
+        "",
+    ]
+
+    if contrat.link_attestation:
+        parts.extend([
+            f"◆ ATTESTATION : {contrat.link_attestation}",
+            ""
+        ])
+
+    if contrat.link_carte_brune:
+        parts.append(f"◆ CEDEAO : {contrat.link_carte_brune}")
+
+    parts.extend([
+        "",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "◆ Support client : +221 78 010 36 36",
+        "",
+        "BWHITE DIGITAL",
+        "À votre service",
+    ])
+
+    return "\n".join(parts)
+@login_required
 def liste_contrats(request):
     """Liste les contrats (filtrables), visibles uniquement s'ils disposent de documents (via emis_avec_doc)."""
     contrats = Contrat.objects.emis_avec_doc().select_related(
@@ -725,8 +775,6 @@ def liste_contrats(request):
             "apporteur_filter": apporteur_id,
         },
     )
-
-
 @login_required
 def liste_clients(request):
     """Liste des clients avec nombre de contrats valides."""
@@ -783,8 +831,6 @@ def echeances_aujourdhui(request):
         qs = qs.filter(apporteur=request.user)
 
     return render(request, "contracts/echeances_aujourdhui.html", {"contrats": qs})
-
-
 @login_required
 def renouveler_contrat_auto(request, pk: int):
     """
@@ -896,8 +942,6 @@ def renouveler_contrat_auto(request, pk: int):
 
     messages.success(request, f"Contrat {new_police} renouvelé avec succès.")
     return redirect("contracts:detail_contrat", pk=nouveau_contrat.pk)
-
-
 @login_required
 @require_http_methods(["POST"])
 def annuler_contrat(request, pk):
@@ -1007,20 +1051,23 @@ def annuler_contrat(request, pk):
         )
 
     return redirect("contracts:detail_contrat", pk=pk)
-
-
 @login_required
 def detail_client(request, pk):
-    """Fiche client avec ses contrats valides uniquement (avec scope apporteur)."""
     client = get_object_or_404(Client, pk=pk)
 
     if getattr(request.user, "role", "") == "APPORTEUR":
+        # Vérifier que l'apporteur a au moins un contrat avec ce client
         contrats = (
             Contrat.objects.emis_avec_doc()
             .filter(client=client, apporteur=request.user)
             .select_related("vehicule", "apporteur")
             .order_by("-created_at")
         )
+
+        # Bloquer l'accès si aucun contrat trouvé
+        if not contrats.exists():
+            messages.error(request, "Vous n'avez pas accès à ce client.")
+            return redirect("dashboard:home")
     else:
         contrats = (
             Contrat.objects.emis_avec_doc()
@@ -1029,17 +1076,7 @@ def detail_client(request, pk):
             .order_by("-created_at")
         )
 
-    return render(
-        request,
-        "contracts/detail_client.html",
-        {
-            "title": f"Fiche Client - {client.nom_complet}",
-            "client": client,
-            "contrats": contrats,
-        },
-    )
-
-
+    return render(request, "contracts/detail_client.html", {...})
 @login_required
 @require_POST
 @transaction.atomic

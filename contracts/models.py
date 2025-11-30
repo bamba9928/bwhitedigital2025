@@ -20,17 +20,17 @@ from .validators import (
     normalize_immat_for_storage,
 )
 
+    # =========================
+    # Client
+    # =========================
 
-# =========================
-# Client
-# =========================
+
 class Client(models.Model):
     """Modèle Client"""
 
     prenom = models.CharField(max_length=100, verbose_name="Prénom")
     nom = models.CharField(max_length=100, verbose_name="Nom")
 
-    # MODIFICATION : unique=True retiré pour permettre plusieurs clients sur le même numéro
     telephone = models.CharField(
         validators=[SENEGAL_PHONE_VALIDATOR],
         max_length=9,
@@ -475,9 +475,10 @@ class Contrat(models.Model):
 
     def calculate_commission(self):
         """
-        Calcule TOUTES les commissions (Askia, Apporteur, BWHITE) et le Net à Reverser.
+        Calcule TOUTES les commissions et le Net à Reverser (Askia).
+        Gère les cas ADMIN / COMMERCIAL / APPORTEUR.
         """
-        # Constantes paramétrables avec valeurs par défaut sûres
+        # Constantes
         ASKIA_TAUX = getattr(settings, "COMMISSION_ASKIA_TAUX", Decimal("0.20"))
         ASKIA_ACCESSOIRES = getattr(settings, "COMMISSION_ASKIA_FIXE", Decimal("3000"))
 
@@ -487,11 +488,14 @@ class Contrat(models.Model):
         FR_TAUX = getattr(settings, "COMMISSION_FREEMIUM_TAUX", Decimal("0.10"))
         FR_FIXE = getattr(settings, "COMMISSION_FREEMIUM_FIXE", Decimal("1800"))
 
-        # 1. Commission totale versée par Askia à BWHITE
+        # 1. Commission totale que Askia verse à BWHITE (Base de calcul pour tous)
+        # BWHITE reçoit toujours 20% + 3000 F de Askia
         self.commission_askia = (self.prime_nette * ASKIA_TAUX) + ASKIA_ACCESSOIRES
 
         # 2. Commission Apporteur
         self.commission_apporteur = Decimal("0.00")
+
+        # Si c'est un vrai Apporteur
         if self.apporteur and getattr(self.apporteur, "role", None) == "APPORTEUR":
             grade = getattr(self.apporteur, "grade", None)
             if grade == "PLATINE":
@@ -499,10 +503,16 @@ class Contrat(models.Model):
             elif grade == "FREEMIUM":
                 self.commission_apporteur = (self.prime_nette * FR_TAUX) + FR_FIXE
 
-        # 3. Commission BWHITE (Profit)
+        # Si Admin ou Commercial, Commission Apporteur = 0 (ils ne touchent pas de com directe ici)
+        # La commission_bwhite sera égale à la commission_askia
+
+        # 3. Commission BWHITE (Profit Net)
+        # Profit = Ce que Askia nous donne - Ce qu'on donne à l'apporteur
         self.commission_bwhite = self.commission_askia - self.commission_apporteur
 
-        # 4. Net à reverser (ce que BWHITE doit à ASKIA)
+        # 4. Net à reverser à Askia
+        # Montant à payer à Askia = TTC - (20% + 3000 F)
+        # Indépendant de qui a fait la vente
         self.net_a_reverser = self.prime_ttc - self.commission_askia
 
     def calculate_date_echeance(self):
@@ -517,7 +527,7 @@ class Contrat(models.Model):
         if not self.date_echeance:
             self.calculate_date_echeance()
 
-        # Recalcule toujours les commissions pour éviter les incohérences après modification.
+        # Recalcule toujours les commissions
         self.calculate_commission()
 
         # Set emis_at si transition ou création en statut EMIS
