@@ -131,8 +131,6 @@ def _parse_date(value: str) -> date | None:
             except ValueError:
                 continue
     return None
-
-
 @login_required
 @require_http_methods(["POST"])
 def simuler_tarif(request):
@@ -531,7 +529,7 @@ def emettre_contrat(request):
         request.session.pop("simulation_data", None)
 
         # Message de succès pour l'ÉMISSION
-        success_msg = "Contrat émis avec succès"
+        success_msg = "tetstetes"
 
         if _is_hx(request):
             return render(

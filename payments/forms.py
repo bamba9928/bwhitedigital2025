@@ -1,11 +1,11 @@
 from django import forms
 from .models import PaiementApporteur
 
-# Style standard du projet (récupéré de contracts/forms.py pour cohérence)
 STANDARD_INPUT_STYLE = (
     "w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-900 text-gray-100 "
     "focus:border-green-500 focus:outline-none transition-colors"
 )
+
 
 class DeclarationPaiementForm(forms.ModelForm):
     """
@@ -17,7 +17,6 @@ class DeclarationPaiementForm(forms.ModelForm):
         widgets = {
             "methode_paiement": forms.Select(attrs={
                 "class": STANDARD_INPUT_STYLE,
-                # Optionnel : ajouter 'id': 'id_methode' si tu veux y brancher Select2 via JS
             }),
             "reference_transaction": forms.TextInput(attrs={
                 "class": STANDARD_INPUT_STYLE,
@@ -42,10 +41,12 @@ class DeclarationPaiementForm(forms.ModelForm):
         self.fields["notes"].required = False
 
     def clean_reference_transaction(self):
-        ref = self.cleaned_data.get("reference_transaction", "")
-        if ref and len(ref.strip()) < 6:
+        ref = self.cleaned_data.get("reference_transaction", "") or ""
+        ref = ref.strip()
+        # Référence facultative mais si fournie : min 6 caractères
+        if ref and len(ref) < 6:
             raise forms.ValidationError("Référence trop courte (≥ 6 caractères).")
-        return ref.strip()
+        return ref
 
 
 class ValidationPaiementForm(forms.Form):
@@ -69,7 +70,7 @@ class ValidationPaiementForm(forms.Form):
     )
 
     def clean_reference_transaction(self):
-        ref = self.cleaned_data["reference_transaction"].strip()
+        ref = (self.cleaned_data.get("reference_transaction") or "").strip()
         if len(ref) < 6:
             raise forms.ValidationError("Référence trop courte (≥ 6 caractères).")
         return ref

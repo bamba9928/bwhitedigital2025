@@ -109,8 +109,9 @@
                                 {% elif user.role == 'COMMERCIAL' %}
                                     <i class="fas fa-briefcase mr-1"></i>Commercial
                                 {% elif user.role == 'APPORTEUR' %}
-                                    <i class="fas fa-user-tie mr-1"></i>{{ user.get_grade_display|default:"Apporteur d'affaires" }}
+                                    <i class="fas fa-user-tie mr-1"></i>{{ user.grade_short|default:"Apporteur d'affaires" }}
                                 {% else %}
+
                                     <i class="fas fa-user mr-1"></i>{{ user.get_role_display|default:"-" }}
                                 {% endif %}
                             </span>

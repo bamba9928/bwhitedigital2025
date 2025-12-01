@@ -1,53 +1,18 @@
-from django import forms
+# payments/views.py
+
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+
 from accounts.models import User
 from contracts.models import Contrat
 from .models import PaiementApporteur
-# -----------------------------
-# Forms
-# -----------------------------
-class DeclarationPaiementForm(forms.ModelForm):
-    class Meta:
-        model = PaiementApporteur
-        fields = ["methode_paiement", "reference_transaction", "numero_compte", "notes"]
-        widgets = {
-            "methode_paiement": forms.Select(attrs={"class": "form-select"}),
-            "reference_transaction": forms.TextInput(attrs={"class": "form-input"}),
-            "numero_compte": forms.TextInput(attrs={"class": "form-input"}),
-            "notes": forms.Textarea(attrs={"rows": 3, "class": "form-textarea"}),
-        }
-
-    def clean_reference_transaction(self):
-        ref = (self.cleaned_data.get("reference_transaction") or "").strip()
-        if not ref:
-            raise forms.ValidationError("La référence de transaction est obligatoire.")
-        return ref
-
-    def clean_numero_compte(self):
-        num = (self.cleaned_data.get("numero_compte") or "").strip()
-        if not num:
-            raise forms.ValidationError("Le numéro de compte / wallet est obligatoire.")
-        return num
-
-
-class ValidationPaiementForm(forms.Form):
-    methode_paiement = forms.ChoiceField(
-        choices=PaiementApporteur.METHODE, required=True
-    )
-    reference_transaction = forms.CharField(max_length=64, required=True)
-
-    def clean_reference_transaction(self):
-        ref = (self.cleaned_data.get("reference_transaction") or "").strip()
-        if not ref:
-            raise forms.ValidationError("Référence obligatoire.")
-        return ref
+from .forms import DeclarationPaiementForm, ValidationPaiementForm
 
 
 # -----------------------------
@@ -56,13 +21,12 @@ class ValidationPaiementForm(forms.Form):
 def _require_apporteur(user) -> bool:
     """
     Vérifie que l'utilisateur est bien un apporteur.
-    Ne dépend pas d'une propriété optionnelle.
     """
     return user.is_authenticated and getattr(user, "role", None) == "APPORTEUR"
 
 
 # -----------------------------
-# Apporteur: liste et détail
+# Apporteur : liste de ses paiements
 # -----------------------------
 @login_required
 def mes_paiements(request):
@@ -100,6 +64,9 @@ def mes_paiements(request):
     )
 
 
+# -----------------------------
+# Apporteur : déclaration de paiement
+# -----------------------------
 @login_required
 def declarer_paiement(request, contrat_id):
     """
@@ -119,14 +86,18 @@ def declarer_paiement(request, contrat_id):
         apporteur=request.user,
     )
 
+    # Contrat doit être "valide" (émis + docs) — propriété à toi
     if not getattr(contrat, "is_valide", False):
         messages.error(
             request, "Contrat non valide. Attestation ou carte brune manquante."
         )
         return redirect("payments:mes_paiements")
 
-    # Calcul du montant à payer par l'apporteur : TTC - Commission
-    montant_a_payer_apporteur = contrat.prime_ttc - contrat.commission_apporteur
+    # Montant attendu côté contrat : on privilégie net_a_reverser
+    montant_a_payer_apporteur = getattr(contrat, "net_a_reverser", None)
+    if montant_a_payer_apporteur is None:
+        # fallback simple si jamais net_a_reverser n'est pas renseigné
+        montant_a_payer_apporteur = contrat.prime_ttc - contrat.commission_apporteur
 
     paiement, created = PaiementApporteur.objects.get_or_create(
         contrat=contrat,
@@ -136,11 +107,10 @@ def declarer_paiement(request, contrat_id):
         },
     )
 
-    # Si déjà créé et en attente, on resynchronise le montant si nécessaire
-    if not created and paiement.est_en_attente:
-        if paiement.montant_a_payer != montant_a_payer_apporteur:
-            paiement.montant_a_payer = montant_a_payer_apporteur
-            paiement.save(update_fields=["montant_a_payer"])
+    # Si déjà créé et en attente, on resynchronise le montant avec le contrat
+    if paiement.est_en_attente and paiement.montant_a_payer != montant_a_payer_apporteur:
+        paiement.montant_a_payer = montant_a_payer_apporteur
+        paiement.save(update_fields=["montant_a_payer"])
 
     # Bloque les statuts finaux
     if paiement.est_paye:
@@ -148,18 +118,20 @@ def declarer_paiement(request, contrat_id):
         return redirect("payments:mes_paiements")
 
     if paiement.est_annule:
-        messages.error(request, "Ce paiement a été annulé. Contacte l’admin.")
+        messages.error(request, "Ce paiement a été annulé. Contacte l’administration.")
         return redirect("payments:mes_paiements")
 
     if request.method == "POST":
         form = DeclarationPaiementForm(request.POST, instance=paiement)
         if form.is_valid():
             paiement = form.save(commit=False)
-            # sécurité: on force l'état attendu côté apporteur
+            # On garde le montant calculé côté serveur
+            paiement.montant_a_payer = montant_a_payer_apporteur
             paiement.status = "EN_ATTENTE"
             paiement.save()
             messages.success(
-                request, "Déclaration soumise. En attente de validation admin."
+                request,
+                "Déclaration soumise. En attente de validation par l’administration.",
             )
             return redirect("payments:mes_paiements")
     else:
@@ -175,14 +147,16 @@ def declarer_paiement(request, contrat_id):
             "form": form,
         },
     )
+
+
 # -----------------------------
-# Admin / Staff: liste et validation
+# Staff : liste des encaissements
 # -----------------------------
 @staff_member_required
 def liste_encaissements(request):
     """
     Liste des encaissements côté staff (ADMIN + COMMERCIAL).
-    Affiche TOUS les encaissements, y compris ceux des admins et commerciaux.
+    Affiche TOUS les encaissements.
     """
     qs = (
         PaiementApporteur.objects.select_related(
@@ -204,8 +178,7 @@ def liste_encaissements(request):
             | Q(contrat__client__nom__icontains=q)
         )
 
-    # Totaux calculés sur le jeu filtré (apporteur + recherche),
-    # mais indépendants du filtre status d'affichage.
+    # Totaux sur le jeu filtré (recherche + apporteur)
     base_qs = qs
 
     total_attente = (
@@ -214,7 +187,9 @@ def liste_encaissements(request):
         or 0
     )
     total_paye = (
-        base_qs.filter(status="PAYE").aggregate(s=Sum("montant_a_payer"))["s"] or 0
+        base_qs.filter(status="PAYE")
+        .aggregate(s=Sum("montant_a_payer"))["s"]
+        or 0
     )
     total_annule = (
         base_qs.filter(status="ANNULE")
@@ -251,6 +226,9 @@ def liste_encaissements(request):
     )
 
 
+# -----------------------------
+# Staff : détail + validation
+# -----------------------------
 @staff_member_required
 def detail_encaissement(request, paiement_id):
     """
@@ -279,13 +257,15 @@ def detail_encaissement(request, paiement_id):
             "vform": vform,
         },
     )
+
+
 @staff_member_required
 @require_POST
 @transaction.atomic
 def valider_encaissement(request, paiement_id):
     """
     Marque l'encaissement comme PAYE.
-    Autorisé pour ADMIN et COMMERCIAL (Validation manuelle des paiements hors plateforme).
+    Autorisé pour ADMIN et COMMERCIAL.
     """
     paiement = get_object_or_404(PaiementApporteur, pk=paiement_id)
 

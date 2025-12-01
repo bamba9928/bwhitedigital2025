@@ -94,6 +94,15 @@ class User(AbstractUser):
         """Vrai Admin seulement (pour masquer les finances au Commercial)"""
         return self.role == "ADMIN"
 
+    @property
+    def grade_short(self):
+        """Libellé court du grade (sans % / FCFA)"""
+        if self.grade == "PLATINE":
+            return "Platine"
+        if self.grade == "FREEMIUM":
+            return "Freemium"
+        return None
+
     def save(self, *args, **kwargs):
         """Sauvegarde avec normalisation du téléphone et cohérence des permissions"""
         # Normaliser le numéro de téléphone en 9 chiffres

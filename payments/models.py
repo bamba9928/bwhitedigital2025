@@ -131,17 +131,13 @@ class PaiementApporteur(models.Model):
 
         montant_attendu = self._get_montant_attendu()
         if montant_attendu is None:
-            return  # on ne bloque pas si on ne peut pas calculer
+            return
 
         # Tolérance d'arrondi
         if (self.montant_a_payer - montant_attendu).copy_abs() > Decimal("0.01"):
+
             raise ValidationError(
-                {
-                    "montant_a_payer": (
-                        f"Incohérent. Attendu: {montant_attendu} "
-                        f"(contrat {self.contrat_id})"
-                    )
-                }
+                f"Incohérent. Montant attendu : {montant_attendu} (contrat {self.contrat_id})"
             )
 
     def save(self, *args, **kwargs):

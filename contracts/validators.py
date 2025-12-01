@@ -9,19 +9,13 @@ SENEGAL_PHONE_VALIDATOR = RegexValidator(
     regex=r"^(70|71|75|76|77|78|30|33|34)\d{7}$",
     message="Le numéro doit être au format sénégalais (ex: 771234567)",
 )
-
-
 def normalize_phone_for_storage(phone: str) -> str:
     if not phone:
         return ""
     return "".join(filter(str.isdigit, str(phone)))
-
-
 # ==================================
 # 🚗 Validateur d'Immatriculation
 # ==================================
-
-
 def validate_immatriculation(value):
     """
     Validateur Django qui utilise la logique de validation de l'api_client.

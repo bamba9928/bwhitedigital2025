@@ -1,12 +1,10 @@
-import base64
 import csv
-
+import logging
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
-from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Sum, Count, Q
@@ -15,7 +13,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
-
 from contracts.models import Contrat
 from payments.models import PaiementApporteur
 from .forms import (
@@ -25,10 +22,11 @@ from .forms import (
     AdminApporteurUpdateForm,
     BulkActionForm,
 )
+from .forms_onboarding import OnboardingForm
 from .models import User
 from .models_onboarding import ApporteurOnboarding
 
-
+logger = logging.getLogger(__name__)
 # ==========================================
 # VUES PROFIL UTILISATEUR
 # ==========================================
@@ -208,18 +206,26 @@ def nouveau_apporteur(request):
 
 @staff_member_required
 def detail_apporteur(request, pk):
-    """Vue détaillée d'un apporteur"""
+    """Vue détaillée d'un apporteur (ADMIN + COMMERCIAL)"""
+    # Optionnel mais plus explicite : seuls ces rôles voient cette vue
+    if request.user.role not in ("ADMIN", "COMMERCIAL"):
+        messages.error(request, "Vous n'avez pas les droits pour accéder à cette page.")
+        return redirect("accounts:profile")
+
     apporteur = get_object_or_404(User, pk=pk, role="APPORTEUR")
     onboarding = ApporteurOnboarding.objects.filter(user=apporteur).first()
 
     if request.method == "POST":
         action = request.POST.get("action")
+
         if action == "toggle_status":
             apporteur.is_active = not apporteur.is_active
             apporteur.save()
             messages.success(
-                request, f"Apporteur {'activé' if apporteur.is_active else 'désactivé'}"
+                request,
+                f"Apporteur {'activé' if apporteur.is_active else 'désactivé'}",
             )
+
         elif action == "change_grade":
             new_grade = request.POST.get("grade")
             if new_grade in ["PLATINE", "FREEMIUM"]:
@@ -228,35 +234,32 @@ def detail_apporteur(request, pk):
                 messages.success(
                     request, f"Grade modifié en {apporteur.get_grade_display()}"
                 )
+
         elif action == "valider_onboarding" and onboarding:
-            if (
-                    onboarding.a_lu_et_approuve
-                    and onboarding.cni_recto
-                    and onboarding.cni_verso
-                    and onboarding.signature_image
-            ):
-                onboarding.status = "VALIDE"
-                onboarding.save()
+            if onboarding.est_complet():  # utilise ta méthode helper :contentReference[oaicite:3]{index=3}
+                onboarding.status = ApporteurOnboarding.Status.VALIDE
+                onboarding.save(update_fields=["status"])
                 messages.success(request, "Onboarding validé.")
             else:
                 messages.error(
-                    request, "Dossier incomplet. CNI recto/verso et signature requis."
+                    request,
+                    "Dossier incomplet. CNI recto/verso et signature requis.",
                 )
+
         elif action == "rejeter_onboarding" and onboarding:
-            onboarding.status = "REJETE"
-            onboarding.save()
+            onboarding.status = ApporteurOnboarding.Status.REJETE
+            onboarding.save(update_fields=["status"])
             messages.success(request, "Onboarding rejeté.")
+
         return redirect("accounts:detail_apporteur", pk=pk)
 
     stats = _get_apporteur_detailed_stats(apporteur)
-    # Liste des derniers contrats : filtrés aussi pour n'afficher que ceux avec docs
     derniers_contrats = (
         Contrat.objects.emis_avec_doc()
         .filter(apporteur=apporteur)
         .select_related("client", "vehicule")
         .order_by("-created_at")[:10]
     )
-
     paiements_attente = (
         PaiementApporteur.objects.filter(
             contrat__apporteur=apporteur, status="EN_ATTENTE"
@@ -277,31 +280,6 @@ def detail_apporteur(request, pk):
             "onboarding": onboarding,
         },
     )
-@login_required
-def contrat_pdf(request):
-    """Téléchargement du contrat en PDF ou fallback imprimable"""
-    user = request.user
-    if user.role != "APPORTEUR":
-        return redirect("accounts:profile")
-
-    ob = get_object_or_404(ApporteurOnboarding, user=user)
-    html = render_to_string(
-        "accounts/contrat_pdf.html", {"user": user, "onboarding": ob}, request=request
-    )
-
-    try:
-        from weasyprint import HTML
-
-        pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
-        resp = HttpResponse(pdf, content_type="application/pdf")
-        resp["Content-Disposition"] = (
-            f'attachment; filename="Contrat_BWHITE_{user.username}.pdf"'
-        )
-        return resp
-    except Exception:
-        return HttpResponse(html)
-
-
 @staff_member_required
 def edit_apporteur(request, pk):
     """Édition d'un apporteur"""
@@ -448,8 +426,6 @@ def export_apporteurs(request):
             ]
         )
     return response
-
-
 @staff_member_required
 def import_apporteurs(request):
     """Import CSV"""
@@ -492,8 +468,6 @@ def import_apporteurs(request):
     return render(
         request, "accounts/import_apporteurs.html", {"title": "Importer Apporteurs"}
     )
-
-
 # =========================================
 # API CHECKS HTMX
 # ==========================================

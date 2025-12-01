@@ -1,16 +1,14 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from django.http import HttpResponse
-from django.template.loader import render_to_string
-from .models_onboarding import ApporteurOnboarding
-from .forms_onboarding import OnboardingForm
-import base64
-from django.core.files.base import ContentFile
-from django.contrib import messages
 import logging
-logger = logging.getLogger(__name__)
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.utils import timezone
+from .forms_onboarding import OnboardingForm
+from .models_onboarding import ApporteurOnboarding
 
+logger = logging.getLogger(__name__)
 
 @login_required
 def apporteur_detail(request):
@@ -21,28 +19,40 @@ def apporteur_detail(request):
 
     ob, _ = ApporteurOnboarding.objects.get_or_create(user=user)
 
-    # Protection statut
-    if ob.status in ["VALIDE", "REJETE"] and request.method == "POST":
-        messages.error(request, "Onboarding déjà traité par l'admin.")
+    # Protection statut : déjà traité par l'ADMIN ou le COMMERCIAL
+    if ob.status in [ApporteurOnboarding.Status.VALIDE,
+                     ApporteurOnboarding.Status.REJETE] and request.method == "POST":
+        messages.error(request, "Onboarding déjà traité par l'administration.")
         return redirect("accounts:apporteur_detail")
 
     if request.method == "POST":
         form = OnboardingForm(request.POST, request.FILES, instance=ob)
+
         if not request.POST.get("a_lu_et_approuve"):
             form.add_error(None, "Vous devez accepter le contrat et les conditions.")
 
         if form.is_valid():
-            # Traçage
+            # 1) Sauvegarde des fichiers + signature via le form
+            ob = form.save(commit=True)
+
+            # 2) Traçage
             ob.approuve_at = timezone.now()
             xff = request.META.get("HTTP_X_FORWARDED_FOR")
-            ob.ip_accept = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR")
+            ob.ip_accept = (
+                xff.split(",")[0].strip()
+                if xff
+                else request.META.get("REMOTE_ADDR")
+            )
             ob.ua_accept = request.META.get("HTTP_USER_AGENT", "")
 
-            # Statut
-            if ob.status not in ("VALIDE", "REJETE"):
-                ob.status = "SOUMIS"
+            # 3) Statut "SOUMIS" tant qu'ADMIN/COMMERCIAL n'a pas tranché
+            if ob.status not in (
+                ApporteurOnboarding.Status.VALIDE,
+                ApporteurOnboarding.Status.REJETE,
+            ):
+                ob.status = ApporteurOnboarding.Status.SOUMIS
 
-            ob.save()
+            ob.save(update_fields=["approuve_at", "ip_accept", "ua_accept", "status"])
             messages.success(request, "Données soumises avec succès.")
             return redirect("accounts:apporteur_detail")
     else:
@@ -54,16 +64,26 @@ def apporteur_detail(request):
         request=request,
     )
 
-    return render(request, "accounts/apporteur_detail.html", {
-        "title": "Mon contrat Apporteur",
-        "onboarding": ob,
-        "form": form,
-        "conditions_html": conditions_html,
-    })
+    return render(
+        request,
+        "accounts/apporteur_detail.html",
+        {
+            "title": "Mon contrat Apporteur",
+            "onboarding": ob,
+            "form": form,
+            "conditions_html": conditions_html,
+        },
+    )
 @login_required
 def contrat_pdf(request):
     """Téléchargement du contrat en PDF; fallback HTML imprimable."""
     user = request.user
+
+    # Seul un apporteur peut télécharger SON contrat
+    if user.role != "APPORTEUR":
+        messages.error(request, "Accès réservé aux apporteurs.")
+        return redirect("accounts:profile")
+
     ob = get_object_or_404(ApporteurOnboarding, user=user)
 
     html = render_to_string(

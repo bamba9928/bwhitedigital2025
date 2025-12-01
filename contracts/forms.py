@@ -234,7 +234,7 @@ class VehiculeForm(forms.ModelForm):
 
     marque = forms.ChoiceField(
         label="Marque",
-        # MARQUES a déjà parfois une option vide; n’en rajoute pas ici pour éviter le doublon
+        # MARQUES a déjà parfois une option vide; on rajoute pas ici pour éviter le doublon
         choices=MARQUES,
         widget=forms.Select(
             attrs={"class": BASE_SELECT_CLASS, "id": "id_marque", "required": True}
@@ -243,7 +243,7 @@ class VehiculeForm(forms.ModelForm):
 
     categorie = forms.ChoiceField(
         label="Catégorie",
-        choices=CATEGORIES,  # évite double option vide
+        choices=CATEGORIES,
         widget=forms.Select(
             attrs={
                 "class": BASE_SELECT_CLASS,
@@ -274,7 +274,7 @@ class VehiculeForm(forms.ModelForm):
 
     carburant = forms.ChoiceField(
         label="Carburant",
-        choices=CARBURANTS,  # évite double option vide
+        choices=CARBURANTS,
         widget=forms.Select(
             attrs={"class": BASE_SELECT_CLASS, "id": "id_carburant", "required": True}
         ),
