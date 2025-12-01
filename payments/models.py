@@ -5,9 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models, transaction
-from django.utils import timezone
-
-from contracts.models import Contrat  # Import direct si pas de cycle
+from contracts.models import Contrat
 
 # Constantes
 MAX_UPLOAD = 5 * 1024 * 1024

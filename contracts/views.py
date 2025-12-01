@@ -265,8 +265,13 @@ def simuler_tarif(request):
             date_effet=date_effet,
         )
         temp.calculate_commission()
+        net_a_afficher = temp.net_a_reverser
 
-        # 8) Session
+        if getattr(request.user, "role", "") == "APPORTEUR":
+            net_a_afficher = temp.prime_ttc - temp.commission_apporteur
+        # --------------------------------------------------------------
+
+        # 8) Session (On stocke les valeurs comptables réelles)
         request.session["simulation_data"] = to_jsonable(
             {
                 "vehicule": vehicule_data,
@@ -289,7 +294,7 @@ def simuler_tarif(request):
             }
         )
 
-        # 9) Rendu partiel
+        # 9) Rendu partiel (On passe la valeur d'affichage calculée)
         context = {
             "simulation": {
                 "prime_nette": prime_nette,
@@ -300,7 +305,7 @@ def simuler_tarif(request):
                 "commission": simulation.get("commission", 0),
             },
             "commission": temp.commission_apporteur,
-            "net_a_reverser": temp.net_a_reverser,
+            "net_a_reverser": net_a_afficher,
             "duree": duree,
             "date_effet": date_effet,
             "is_apporteur": getattr(request.user, "role", "") == "APPORTEUR",
