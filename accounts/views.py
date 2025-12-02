@@ -202,8 +202,6 @@ def nouveau_apporteur(request):
         "accounts/nouveau_apporteur.html",
         {"title": "Nouvel utilisateur", "form": form},
     )
-
-
 @staff_member_required
 def detail_apporteur(request, pk):
     """Vue détaillée d'un apporteur (ADMIN + COMMERCIAL)"""
@@ -214,6 +212,17 @@ def detail_apporteur(request, pk):
 
     apporteur = get_object_or_404(User, pk=pk, role="APPORTEUR")
     onboarding = ApporteurOnboarding.objects.filter(user=apporteur).first()
+    conditions_html = None
+    if onboarding:
+        conditions_html = render_to_string(
+            "accounts/partials/conditions_apporteur_v1.html",
+            {
+                "user": apporteur,
+                "version": onboarding.version_conditions,
+                "today": onboarding.approuve_at or timezone.now(),
+            },
+            request=request,
+        )
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -278,6 +287,7 @@ def detail_apporteur(request, pk):
             "derniers_contrats": derniers_contrats,
             "paiements_attente": paiements_attente,
             "onboarding": onboarding,
+            "conditions_html": conditions_html,
         },
     )
 @staff_member_required

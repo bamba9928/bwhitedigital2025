@@ -35,6 +35,8 @@ class OnboardingForm(forms.ModelForm):
         """Valide la signature et retourne un ContentFile"""
         data_url = self.cleaned_data.get('signature_data_url')
         if not data_url:
+            if self.instance and self.instance.signature_image:
+                return None
             raise ValidationError("La signature est obligatoire.")
 
         if not data_url.startswith("data:image/"):

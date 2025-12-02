@@ -534,7 +534,7 @@ def emettre_contrat(request):
         request.session.pop("simulation_data", None)
 
         # Message de succès pour l'ÉMISSION
-        success_msg = "tetstetes"
+        success_msg = "Contrat émis avec succès"
 
         if _is_hx(request):
             return render(

@@ -21,8 +21,12 @@ from decouple import config, Csv
 from django.contrib.messages import constants as messages
 from dotenv import load_dotenv
 
+# ==============================
+# BASE
+# ==============================
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+
 # ==============================
 # Sécurité
 # ==============================
@@ -41,19 +45,24 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
     "widget_tweaks",
     "django_htmx",
     "django.contrib.humanize",
+
     "accounts.apps.AccountsConfig",
     "contracts.apps.ContractsConfig",
     "payments.apps.PaymentsConfig",
     "dashboard.apps.DashboardConfig",
 ]
+
+# ==============================
+# Middleware
+# ==============================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -61,6 +70,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# ==============================
+# URLs / WSGI
+# ==============================
 ROOT_URLCONF = "askia_insurance.urls"
 
 TEMPLATES = [
@@ -84,37 +96,45 @@ WSGI_APPLICATION = "askia_insurance.wsgi.application"
 # ==============================
 # Base de données
 # ==============================
-DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3").strip()
-DB_NAME = os.getenv("DB_NAME", "").strip()
-DB_USER = os.getenv("DB_USER", "").strip()
-DB_PWD = os.getenv("DB_PASSWORD", "").strip()
-DB_HOST = os.getenv("DB_HOST", "").strip()
-DB_PORT = os.getenv("DB_PORT", "").strip()
+# On lit la configuration DB via .env
+DB_ENGINE = config("DB_ENGINE", default="django.db.backends.sqlite3").strip()
+DB_NAME = config("DB_NAME", default="db.sqlite3").strip()
+DB_USER = config("DB_USER", default="").strip()
+DB_PWD = config("DB_PASSWORD", default="").strip()
+DB_HOST = config("DB_HOST", default="").strip()
+DB_PORT = config("DB_PORT", default="").strip()
 
 if DB_ENGINE == "django.db.backends.sqlite3":
-    # Toujours un chemin absolu
-    NAME = str((BASE_DIR / (DB_NAME or "db.sqlite3")).resolve())
+    # MODE SQLITE (développement local typiquement)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": NAME,
+            "NAME": str((BASE_DIR / DB_NAME).resolve()),
         }
     }
 else:
-    # PostgreSQL
+    # MODE POSTGRESQL (ou autre backend explicite)
     if not (DB_NAME and DB_USER):
-        raise RuntimeError("DB_NAME et DB_USER requis pour PostgreSQL")
+        raise RuntimeError("DB_NAME et DB_USER sont requis pour PostgreSQL")
+
     DATABASES = {
         "default": {
-            "ENGINE": DB_ENGINE,
+            "ENGINE": DB_ENGINE,  # ex: django.db.backends.postgresql
             "NAME": DB_NAME,
             "USER": DB_USER,
             "PASSWORD": DB_PWD,
             "HOST": DB_HOST or "127.0.0.1",
             "PORT": DB_PORT or "5432",
-            "CONN_MAX_AGE": 60,
+            "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
         }
     }
+
+# En production (DEBUG=False), PostgreSQL est obligatoire
+if not DEBUG and DATABASES["default"]["ENGINE"] != "django.db.backends.postgresql":
+    raise RuntimeError(
+        "En production (DEBUG=False), la base doit impérativement être PostgreSQL."
+    )
+
 # ==============================
 # Authentification
 # ==============================
@@ -141,13 +161,17 @@ TIME_ZONE = "Africa/Dakar"
 USE_I18N = True
 USE_TZ = True
 
-# storage staticfiles pour Whitenoise
+# ==============================
+# Static / Media / Whitenoise
+# ==============================
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+        # Intégré à Whitenoise pour servir le static en prod
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -241,44 +265,17 @@ LOGGING = {
         },
     },
 }
-# ==========================
-# ⚙️ CONFIGURATION DES SESSIONS
-# ==========================
 
-# Durée max d’inactivité
-# SESSION_COOKIE_AGE = 3600
-
-# Renouvelle le compteur de session à chaque requête (inactivité réelle)
-# SESSION_SAVE_EVERY_REQUEST = True
-
-# Déconnecte l’utilisateur si le navigateur est fermé
-# SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-
-# CSRF pour domaines HTTPS (prod)
-# CSRF_TRUSTED_ORIGINS = config(
-#    'CSRF_TRUSTED_ORIGINS',
-#    default='',
-#    cast=Csv()
-# )
-# ==========================
-# 🔒 CONFIGURATION SSL / COOKIES (ACTIVER EN PROD SEULEMENT)
-# ==========================
-# ⚠️ Active uniquement si le site est servi en HTTPS (production)
-# if not DEBUG:
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-# CSRF_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = True
-# SECURE_CONTENT_TYPE_NOSNIFF = True
-# SECURE_SSL_REDIRECT = True
-# SECURE_HSTS_SECONDS = 31536000
-# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-# SECURE_HSTS_PRELOAD = True
+# ==============================
+# Cache
+# ==============================
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "unique-snowflake",
     }
 }
+
 # ==============================
 # COMMISSIONS & TARIFS
 # ==============================
@@ -303,6 +300,7 @@ COMMISSION_FREEMIUM_FIXE = config(
 
 COMMISSION_ADMIN_TAUX = COMMISSION_ASKIA_TAUX - COMMISSION_PLATINE_TAUX  # attendu 0.02
 COMMISSION_ADMIN_FIXE = COMMISSION_ASKIA_FIXE - COMMISSION_PLATINE_FIXE  # attendu 1000
+
 # Garde-fous
 if COMMISSION_ADMIN_TAUX < 0 or COMMISSION_ADMIN_FIXE < 0:
     raise ValueError("Paramétrage commissions incohérent: admin < 0")
@@ -315,39 +313,28 @@ FEATURES = {
     "BROKER_ONBOARDING": True,
     "TWO_WHEELS": True,
 }
+
 BUSINESS = {
     "SERVICE_PHONE": "780103636",
 }
+
 # ==============================
 # Configuration JAZZMIN
 # ==============================
 JAZZMIN_SETTINGS = {
-    # Titre de la fenêtre (onglet du navigateur)
     "site_title": "BWHITE Admin",
-
-    # Titre sur l'écran de connexion (peut être long)
     "site_header": "BWHITE DIGITAL",
-
-    # Titre court dans la barre de navigation (logo)
     "site_brand": "BWHITE Admin",
 
-    # Logo pour l'écran de connexion
-    "login_logo": "images/logo.png",  # Doit être dans /static/
+    "login_logo": "images/logo.png",
     "login_logo_dark": "images/logo.png",
-
-    # Logo pour la barre de navigation
     "site_logo": "images/logo.png",
 
-    # Thème
-    "theme": "darkly",  # Un thème sombre populaire qui ira bien
-
-    # Options UI
-    "show_ui_builder": True,  # Permet de tester les thèmes en direct
+    "theme": "darkly",
+    "show_ui_builder": True,
 
     "topmenu_links": [
-        # Lien vers le site principal
         {"name": "Accueil", "url": "dashboard:home", "permissions": ["auth.view_user"]},
-        # Modèle (exemple)
         {"model": "accounts.User"},
     ],
 
