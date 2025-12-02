@@ -1,207 +1,226 @@
 {% extends 'base.html' %}
 {% load humanize %}
+
 {% block title %}Mon Profil - BWHITE DIGITAL{% endblock %}
+
 {% block content %}
-    <div class="max-w-6xl mx-auto px-4 py-8">
-        <!-- En-tête -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-white flex items-center gap-3">
-                <i class="fas fa-user-circle text-primary-green"></i>
-                Mon Profil
-            </h1>
-            <p class="text-gray-400 mt-2">Gérez vos informations personnelles et paramètres de compte</p>
+    <div class="max-w-7xl mx-auto px-4 py-8 animate-fadeIn">
+
+        <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary-green/20 flex items-center justify-center">
+                        <i class="fas fa-user-circle text-primary-green text-xl"></i>
+                    </div>
+                    Mon Profil
+                </h1>
+                <p class="text-gray-400 mt-1 ml-14">Gérez vos informations personnelles et paramètres de compte</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span class="px-4 py-2 rounded-full border border-gray-700 bg-gray-800 text-sm text-gray-300">
+                    <i class="fas fa-fingerprint mr-2 text-gray-500"></i>ID: {{ user.id }}
+                </span>
+            </div>
         </div>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Colonne principale (2/3) -->
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
             <div class="lg:col-span-2 space-y-6">
-                <!-- Informations personnelles -->
-                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-xl font-semibold text-white flex items-center gap-2">
-                            <i class="fas fa-id-card text-blue-400"></i>
+
+                <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden shadow-lg">
+                    <div class="p-6 border-b border-gray-800 flex items-center justify-between">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fas fa-address-card text-blue-400"></i>
                             Informations Personnelles
                         </h2>
                         <a href="{% url 'accounts:edit_profile' %}"
-                           class="btn btn-primary flex items-center gap-2 text-sm">
-                            <i class="fas fa-edit"></i>
-                            <span>Modifier</span>
+                           class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition flex items-center gap-2">
+                            <i class="fas fa-pen"></i> Modifier
                         </a>
                     </div>
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Prénom</label>
-                                <div class="bg-gray-800 rounded-lg px-4 py-3 text-white">{{ user.first_name|default:"Non renseigné" }}</div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Prénom & Nom</label>
+                                <div class="bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white font-medium">
+                                    {{ user.first_name }} {{ user.last_name }}
+                                </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Nom</label>
-                                <div class="bg-gray-800 rounded-lg px-4 py-3 text-white">{{ user.last_name|default:"Non renseigné" }}</div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Email</label>
+                                <div class="bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white flex items-center gap-3">
+                                    <i class="fas fa-envelope text-gray-500"></i>
+                                    {{ user.email|default:"Non renseigné" }}
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Email</label>
-                            <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
-                                <i class="fas fa-envelope text-gray-500 text-sm"></i>
-                                {{ user.email|default:"Non renseigné" }}
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Nom d'utilisateur</label>
-                            <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
-                                <i class="fas fa-user text-gray-500 text-sm"></i>
-                                {{ user.username }}
-                            </div>
-                        </div>
-                        {% if user.role == 'APPORTEUR' %}
+
+                        <div class="space-y-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Téléphone</label>
-                                <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-center gap-2">
-                                    <i class="fas fa-phone text-gray-500 text-sm"></i>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nom d'utilisateur</label>
+                                <div class="bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white flex items-center gap-3">
+                                    <i class="fas fa-user-tag text-gray-500"></i>
+                                    @{{ user.username }}
+                                </div>
+                            </div>
+
+                            {% if user.role == 'APPORTEUR' %}
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Téléphone</label>
+                                <div class="bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white flex items-center gap-3">
+                                    <i class="fas fa-phone text-gray-500"></i>
                                     {{ user.phone|default:"Non renseigné" }}
                                 </div>
                             </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Adresse</label>
-                                <div class="bg-gray-800 rounded-lg px-4 py-3 text-white flex items-start gap-2">
-                                    <i class="fas fa-map-marker-alt text-gray-500 text-sm mt-1"></i>
-                                    {{ user.address|default:"Non renseignée" }}
-                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if user.role == 'APPORTEUR' %}
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Adresse Postale</label>
+                            <div class="bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white flex items-start gap-3">
+                                <i class="fas fa-map-marker-alt text-gray-500 mt-1"></i>
+                                {{ user.address|default:"Adresse non renseignée" }}
                             </div>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
-                <!-- Sécurité -->
-                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                    <h2 class="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-                        <i class="fas fa-shield-alt text-green-400"></i>
-                        Sécurité
-                    </h2>
-                    <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                        <div>
-                            <h3 class="font-medium text-white">Mot de passe</h3>
-                            <p class="text-sm text-gray-400">••••••••</p>
+
+                <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden shadow-lg">
+                    <div class="p-6 border-b border-gray-800">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fas fa-shield-alt text-emerald-400"></i>
+                            Connexion & Sécurité
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center justify-between p-4 bg-gray-800/50 border border-gray-700 rounded-lg hover:border-gray-600 transition">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                                    <i class="fas fa-key text-gray-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-white">Mot de passe</h3>
+                                    <p class="text-xs text-gray-400">Dernière modification : Il y a un moment</p>
+                                </div>
+                            </div>
+                            <a href="{% url 'accounts:change_password' %}"
+                               class="text-sm font-semibold text-blue-400 hover:text-blue-300 transition">
+                                Modifier
+                            </a>
                         </div>
-                        <a href="{% url 'accounts:change_password' %}"
-                           class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition">
-                            Modifier
-                        </a>
                     </div>
                 </div>
             </div>
-            <!-- Sidebar (1/3) -->
-            <div class="space-y-6">
-                <!-- Statut du compte -->
-                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                    <h3 class="text-lg font-semibold text-white mb-4">Statut du Compte</h3>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-400 text-sm">Rôle</span>
-                            <span class="px-3 py-1 rounded-full text-xs font-semibold
-                                         {% if user.role == 'ADMIN' %}
-                                            bg-yellow-900/50 text-yellow-300
-                                         {% elif user.role == 'COMMERCIAL' %}
-                                            bg-indigo-900/50 text-indigo-300
-                                         {% else %}
-                                            bg-blue-900/50 text-blue-300
-                                         {% endif %}">
-                                {% if user.role == 'ADMIN' %}
-                                    <i class="fas fa-crown mr-1"></i>Administrateur
-                                {% elif user.role == 'COMMERCIAL' %}
-                                    <i class="fas fa-briefcase mr-1"></i>Commercial
-                                {% elif user.role == 'APPORTEUR' %}
-                                    <i class="fas fa-user-tie mr-1"></i>{{ user.grade_short|default:"Apporteur d'affaires" }}
-                                {% else %}
 
-                                    <i class="fas fa-user mr-1"></i>{{ user.get_role_display|default:"-" }}
-                                {% endif %}
+            <div class="space-y-6">
+
+                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 shadow-lg relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-primary-green/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Mon Compte</h3>
+
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center pb-3 border-b border-gray-800">
+                            <span class="text-gray-400">Rôle</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold border
+                                {% if user.role == 'ADMIN' %} bg-red-900/30 text-red-400 border-red-500/30
+                                {% elif user.role == 'COMMERCIAL' %} bg-blue-900/30 text-blue-400 border-blue-500/30
+                                {% else %} bg-green-900/30 text-green-400 border-green-500/30 {% endif %}">
+                                {{ user.get_role_display }}
                             </span>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-400 text-sm">Membre depuis</span>
-                            <span class="text-white text-sm">{{ user.date_joined|date:"d/m/Y" }}</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-400 text-sm">Dernière connexion</span>
-                            <span class="text-white text-sm">
-                                {% if user.last_login %}
-                                    {{ user.last_login|date:"d/m H:i" }}
-                                {% else %}
-                                    Jamais
-                                {% endif %}
+
+                        {% if user.role == 'APPORTEUR' %}
+                        <div class="flex justify-between items-center pb-3 border-b border-gray-800">
+                            <span class="text-gray-400">Grade</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold border bg-yellow-900/20 text-yellow-400 border-yellow-500/30">
+                                <i class="fas fa-medal mr-1"></i> {{ user.grade_short|default:"Standard" }}
                             </span>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-400 text-sm">Statut</span>
-                            <span class="flex items-center gap-2">
-                                {% if user.is_active %}
-                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                                    <span class="text-green-400 text-sm font-medium">Actif</span>
-                                {% else %}
-                                    <span class="w-2 h-2 bg-red-500 rounded-full"></span>
-                                    <span class="text-red-400 text-sm font-medium">Inactif</span>
-                                {% endif %}
-                            </span>
+                        {% endif %}
+
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500 text-sm">Membre depuis</span>
+                            <span class="text-white text-sm font-medium">{{ user.date_joined|date:"M Y" }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500 text-sm">Dernière visite</span>
+                            <span class="text-white text-sm font-medium">{{ user.last_login|date:"d/m H:i"|default:"-" }}</span>
                         </div>
                     </div>
                 </div>
-                <!-- Statistiques -->
-                {% if user.role == 'APPORTEUR' %}
-                    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                        <h3 class="text-lg font-semibold text-white mb-4">Mes Statistiques</h3>
-                        <div class="space-y-3">
-                            <div class="text-center p-4 bg-gray-800 rounded-lg">
-                                <div class="text-3xl font-bold text-blue-400">{{ stats.contrats_mois|default:0 }}</div>
-                                <div class="text-xs text-gray-400 mt-1">Contrats ce mois</div>
-                            </div>
-                            <div class="text-center p-4 bg-gray-800 rounded-lg">
-                                <div class="text-2xl font-bold text-green-400">
-                                    {{ stats.commissions_mois|default_if_none:0|floatformat:0|intcomma }} F
+
+                {% if user.role == 'APPORTEUR' and user.onboarding %}
+                    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 shadow-lg">
+                        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Dossier Légal</h3>
+
+                        <div class="flex items-center gap-3 mb-4">
+                            {% if user.onboarding.status == 'VALIDE' %}
+                                <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
+                                    <i class="fas fa-check"></i>
                                 </div>
-                                <div class="text-xs text-gray-400 mt-1">Commissions ce mois</div>
-                            </div>
+                                <div>
+                                    <p class="text-white font-bold text-sm">Dossier Validé</p>
+                                    <p class="text-xs text-green-400">Tout est en ordre.</p>
+                                </div>
+                            {% elif user.onboarding.status == 'REJETE' %}
+                                <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 animate-pulse">
+                                    <i class="fas fa-exclamation"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white font-bold text-sm">Action Requise</p>
+                                    <p class="text-xs text-red-400">Dossier rejeté.</p>
+                                </div>
+                            {% else %}
+                                <div class="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white font-bold text-sm">En cours</p>
+                                    <p class="text-xs text-yellow-400">En attente de validation.</p>
+                                </div>
+                            {% endif %}
                         </div>
-                        <a href="{% url 'accounts:user_stats' %}"
-                           class="block mt-4 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition">
-                            Voir mes statistiques
-                        </a>
+
                         <a href="{% url 'accounts:apporteur_detail' %}"
-                           class="block mt-2 text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm transition">
-                            <i class="fas fa-file-signature mr-2"></i>Contrat et conditions
+                           class="block w-full text-center py-2 rounded-lg text-sm font-bold transition
+                           {% if user.onboarding.status == 'REJETE' %} bg-red-600 hover:bg-red-500 text-white
+                           {% else %} bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white {% endif %}">
+                           {% if user.onboarding.status == 'VALIDE' %}
+                                Voir mon contrat
+                           {% else %}
+                                Gérer mon dossier
+                           {% endif %}
                         </a>
-                    </div>
-                {% elif user.role == 'ADMIN' %}
-                    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                        <h3 class="text-lg font-semibold text-white mb-4">Vue d'ensemble</h3>
-                        <div class="space-y-3">
-                            <div class="text-center p-4 bg-gray-800 rounded-lg">
-                                <div class="text-3xl font-bold text-blue-400">{{ stats.apporteurs_actifs|default:0 }}</div>
-                                <div class="text-xs text-gray-400 mt-1">Apporteurs actifs</div>
-                            </div>
-                            <div class="text-center p-4 bg-gray-800 rounded-lg">
-                                <div class="text-3xl font-bold text-green-400">{{ stats.contrats_total|default:0 }}</div>
-                                <div class="text-xs text-gray-400 mt-1">Contrats totaux</div>
-                            </div>
-                        </div>
                     </div>
                 {% endif %}
-                <!-- Actions rapides -->
-                <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                    <h3 class="text-lg font-semibold text-white mb-4">Actions Rapides</h3>
-                    <div class="space-y-2">
-                        <a href="{% url 'contracts:nouveau_contrat' %}"
-                           class="block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm text-center transition">
-                            <i class="fas fa-plus mr-2"></i>Nouveau contrat
-                        </a>
-                        <a href="{% url 'contracts:liste_contrats' %}"
-                           class="block w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg text-sm text-center transition">
-                            <i class="fas fa-list mr-2"></i>Mes contrats
-                        </a>
-                        <a href="{% url 'contracts:liste_clients' %}"
-                           class="block w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg text-sm text-center transition">
-                            <i class="fas fa-users mr-2"></i>Mes clients
+
+                {% if user.role == 'APPORTEUR' %}
+                    <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl border border-gray-700 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-bold text-white">Performance (Mois)</h3>
+                            <i class="fas fa-chart-line text-blue-500"></i>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-400">Contrats</p>
+                                <p class="text-xl font-bold text-white">{{ stats.contrats_mois|default:0 }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400">Commissions</p>
+                                <p class="text-xl font-bold text-green-400">{{ stats.commissions_mois|default:0|floatformat:0|intcomma }}</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'accounts:user_stats' %}" class="block mt-4 text-xs text-blue-400 hover:text-blue-300 text-center font-medium">
+                            Voir les détails <i class="fas fa-arrow-right ml-1"></i>
                         </a>
                     </div>
-                </div>
+                {% endif %}
+
             </div>
         </div>
     </div>

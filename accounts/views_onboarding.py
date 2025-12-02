@@ -5,56 +5,67 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.text import slugify
 from .forms_onboarding import OnboardingForm
 from .models_onboarding import ApporteurOnboarding
 
 logger = logging.getLogger(__name__)
 
+
+def get_client_ip(request):
+    """Récupère l'IP réelle du client."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
 @login_required
 def apporteur_detail(request):
     """Espace contrat/conditions de l'apporteur"""
     user = request.user
-    if user.role != "APPORTEUR":
+
+    # 1. Sécurité Rôle
+    if not getattr(user, 'is_apporteur', False):
         return redirect("accounts:profile")
 
-    ob, _ = ApporteurOnboarding.objects.get_or_create(user=user)
+    # 2. Récupération
+    ob, created = ApporteurOnboarding.objects.get_or_create(user=user)
 
-    # Protection statut : déjà traité par l'ADMIN ou le COMMERCIAL
-    if ob.status in [ApporteurOnboarding.Status.VALIDE,
-                     ApporteurOnboarding.Status.REJETE] and request.method == "POST":
-        messages.error(request, "Onboarding déjà traité par l'administration.")
-        return redirect("accounts:apporteur_detail")
+    is_locked = ob.status in [
+        ApporteurOnboarding.Status.VALIDE,
+        ApporteurOnboarding.Status.EN_ATTENTE_VALIDATION
+    ]
 
     if request.method == "POST":
+        if is_locked:
+            messages.error(request, "Dossier en cours de traitement ou déjà validé. Modification impossible.")
+            return redirect("accounts:apporteur_detail")
+
         form = OnboardingForm(request.POST, request.FILES, instance=ob)
 
-        if not request.POST.get("a_lu_et_approuve"):
-            form.add_error(None, "Vous devez accepter le contrat et les conditions.")
-
         if form.is_valid():
-            # 1) Sauvegarde des fichiers + signature via le form
-            ob = form.save(commit=True)
+            # Sauvegarde temporaire pour les fichiers
+            ob = form.save(commit=False)
 
-            # 2) Traçage
-            ob.approuve_at = timezone.now()
-            xff = request.META.get("HTTP_X_FORWARDED_FOR")
-            ob.ip_accept = (
-                xff.split(",")[0].strip()
-                if xff
-                else request.META.get("REMOTE_ADDR")
-            )
+            # Audit
+            ob.ip_accept = get_client_ip(request)
             ob.ua_accept = request.META.get("HTTP_USER_AGENT", "")
 
-            # 3) Statut "SOUMIS" tant qu'ADMIN/COMMERCIAL n'a pas tranché
-            if ob.status not in (
-                ApporteurOnboarding.Status.VALIDE,
-                ApporteurOnboarding.Status.REJETE,
-            ):
-                ob.status = ApporteurOnboarding.Status.SOUMIS
+            ob.save()
 
-            ob.save(update_fields=["approuve_at", "ip_accept", "ua_accept", "status"])
-            messages.success(request, "Données soumises avec succès.")
+            # Tentative de soumission
+            if ob.soumettre():
+                messages.success(request, "Dossier soumis avec succès ! En attente de validation.")
+            else:
+                # Si incomplet (ex: upload CNI recto mais oubli verso)
+                messages.warning(request, "Modifications enregistrées. Dossier incomplet (pièces manquantes).")
+
             return redirect("accounts:apporteur_detail")
+        else:
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
         form = OnboardingForm(instance=ob)
 
@@ -72,34 +83,50 @@ def apporteur_detail(request):
             "onboarding": ob,
             "form": form,
             "conditions_html": conditions_html,
+            "is_locked": is_locked,
         },
     )
+
+
 @login_required
 def contrat_pdf(request):
-    """Téléchargement du contrat en PDF; fallback HTML imprimable."""
+    """Téléchargement du contrat en PDF."""
     user = request.user
 
-    # Seul un apporteur peut télécharger SON contrat
-    if user.role != "APPORTEUR":
-        messages.error(request, "Accès réservé aux apporteurs.")
+    if not getattr(user, 'is_apporteur', False):
+        messages.error(request, "Accès réservé.")
         return redirect("accounts:profile")
 
     ob = get_object_or_404(ApporteurOnboarding, user=user)
 
-    html = render_to_string(
-        "accounts/contrat_pdf.html",
-        {"user": user, "onboarding": ob},
-        request=request,
-    )
+    if not ob.est_complet:
+        messages.error(request, "Contrat non finalisé.")
+        return redirect("accounts:apporteur_detail")
+
+    context = {
+        "user": user,
+        "onboarding": ob,
+        "date_signature": ob.approuve_at or timezone.now()
+    }
+
+    html = render_to_string("accounts/contrat_pdf.html", context, request=request)
 
     try:
         from weasyprint import HTML
+        base_url = request.build_absolute_uri("/")
+        pdf = HTML(string=html, base_url=base_url).write_pdf()
 
-        pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
-        filename = f"Contrat_BWHITE_{user.username}.pdf"
+        # Nettoyage du nom de fichier pour éviter les bugs d'encodage navigateur
+        safe_filename = slugify(f"Contrat-BWHITE-{user.username}-{ob.version_conditions}") + ".pdf"
+
         response = HttpResponse(pdf, content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Content-Disposition"] = f'attachment; filename="{safe_filename}"'
         return response
+
+    except ImportError:
+        logger.error("WeasyPrint manquant.")
+        return HttpResponse(html)
     except Exception as e:
-        logger.warning("Échec génération PDF Weasyprint (fallback HTML): %s", e)
+        logger.error(f"Erreur PDF: {e}")
+        messages.warning(request, "Erreur génération PDF. Voici la version web.")
         return HttpResponse(html)

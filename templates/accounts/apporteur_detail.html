@@ -1,26 +1,66 @@
 {% extends "base.html" %}
 {% load humanize %}
-{% block title %}Mon contrat apporteur{% endblock %}
+
+{% block title %}Mon contrat Apporteur{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 py-8">
 
+    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <span class="p-2 bg-green-500/10 text-green-500 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </span>
+                Contrat & Onboarding
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Gérez vos documents légaux et validez votre statut d'apporteur.</p>
+        </div>
+
+        <div class="px-4 py-2 rounded-full border
+            {% if onboarding.status == 'VALIDE' %}bg-green-500/10 border-green-500 text-green-400
+            {% elif onboarding.status == 'REJETE' %}bg-red-500/10 border-red-500 text-red-400
+            {% elif onboarding.status == 'SOUMIS' or onboarding.status == 'EN_ATTENTE_VALIDATION' %}bg-orange-500/10 border-orange-500 text-orange-400
+            {% else %}bg-slate-700 border-slate-600 text-slate-400{% endif %}">
+            <span class="flex items-center gap-2 font-medium text-sm">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-current"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
+                </span>
+                {{ onboarding.get_status_display }}
+            </span>
+        </div>
+    </div>
+
     <div class="card bg-slate-800 rounded-xl shadow-lg border border-slate-700 overflow-hidden">
 
-        <div class="p-6 border-b border-slate-700 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+        {% if form.non_field_errors %}
+            <div class="bg-red-500/10 border-l-4 border-red-500 p-4 m-6">
+                <div class="flex">
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-400">Erreur de validation</h3>
+                        <div class="mt-2 text-sm text-red-300">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
             </div>
-            <h1 class="text-xl font-bold text-white">Contrat & conditions</h1>
-        </div>
+        {% endif %}
+
+        {% if onboarding.motif_rejet and onboarding.status == 'REJETE' %}
+             <div class="bg-red-500/10 border border-red-500 p-4 m-6 rounded-lg">
+                <h4 class="font-bold text-red-400 mb-1">Dossier rejeté par l'administrateur :</h4>
+                <p class="text-slate-300">{{ onboarding.motif_rejet }}</p>
+             </div>
+        {% endif %}
 
         <div class="p-6">
             {% if conditions_html %}
             <div class="mb-8">
-                <label class="block text-sm font-semibold text-slate-300 mb-2">Conditions contractuelles</label>
-                <div class="bg-white text-slate-900 rounded-lg p-4 h-64 overflow-y-auto text-sm leading-relaxed shadow-inner border border-slate-600">
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Termes du contrat (Version {{ onboarding.version_conditions }})</label>
+                <div class="bg-white text-slate-900 rounded-lg p-4 h-64 overflow-y-auto text-sm leading-relaxed shadow-inner border border-slate-600 custom-scrollbar">
                     {{ conditions_html|safe }}
                 </div>
             </div>
@@ -29,228 +69,238 @@
             <form method="post" enctype="multipart/form-data" id="signature-form" class="space-y-8">
                 {% csrf_token %}
 
-                {% if form.non_field_errors %}
-                  <div class="mb-4 p-3 rounded bg-red-900/40 border border-red-500 text-red-200 text-sm">
-                      {% for error in form.non_field_errors %}
-                          <p>{{ error }}</p>
-                      {% endfor %}
-                  </div>
-                {% endif %}
-
-                {% for field in form %}
-                    {% if field.errors %}
-                        <div class="mb-2 p-2 rounded bg-red-900/20 border border-red-500/30 text-xs text-red-300">
-                            <strong>{{ field.label }} :</strong>
-                            {{ field.errors|striptags }}
-                        </div>
-                    {% endif %}
-                {% endfor %}
-                <div class="flex items-start gap-3">
-                    <div class="relative flex items-start">
-                        <input type="checkbox" id="a_lu_et_approuve" name="a_lu_et_approuve" required
+                <div class="flex items-start gap-3 p-4 bg-slate-700/30 rounded-lg border border-slate-700">
+                    <div class="relative flex items-start mt-0.5">
+                        <input type="checkbox" id="id_a_lu_et_approuve" name="a_lu_et_approuve" required
                                {% if onboarding.a_lu_et_approuve %}checked{% endif %}
-                               class="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-500 bg-slate-700 transition-all checked:border-green-500 checked:bg-green-500 hover:border-green-400 focus:ring-2 focus:ring-green-500/30 mt-0.5">
-                        <svg class="pointer-events-none absolute top-1 left-1 h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                               {% if is_locked %}disabled{% endif %}
+                               class="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-500 bg-slate-700 transition-all checked:border-green-500 checked:bg-green-500 hover:border-green-400 focus:ring-2 focus:ring-green-500/30 disabled:opacity-50">
+                        <svg class="pointer-events-none absolute top-1 left-1 h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
-                    <label for="a_lu_et_approuve" class="text-sm text-slate-300 cursor-pointer select-none leading-relaxed">
-                        Je déclare avoir lu et j’accepte les termes du contrat et les conditions générales d'utilisation.
+                    <label for="id_a_lu_et_approuve" class="text-sm text-slate-300 cursor-pointer select-none leading-relaxed {% if is_locked %}opacity-50{% endif %}">
+                        Je déclare avoir lu et j’accepte les termes du contrat ci-dessus ainsi que les conditions générales d'utilisation.
+                        <span class="block text-xs text-slate-500 mt-1">En cochant cette case, vous acceptez l'enregistrement de votre adresse IP ({{ request.META.REMOTE_ADDR }}) comme preuve de consentement.</span>
                     </label>
                 </div>
+                {% if form.a_lu_et_approuve.errors %}
+                    <p class="text-red-400 text-xs mt-1">{{ form.a_lu_et_approuve.errors.0 }}</p>
+                {% endif %}
+
+                <hr class="border-slate-700">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="form-group">
-                        <label class="block text-sm font-medium text-slate-400 mb-2">CNI Recto (jpg/png/pdf)</label>
+                        <label class="block text-sm font-medium text-slate-400 mb-2">CNI Recto (Image ou PDF)</label>
 
-                        <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer bg-slate-700/30 hover:bg-slate-700 hover:border-green-500 transition-all group relative">
-                            <div class="flex flex-col items-center justify-center pt-5 pb-6 z-10">
-                                <svg class="w-8 h-8 mb-2 text-slate-400 group-hover:text-green-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                                <p class="text-xs text-slate-400 group-hover:text-slate-200" id="text-recto">Cliquez pour sélectionner</p>
-                                <p id="filename-recto" class="text-xs text-green-400 mt-1 font-medium truncate px-2 max-w-[200px]"></p>
+                        {% if not is_locked %}
+                        <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer bg-slate-700/30 hover:bg-slate-700 hover:border-green-500 transition-all group relative overflow-hidden">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6 z-10 text-center px-4">
+                                <svg class="w-8 h-8 mb-2 text-slate-400 group-hover:text-green-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <p class="text-xs text-slate-400 group-hover:text-slate-200" id="text-recto">Cliquez pour importer</p>
+                                <p id="filename-recto" class="text-xs text-green-400 mt-1 font-medium truncate w-full"></p>
                             </div>
-                            <input type="file" name="cni_recto" class="hidden" accept=".jpg,.jpeg,.png,.pdf"
-                                   onchange="updateFileName(this, 'filename-recto', 'text-recto')" />
+                            <input type="file" name="cni_recto" class="hidden" accept="image/*,.pdf" onchange="updateFileName(this, 'filename-recto', 'text-recto')" />
                         </label>
+                        {% endif %}
 
                         {% if onboarding.cni_recto %}
-                            <div class="mt-2 flex items-center gap-2 text-xs bg-slate-900/50 p-2 rounded border border-slate-700">
-                                <span class="text-green-500">✓ Fichier actuel :</span>
-                                <a href="{{ onboarding.cni_recto.url }}" target="_blank" class="text-blue-400 hover:underline hover:text-blue-300 flex items-center gap-1">
-                                    Voir le document
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                </a>
+                            <div class="mt-2 flex items-center justify-between text-xs bg-slate-900/50 p-3 rounded border border-slate-700">
+                                <span class="text-green-500 flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    Fichier enregistré
+                                </span>
+                                <a href="{{ onboarding.cni_recto.url }}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">Voir</a>
                             </div>
+                        {% else %}
+                             <p class="text-xs text-orange-400 mt-1">⚠️ Document manquant</p>
+                        {% endif %}
+                        {% if form.cni_recto.errors %}
+                            <p class="text-red-400 text-xs mt-1">{{ form.cni_recto.errors.0 }}</p>
                         {% endif %}
                     </div>
 
                     <div class="form-group">
-                        <label class="block text-sm font-medium text-slate-400 mb-2">CNI Verso (jpg/png/pdf)</label>
+                        <label class="block text-sm font-medium text-slate-400 mb-2">CNI Verso (Image ou PDF)</label>
 
-                        <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer bg-slate-700/30 hover:bg-slate-700 hover:border-green-500 transition-all group relative">
-                            <div class="flex flex-col items-center justify-center pt-5 pb-6 z-10">
-                                <svg class="w-8 h-8 mb-2 text-slate-400 group-hover:text-green-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                                <p class="text-xs text-slate-400 group-hover:text-slate-200" id="text-verso">Cliquez pour sélectionner</p>
-                                <p id="filename-verso" class="text-xs text-green-400 mt-1 font-medium truncate px-2 max-w-[200px]"></p>
+                        {% if not is_locked %}
+                        <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer bg-slate-700/30 hover:bg-slate-700 hover:border-green-500 transition-all group relative overflow-hidden">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6 z-10 text-center px-4">
+                                <svg class="w-8 h-8 mb-2 text-slate-400 group-hover:text-green-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <p class="text-xs text-slate-400 group-hover:text-slate-200" id="text-verso">Cliquez pour importer</p>
+                                <p id="filename-verso" class="text-xs text-green-400 mt-1 font-medium truncate w-full"></p>
                             </div>
-                            <input type="file" name="cni_verso" class="hidden" accept=".jpg,.jpeg,.png,.pdf"
-                                   onchange="updateFileName(this, 'filename-verso', 'text-verso')" />
+                            <input type="file" name="cni_verso" class="hidden" accept="image/*,.pdf" onchange="updateFileName(this, 'filename-verso', 'text-verso')" />
                         </label>
+                        {% endif %}
 
                         {% if onboarding.cni_verso %}
-                            <div class="mt-2 flex items-center gap-2 text-xs bg-slate-900/50 p-2 rounded border border-slate-700">
-                                <span class="text-green-500">✓ Fichier actuel :</span>
-                                <a href="{{ onboarding.cni_verso.url }}" target="_blank" class="text-blue-400 hover:underline hover:text-blue-300 flex items-center gap-1">
-                                    Voir le document
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                </a>
+                            <div class="mt-2 flex items-center justify-between text-xs bg-slate-900/50 p-3 rounded border border-slate-700">
+                                <span class="text-green-500 flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    Fichier enregistré
+                                </span>
+                                <a href="{{ onboarding.cni_verso.url }}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">Voir</a>
                             </div>
+                        {% else %}
+                             <p class="text-xs text-orange-400 mt-1">⚠️ Document manquant</p>
+                        {% endif %}
+                        {% if form.cni_verso.errors %}
+                            <p class="text-red-400 text-xs mt-1">{{ form.cni_verso.errors.0 }}</p>
                         {% endif %}
                     </div>
                 </div>
 
-                <div class="border-t border-slate-700 pt-6">
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="block text-sm font-medium text-slate-300">Votre Signature</label>
+                <hr class="border-slate-700">
+
+                <div>
+                    <div class="flex justify-between items-end mb-3">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300">Votre Signature Manuscrite</label>
+                            <p class="text-xs text-slate-500">Signez dans le cadre blanc ci-dessous.</p>
+                        </div>
+
+                        {% if not is_locked %}
                         <div class="flex gap-2">
-                            <button type="button" id="undo_sig" class="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition">Annuler trait</button>
-                            <button type="button" id="clear_sig" class="text-xs px-2 py-1 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                                Effacer tout
+                            <button type="button" id="undo_sig" class="text-xs px-3 py-1.5 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition">↩ Retour</button>
+                            <button type="button" id="clear_sig" class="text-xs px-3 py-1.5 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition flex items-center gap-1 border border-red-500/30">
+                                Effacer
                             </button>
                         </div>
+                        {% endif %}
                     </div>
 
-                    <div class="relative rounded-lg overflow-hidden border-2 border-slate-600 bg-white hover:border-slate-500 transition-colors">
-                        <canvas id="sigpad" class="w-full h-48 cursor-crosshair block touch-none"></canvas>
-                        <div class="absolute bottom-2 right-2 text-[10px] text-gray-400 pointer-events-none select-none">Signez dans cette zone</div>
-                    </div>
-
-                    <input type="hidden" name="signature_data_url" id="signature_image_input">
-
-                    {% if onboarding.signature_image %}
-                        <div class="mt-3 p-3 bg-slate-900/50 rounded border border-slate-700 inline-block">
-                            <p class="text-xs text-slate-400 mb-2">Signature enregistrée :</p>
-                            <img src="{{ onboarding.signature_image.url }}" alt="Signature" class="h-12 bg-white rounded px-2 py-1">
+                    {% if is_locked %}
+                        {% if onboarding.signature_image %}
+                            <div class="p-4 bg-white rounded-lg border border-slate-600 flex justify-center">
+                                <img src="{{ onboarding.signature_image.url }}" alt="Signature validée" class="max-h-24">
+                            </div>
+                            <p class="text-xs text-green-500 mt-2 text-center">✓ Signature validée et verrouillée.</p>
+                        {% else %}
+                             <p class="text-red-400 text-sm">Erreur : Dossier verrouillé sans signature.</p>
+                        {% endif %}
+                    {% else %}
+                        <div class="relative rounded-lg overflow-hidden border-2 border-slate-600 bg-white hover:border-slate-500 transition-colors shadow-inner">
+                            <canvas id="sigpad" class="w-full h-56 cursor-crosshair block touch-none"></canvas>
+                            <div class="absolute bottom-2 right-2 text-[10px] text-gray-300 pointer-events-none select-none">BWHITE CONTRACTS - SIGNATURE SECURE</div>
                         </div>
+                        <input type="hidden" name="signature_data_url" id="signature_image_input">
+
+                        {% if onboarding.signature_image %}
+                            <div class="mt-2 text-xs text-slate-400 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Une signature est déjà enregistrée. Signez à nouveau uniquement pour la modifier.
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if form.errors.signature_data_url %}
+                        <p class="text-red-400 text-xs mt-1">La signature est obligatoire.</p>
                     {% endif %}
                 </div>
 
-                <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-700">
-                    <button type="submit" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 flex justify-center items-center gap-2">
-                        <span>Valider et Signer</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                    </button>
-
-                    {% if onboarding.a_lu_et_approuve %}
-                        <a href="{% url 'accounts:contrat_pdf' %}" class="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow transition-all text-center flex justify-center items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            PDF
-                        </a>
-                        <button type="button" onclick="window.print()" class="px-5 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg transition-all flex justify-center items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                            Imprimer
+                <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-700">
+                    {% if not is_locked %}
+                        <button type="submit" class="flex-1 px-6 py-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 flex justify-center items-center gap-2">
+                            <span>Enregistrer et Soumettre</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                         </button>
                     {% endif %}
-                </div>
 
-                {% if onboarding.status %}
-                    <div class="text-center pt-2">
-                        <p class="text-xs text-slate-500">
-                            Statut actuel : <span class="text-slate-300 font-medium">{{ onboarding.get_status_display }}</span>
-                            {% if onboarding.approuve_at %}
-                                • Signé le {{ onboarding.approuve_at|date:"d/m/Y à H:i" }}
-                            {% endif %}
-                        </p>
-                    </div>
-                {% endif %}
+                    {% if onboarding.est_complet %}
+                        <a href="{% url 'accounts:contrat_pdf' %}" class="px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow transition-all text-center flex justify-center items-center gap-2 {% if not is_locked %}sm:w-auto w-full{% else %}w-full justify-center{% endif %}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Télécharger le Contrat (PDF)
+                        </a>
+                    {% endif %}
+                </div>
             </form>
         </div>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+
 <script>
-    // Fonction pour afficher le nom du fichier sélectionné
+    // UX Upload Fichier
     function updateFileName(input, nameId, textId) {
         const nameDisplay = document.getElementById(nameId);
         const textDisplay = document.getElementById(textId);
         if (input.files && input.files.length > 0) {
             nameDisplay.textContent = input.files[0].name;
-            textDisplay.textContent = "Fichier sélectionné :";
-            textDisplay.classList.add('text-green-400');
+            textDisplay.textContent = "Fichier prêt à l'envoi :";
+            textDisplay.className = "text-xs text-green-400 font-bold mb-1";
         } else {
             nameDisplay.textContent = "";
-            textDisplay.textContent = "Cliquez pour sélectionner";
-            textDisplay.classList.remove('text-green-400');
+            textDisplay.textContent = "Cliquez pour importer";
+            textDisplay.className = "text-xs text-slate-400 group-hover:text-slate-200";
         }
     }
 
+    // Gestion de la signature
     (function(){
         const canvas = document.getElementById('sigpad');
+        if (!canvas) return; // Si is_locked, le canvas n'existe pas dans le DOM
+
         const input = document.getElementById('signature_image_input');
         const form = document.getElementById('signature-form');
-
-        if (!canvas) return;
-
-        // --- Gestion DPI Signature (Crucial pour mobile/retina) ---
         let signaturePad;
 
+        // Fonction de redimensionnement pour gérer le DPI (Retina/Mobile)
         function resizeCanvas() {
             const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            // On récupère la taille réelle affichée en CSS
-            const width = canvas.offsetWidth;
-            const height = canvas.offsetHeight; // Ou une hauteur fixe si canvas.offsetHeight est 0 (ex: caché)
 
-            // Si le canvas n'est pas visible, on ne fait rien pour l'instant
-            if (width === 0) return;
+            // On sauvegarde l'image actuelle si elle existe
+            let data = null;
+            if (signaturePad) {
+                data = signaturePad.toData();
+            }
 
-            canvas.width = width * ratio;
-            canvas.height = height * ratio;
+            // Redimensionnement réel du canvas
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
             canvas.getContext("2d").scale(ratio, ratio);
 
-            // On réinitialise le pad mais on garde les données si elles existent (pour le redimensionnement fenêtre)
+            // On vide le pad pour éviter les artefacts visuels
             if (signaturePad) {
-                const data = signaturePad.toData();
-                signaturePad.clear(); // Important pour clean le cache interne
-                signaturePad.fromData(data);
+                signaturePad.clear();
+                if(data) signaturePad.fromData(data); // On remet les données
             }
         }
 
-        // Initialisation
+        // Initialisation du pad
         signaturePad = new SignaturePad(canvas, {
-            minWidth: 0.7,
-            maxWidth: 2.0,
+            minWidth: 1, // Trait plus fin pour faire pro
+            maxWidth: 2.5,
             penColor: 'rgb(0, 0, 0)',
-            backgroundColor: 'rgb(255, 255, 255)'
+            backgroundColor: 'rgb(255, 255, 255)', // Fond blanc explicite pour le JPEG/PNG
+            velocityFilterWeight: 0.7
         });
 
-        // Appel initial et au redimensionnement
+        // Gestionnaires d'événements
         window.addEventListener("resize", resizeCanvas);
-        resizeCanvas(); // Premier appel
+        resizeCanvas(); // Appel initial immédiat
 
-        // --- Boutons ---
-        document.getElementById('clear_sig').onclick = () => signaturePad.clear();
+        document.getElementById('clear_sig').addEventListener('click', function() {
+            signaturePad.clear();
+        });
 
-        document.getElementById('undo_sig').onclick = () => {
+        document.getElementById('undo_sig').addEventListener('click', function() {
             const data = signaturePad.toData();
-            if (data.length) {
-                data.pop(); // Enlève le dernier trait
+            if (data) {
+                data.pop(); // Retire le dernier trait
                 signaturePad.fromData(data);
             }
-        };
+        });
 
-        // --- Soumission ---
+        // Avant la soumission, on injecte l'image dans l'input hidden
         form.addEventListener('submit', function(e) {
-            // Vérification si une signature est requise (optionnel selon votre logique)
-            // Si le pad n'est pas vide, on met à jour l'input caché
             if (!signaturePad.isEmpty()) {
+                // On trim l'image pour ne garder que la signature (optionnel, ici on prend tout le canvas)
                 input.value = signaturePad.toDataURL('image/png');
-            } else {
-                // Si pas de signature, on peut soit laisser vide (si édition sans re-signer)
-                // soit bloquer. Ici je laisse passer car l'utilisateur peut avoir déjà signé avant.
-                // Si vous voulez forcer :
-                // e.preventDefault(); alert("Merci de signer avant de valider.");
             }
+            // Note: Si le pad est vide, le backend gérera (soit erreur, soit garde l'ancienne signature)
         });
     })();
 </script>

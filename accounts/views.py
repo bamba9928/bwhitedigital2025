@@ -103,86 +103,6 @@ def change_password(request):
 # GESTION APPORTEURS (Admin uniquement)
 # ==========================================
 @staff_member_required
-def liste_apporteurs(request):
-    """Liste + filtres apporteurs (Stats corrigées : uniquement contrats avec docs)"""
-    search = request.GET.get("search", "")
-    grade = request.GET.get("grade", "")
-    status = request.GET.get("status", "")
-
-    apporteurs = User.objects.filter(role="APPORTEUR")
-
-    if search:
-        apporteurs = apporteurs.filter(
-            Q(first_name__icontains=search)
-            | Q(last_name__icontains=search)
-            | Q(username__icontains=search)
-            | Q(phone__icontains=search)
-        )
-    if grade:
-        apporteurs = apporteurs.filter(grade=grade)
-    if status == "actif":
-        apporteurs = apporteurs.filter(is_active=True)
-    elif status == "inactif":
-        apporteurs = apporteurs.filter(is_active=False)
-
-    # On reproduit la logique de emis_avec_doc() via des Q objects pour l'annotation
-    q_valid_status = Q(contrats_apportes__status__in=["EMIS", "ACTIF", "EXPIRE"])
-    q_has_docs = (
-            (Q(contrats_apportes__link_attestation__isnull=False) & ~Q(contrats_apportes__link_attestation="")) |
-            (Q(contrats_apportes__link_carte_brune__isnull=False) & ~Q(contrats_apportes__link_carte_brune=""))
-    )
-    # Le filtre final pour les aggregations
-    filter_valid_contracts = q_valid_status & q_has_docs
-
-    apporteurs = apporteurs.annotate(
-        nb_contrats=Count(
-            "contrats_apportes",
-            filter=filter_valid_contracts,
-            distinct=True,
-        ),
-        total_commissions=Sum(
-            "contrats_apportes__commission_apporteur",
-            filter=filter_valid_contracts,
-        ),
-        montant_attente=Sum(
-            "contrats_apportes__encaissement__montant_a_payer",
-            filter=Q(contrats_apportes__encaissement__status="EN_ATTENTE"),
-        ),
-        montant_paye=Sum(
-            "contrats_apportes__encaissement__montant_a_payer",
-            filter=Q(contrats_apportes__encaissement__status="PAYE"),
-        ),
-        nb_encaissements_attente=Count(
-            "contrats_apportes__encaissement",
-            filter=Q(contrats_apportes__encaissement__status="EN_ATTENTE"),
-            distinct=True,
-        ),
-        nb_encaissements_payes=Count(
-            "contrats_apportes__encaissement",
-            filter=Q(contrats_apportes__encaissement__status="PAYE"),
-            distinct=True,
-        ),
-    )
-
-    paginator = Paginator(apporteurs.order_by("-created_at"), 25)
-    page_obj = paginator.get_page(request.GET.get("page"))
-
-    return render(
-        request,
-        "accounts/liste_apporteurs.html",
-        {
-            "title": "Gestion des Apporteurs",
-            "page_obj": page_obj,
-            "apporteurs": page_obj,
-            "search": search,
-            "grade": grade,
-            "status": status,
-            "total_count": paginator.count,
-        },
-    )
-
-
-@staff_member_required
 def nouveau_apporteur(request):
     """Création d'un apporteur ou commercial (par staff)."""
     if request.method == "POST":
@@ -314,8 +234,81 @@ def edit_apporteur(request, pk):
             "apporteur": apporteur,
         },
     )
+@staff_member_required
+def liste_apporteurs(request):
+    search = request.GET.get("search", "")
+    grade = request.GET.get("grade", "")
+    status = request.GET.get("status", "")
 
+    apporteurs = User.objects.filter(role="APPORTEUR")
 
+    # Filtres de base
+    if search:
+        apporteurs = apporteurs.filter(
+            Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(username__icontains=search)
+            | Q(phone__icontains=search)
+        )
+    if grade:
+        apporteurs = apporteurs.filter(grade=grade)
+    if status == "actif":
+        apporteurs = apporteurs.filter(is_active=True)
+    elif status == "inactif":
+        apporteurs = apporteurs.filter(is_active=False)
+
+    # Logique "Contrat Valide" reproduite
+    q_valid_status = Q(contrats_apportes__status__in=["EMIS", "ACTIF", "EXPIRE"])
+    # Vérification que les fichiers existent (pas null et pas vide)
+    q_has_docs = (
+        ~Q(contrats_apportes__link_attestation="") &
+        Q(contrats_apportes__link_attestation__isnull=False) &
+        ~Q(contrats_apportes__link_carte_brune="") &
+        Q(contrats_apportes__link_carte_brune__isnull=False)
+    )
+    filter_valid_contracts = q_valid_status & q_has_docs
+
+    apporteurs = apporteurs.annotate(
+        nb_contrats=Count(
+            "contrats_apportes",
+            filter=filter_valid_contracts,
+            distinct=True, # Important pour éviter les doublons dus aux joints
+        ),
+        # Attention : Sum ne supporte pas distinct=True facilement.
+        # On suppose ici une relation 1-1 stricte ou pas de duplication de lignes via d'autres joints
+        total_commissions=Sum(
+            "contrats_apportes__commission_apporteur",
+            filter=filter_valid_contracts,
+        ),
+        # Sommes sur les paiements (Encaissements)
+        # Note: Assurez-vous que related_name='encaissement' est bien sur PaiementApporteur
+        montant_attente=Sum(
+            "contrats_apportes__encaissement__montant_a_payer",
+            filter=Q(contrats_apportes__encaissement__status="EN_ATTENTE"),
+        ),
+        montant_paye=Sum(
+            "contrats_apportes__encaissement__montant_a_payer",
+            filter=Q(contrats_apportes__encaissement__status="PAYE"),
+        )
+    )
+
+    # Tri par défaut : Plus récents d'abord
+    paginator = Paginator(apporteurs.order_by("-created_at"), 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "accounts/liste_apporteurs.html",
+        {
+            "title": "Gestion des Apporteurs",
+            "page_obj": page_obj,
+            "apporteurs": page_obj, # Pour compatibilité template
+            "search": search,
+            "grade": grade,
+            "status": status,
+            "total_count": paginator.count,
+        },
+    )
 @staff_member_required
 @require_POST
 def delete_apporteur(request, pk):
@@ -549,7 +542,7 @@ def _get_user_stats(user):
     first_day = today.replace(day=1)
 
     if user.role == "APPORTEUR":
-        # CORRECTION : Uniquement contrats avec docs
+
         contrats = Contrat.objects.emis_avec_doc().filter(apporteur=user)
         return {
             "total_contrats": contrats.count(),

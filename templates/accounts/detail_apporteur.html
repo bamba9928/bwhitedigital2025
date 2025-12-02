@@ -1,347 +1,319 @@
 {% extends "base.html" %}
 {% load humanize %}
-{% block title %}{{ apporteur.get_full_name }} - Détail Apporteur{% endblock %}
+
+{% block title %}{{ apporteur.get_full_name }} - Administration{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
-    <nav class="text-sm text-gray-400 mb-4">
-        <a href="{% url 'accounts:liste_apporteurs' %}"
-           class="hover:text-primary-green transition">
-            <i class="fas fa-user-tie mr-1"></i>Apporteurs
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+    <nav class="text-sm text-gray-400 flex items-center gap-2">
+        <a href="{% url 'accounts:liste_apporteurs' %}" class="hover:text-green-400 transition flex items-center gap-1">
+            <i class="fas fa-users"></i> Apporteurs
         </a>
-        <span class="mx-2">/</span>
-        <span class="text-white">{{ apporteur.get_full_name }}</span>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span class="text-white font-medium">{{ apporteur.get_full_name }}</span>
     </nav>
 
-    <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div class="flex items-center gap-4">
-                <div class="w-16 h-16 rounded-full bg-primary-green/20 flex items-center justify-center">
-                    <i class="fas fa-user-tie text-primary-green text-2xl"></i>
+    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-green-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+
+        <div class="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div class="flex items-center gap-5">
+                <div class="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center border-2 border-gray-600 shadow-inner">
+                    {% if apporteur.role == 'APPORTEUR' %}
+                        <i class="fas fa-user-tie text-green-500 text-3xl"></i>
+                    {% else %}
+                        <i class="fas fa-user text-gray-400 text-3xl"></i>
+                    {% endif %}
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold text-white">{{ apporteur.get_full_name }}</h1>
-                    <p class="text-gray-400 flex items-center gap-2 mt-1">
-                        <i class="fas fa-phone text-xs"></i>{{ apporteur.phone }}
+                    <h1 class="text-3xl font-bold text-white tracking-tight">{{ apporteur.get_full_name }}</h1>
+                    <div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-400">
+                        <span class="flex items-center gap-2 bg-gray-900/50 px-3 py-1 rounded-lg">
+                            <i class="fas fa-phone text-green-500"></i> {{ apporteur.phone }}
+                        </span>
                         {% if apporteur.email %}
-                            <span class="mx-2">•</span>
-                            <i class="fas fa-envelope text-xs"></i>{{ apporteur.email }}
+                        <span class="flex items-center gap-2 bg-gray-900/50 px-3 py-1 rounded-lg">
+                            <i class="fas fa-envelope text-blue-400"></i> {{ apporteur.email }}
+                        </span>
                         {% endif %}
-                    </p>
+                    </div>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
-                {% if not user.is_apporteur %}
-                    <span class="px-4 py-2 rounded-full font-semibold text-sm
-                                 {% if apporteur.grade == 'PLATINE' %}
-                                     bg-yellow-900/50 text-yellow-300 border border-yellow-600
-                                 {% else %}
-                                     bg-gray-700 text-gray-300 border border-gray-600
-                                 {% endif %}">
-                        <i class="fas fa-medal mr-1"></i>{{ apporteur.get_grade_display }}
+
+            <div class="flex flex-col items-end gap-3">
+                <div class="flex gap-2">
+                    <span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border
+                        {% if apporteur.grade == 'PLATINE' %}
+                             bg-yellow-500/10 text-yellow-400 border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.2)]
+                        {% else %}
+                             bg-blue-500/10 text-blue-400 border-blue-500/30
+                        {% endif %}">
+                        <i class="fas fa-medal mr-1"></i> {{ apporteur.get_grade_display }}
                     </span>
-                {% endif %}
-                <span class="px-4 py-2 rounded-full text-sm font-semibold
-                             {% if apporteur.is_active %}
-                                 bg-green-900/50 text-green-300 border border-green-600
-                             {% else %}
-                                 bg-red-900/50 text-red-300 border border-red-600
-                             {% endif %}">
-                    {% if apporteur.is_active %}
-                        <i class="fas fa-check-circle mr-1"></i>Actif
-                    {% else %}
-                        <i class="fas fa-times-circle mr-1"></i>Inactif
-                    {% endif %}
-                </span>
+
+                    <span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border
+                        {% if apporteur.is_active %}
+                            bg-green-500/10 text-green-400 border-green-500/30
+                        {% else %}
+                            bg-red-500/10 text-red-400 border-red-500/30
+                        {% endif %}">
+                        {{ apporteur.is_active|yesno:"Actif,Inactif" }}
+                    </span>
+                </div>
+                <p class="text-xs text-gray-500">Inscrit le {{ apporteur.date_joined|date:"d M Y" }}</p>
             </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-400 text-sm">Contrats Totaux</p>
-                <i class="fas fa-file-contract text-blue-400 text-xl"></i>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase">Contrats Validés</p>
+                    <h3 class="text-2xl font-bold text-white mt-1">{{ stats.total_contrats|default:0 }}</h3>
+                </div>
+                <div class="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+                    <i class="fas fa-file-contract"></i>
+                </div>
             </div>
-            <p class="text-3xl font-bold text-white">{{ stats.total_contrats|default:0 }}</p>
-            <p class="text-xs text-gray-500 mt-1">{{ stats.contrats_mois|default:0 }} ce mois</p>
+            <div class="text-xs text-gray-500">
+                <span class="text-green-400"><i class="fas fa-arrow-up"></i> {{ stats.contrats_mois|default:0 }}</span> ce mois-ci
+            </div>
         </div>
 
-        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-400 text-sm">Total Primes</p>
-                <i class="fas fa-money-bill-wave text-green-400 text-xl"></i>
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase">Commissions Totales</p>
+                    <h3 class="text-2xl font-bold text-green-400 mt-1">{{ stats.total_commissions|default:0|floatformat:0|intcomma }} F</h3>
+                </div>
+                <div class="p-2 bg-green-500/10 rounded-lg text-green-400">
+                    <i class="fas fa-coins"></i>
+                </div>
             </div>
-            <p class="text-3xl font-bold text-green-400">
-                {{ stats.total_primes|default:0|floatformat:0|intcomma }}
-            </p>
-            <p class="text-xs text-gray-500 mt-1">FCFA</p>
+            <p class="text-xs text-gray-500">Cumul historique</p>
         </div>
 
-        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-400 text-sm">Commissions Totales</p>
-                <i class="fas fa-hand-holding-usd text-purple-400 text-xl"></i>
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase">Solde à payer</p>
+                    <h3 class="text-2xl font-bold text-yellow-400 mt-1">{{ stats.commissions_attente|default:0|floatformat:0|intcomma }} F</h3>
+                </div>
+                <div class="p-2 bg-yellow-500/10 rounded-lg text-yellow-400">
+                    <i class="fas fa-wallet"></i>
+                </div>
             </div>
-            <p class="text-3xl font-bold text-purple-400">
-                {{ stats.total_commissions|default:0|floatformat:0|intcomma }}
-            </p>
-            <p class="text-xs text-gray-500 mt-1">FCFA</p>
+            <p class="text-xs text-gray-500">En attente de versement</p>
         </div>
 
-        <div class="bg-gray-900 rounded-xl p-6 border border-green-800/50">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-400 text-sm">Commissions Payées</p>
-                <i class="fas fa-check-double text-green-400 text-xl"></i>
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase">Déjà versé</p>
+                    <h3 class="text-2xl font-bold text-purple-400 mt-1">{{ stats.commissions_payees|default:0|floatformat:0|intcomma }} F</h3>
+                </div>
+                <div class="p-2 bg-purple-500/10 rounded-lg text-purple-400">
+                    <i class="fas fa-check-double"></i>
+                </div>
             </div>
-            <p class="text-3xl font-bold text-green-400">
-                {{ stats.commissions_payees|default:0|floatformat:0|intcomma }}
-            </p>
-            <p class="text-xs text-gray-500 mt-1">FCFA</p>
-        </div>
-
-        <div class="bg-gray-900 rounded-xl p-6 border border-yellow-800/50">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-400 text-sm">En Attente</p>
-                <i class="fas fa-clock text-yellow-400 text-xl"></i>
-            </div>
-            <p class="text-3xl font-bold text-yellow-400">
-                {{ stats.commissions_attente|default:0|floatformat:0|intcomma }}
-            </p>
-            <p class="text-xs text-gray-500 mt-1">FCFA</p>
-        </div>
-
-        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-400 text-sm">Membre depuis</p>
-                <i class="fas fa-calendar-plus text-blue-400 text-xl"></i>
-            </div>
-            <p class="text-xl font-bold text-white">{{ apporteur.created_at|date:"d/m/Y" }}</p>
-            <p class="text-xs text-gray-500 mt-1">{{ apporteur.created_at|date:"H:i" }}</p>
+            <p class="text-xs text-gray-500">Total payé</p>
         </div>
     </div>
 
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-        <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-            <i class="fas fa-info-circle text-primary-green"></i>
-            Informations Détaillées
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="flex items-start gap-3">
-                <i class="fas fa-map-marker-alt text-primary-green mt-1"></i>
-                <div>
-                    <p class="text-xs text-gray-500">Adresse</p>
-                    <p class="text-white">{{ apporteur.address|default:"Non renseignée" }}</p>
-                </div>
-            </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            <div class="flex items-start gap-3">
-                <i class="fas fa-id-card text-primary-green mt-1"></i>
-                <div>
-                    <p class="text-xs text-gray-500">Nom complet</p>
-                    <p class="text-white">{{ apporteur.last_name }} {{ apporteur.first_name }}</p>
-                </div>
-            </div>
-
+        <div class="lg:col-span-1 space-y-6">
             {% if user.is_staff %}
-            <div class="flex items-start gap-3">
-                <i class="fas fa-percent text-primary-green mt-1"></i>
-                <div>
-                    <p class="text-xs text-gray-500">Taux de commission</p>
-                    <p class="text-white">
-                        {{ apporteur.get_grade_display|default:"Sans grade" }}
-                    </p>
-                </div>
-            </div>
-            {% endif %}
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
+                <h3 class="text-white font-semibold mb-4 flex items-center gap-2">
+                    <i class="fas fa-cogs text-gray-400"></i> Gestion Compte
+                </h3>
 
-            <div class="flex items-start gap-3">
-                <i class="fas fa-user-shield text-primary-green mt-1"></i>
-                <div>
-                    <p class="text-xs text-gray-500">Rôle</p>
-                    <p class="text-white">{{ apporteur.get_role_display }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% if user.is_staff %}
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-        <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-            <i class="fas fa-tools text-primary-green"></i>
-            Actions Administrateur
-        </h2>
-        <div class="flex flex-wrap gap-3">
-            <form method="post" class="inline-block">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="toggle_status">
-                <button type="submit"
-                        class="px-6 py-2 rounded-lg font-semibold transition
-                               {% if apporteur.is_active %}
-                                   bg-red-800 hover:bg-red-700 text-white
-                               {% else %}
-                                   bg-green-800 hover:bg-green-700 text-white
-                               {% endif %}">
-                    {% if apporteur.is_active %}
-                        <i class="fas fa-ban mr-2"></i>Désactiver
-                    {% else %}
-                        <i class="fas fa-check mr-2"></i>Activer
-                    {% endif %}
-                </button>
-            </form>
-
-            <form method="post" class="inline-flex items-center gap-2">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="change_grade">
-                <label class="text-gray-400 text-sm">Changer le grade :</label>
-                <select name="grade"
-                        onchange="if(confirm('Changer le grade de cet apporteur ?')) this.form.submit();"
-                        class="bg-gray-800 text-white rounded-lg px-4 py-2 border border-gray-700 focus:border-primary-green focus:ring-1 focus:ring-primary-green">
-                    <option value="PLATINE"
-                            {% if apporteur.grade == 'PLATINE' %}selected{% endif %}>
-                        Platine (18%)
-                    </option>
-                    <option value="FREEMIUM"
-                            {% if apporteur.grade == 'FREEMIUM' %}selected{% endif %}>
-                        Freemium (10%)
-                    </option>
-                </select>
-            </form>
-
-            <a href="{% url 'contracts:liste_contrats' %}?apporteur={{ apporteur.pk }}"
-               class="px-6 py-2 bg-blue-800 hover:bg-blue-700 text-white rounded-lg font-semibold transition">
-                <i class="fas fa-list mr-2"></i>Voir ses contrats
-            </a>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if onboarding %}
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-        <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-            <i class="fas fa-file-signature text-primary-green"></i>
-            Onboarding & Contrat Apporteur
-        </h2>
-
-        <div class="flex flex-wrap items-center gap-3 mb-4">
-            <span class="px-3 py-1 rounded-full text-sm border
-                         {% if onboarding.status == 'VALIDE' %}
-                             bg-green-900/40 text-green-300 border-green-600
-                         {% elif onboarding.status == 'REJETE' %}
-                             bg-red-900/40 text-red-300 border-red-600
-                         {% elif onboarding.status == 'SOUMIS' %}
-                             bg-yellow-900/40 text-yellow-300 border-yellow-600
-                         {% else %}
-                             bg-gray-800 text-gray-300 border-gray-700
-                         {% endif %}">
-                Statut: {{ onboarding.get_status_display }}
-            </span>
-            {% if onboarding.approuve_at %}
-                <span class="text-xs text-gray-400">
-                    Soumis le {{ onboarding.approuve_at|date:"d/m/Y H:i" }}
-                </span>
-            {% endif %}
-            <span class="text-xs text-gray-400">
-                Version conditions: {{ onboarding.version_conditions }}
-            </span>
-        </div>
-
-        {% if conditions_html %}
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
-            <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                <i class="fas fa-file-contract text-primary-green text-sm"></i>
-                Conditions Contractuelles
-            </h3>
-            <div class="bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto custom-scroll">
-                {{ conditions_html|safe }}
-            </div>
-            <div class="mt-3 flex gap-3">
-                {% if not user.is_staff %}
-                    <a href="{% url 'accounts:contrat_pdf' %}"
-                       class="px-4 py-2 bg-blue-800 hover:bg-blue-700 rounded-lg text-white text-sm font-semibold transition">
-                        <i class="fas fa-file-pdf mr-2"></i>Télécharger PDF
-                    </a>
-                {% endif %}
-                <button type="button"
-                        onclick="window.print()"
-                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm font-semibold transition">
-                    <i class="fas fa-print mr-2"></i>Imprimer
-                </button>
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <p class="text-sm text-gray-400 mb-2">CNI Recto</p>
-                {% if onboarding.cni_recto %}
-                    <a href="{{ onboarding.cni_recto.url }}"
-                       target="_blank"
-                       class="text-primary-green hover:underline">Télécharger / Voir</a>
-                {% else %}
-                    <span class="text-gray-500 text-sm">Non fourni</span>
-                {% endif %}
-            </div>
-
-            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <p class="text-sm text-gray-400 mb-2">CNI Verso</p>
-                {% if onboarding.cni_verso %}
-                    <a href="{{ onboarding.cni_verso.url }}"
-                       target="_blank"
-                       class="text-primary-green hover:underline">Télécharger / Voir</a>
-                {% else %}
-                    <span class="text-gray-500 text-sm">Non fourni</span>
-                {% endif %}
-            </div>
-
-            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <p class="text-sm text-gray-400 mb-2">Signature</p>
-                {% if onboarding.signature_image %}
-                    <img src="{{ onboarding.signature_image.url }}"
-                         alt="Signature"
-                         class="h-16 bg-white p-1 rounded-md">
-                {% else %}
-                    <span class="text-gray-500 text-sm">Non fournie</span>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="flex flex-wrap gap-3 mt-6">
-            {# côté apporteur (pas admin/commercial) #}
-            {% if onboarding.a_lu_et_approuve and not user.is_admin and not user.is_commercial %}
-                <a href="{% url 'accounts:contrat_pdf' %}"
-                   class="px-5 py-2 bg-blue-800 hover:bg-blue-700 text-white rounded-lg font-semibold">
-                    <i class="fas fa-file-pdf mr-2"></i>Voir le contrat
-                </a>
-            {% endif %}
-
-            {# validation par ADMIN + COMMERCIAL #}
-            {% if user.is_admin or user.is_commercial %}
-                {% if onboarding.a_lu_et_approuve and onboarding.cni_recto and onboarding.cni_verso and onboarding.signature_image %}
-                    <form method="post" class="inline-block">
+                <div class="space-y-4">
+                    <form method="post" class="bg-gray-900 p-3 rounded-lg border border-gray-700">
                         {% csrf_token %}
-                        <input type="hidden" name="action" value="valider_onboarding">
-                        <button type="submit"
-                                class="px-5 py-2 bg-green-800 hover:bg-green-700 text-white rounded-lg font-semibold">
-                            <i class="fas fa-check mr-2"></i>Valider Onboarding
+                        <input type="hidden" name="action" value="change_grade">
+                        <label class="text-gray-400 text-xs uppercase font-bold mb-2 block">Grade actuel</label>
+                        <div class="flex gap-2">
+                            <select name="grade" class="flex-1 bg-gray-800 text-white text-sm rounded border border-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500">
+                                <option value="PLATINE" {% if apporteur.grade == 'PLATINE' %}selected{% endif %}>Platine (18%)</option>
+                                <option value="FREEMIUM" {% if apporteur.grade == 'FREEMIUM' %}selected{% endif %}>Freemium (10%)</option>
+                            </select>
+                            <button type="submit" onclick="return confirm('Confirmer le changement de grade ?')" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm transition">OK</button>
+                        </div>
+                    </form>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_status">
+                        <button type="submit" class="w-full py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2
+                            {% if apporteur.is_active %}
+                                bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20
+                            {% else %}
+                                bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20
+                            {% endif %}">
+                            {% if apporteur.is_active %}
+                                <i class="fas fa-ban"></i> Désactiver ce compte
+                            {% else %}
+                                <i class="fas fa-check"></i> Réactiver ce compte
+                            {% endif %}
                         </button>
                     </form>
-                {% endif %}
-                <form method="post" class="inline-block">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="rejeter_onboarding">
-                    <button type="submit"
-                            class="px-5 py-2 bg-red-800 hover:bg-red-700 text-white rounded-lg font-semibold">
-                        <i class="fas fa-times mr-2"></i>Rejeter Onboarding
-                    </button>
-                </form>
+
+                    <a href="#" class="block text-center text-sm text-blue-400 hover:text-blue-300 hover:underline">Voir l'historique des connexions</a>
+                </div>
+            </div>
             {% endif %}
+
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
+                <h3 class="text-white font-semibold mb-4">Coordonnées</h3>
+                <ul class="space-y-3 text-sm">
+                    <li class="flex flex-col">
+                        <span class="text-gray-500 text-xs">Adresse</span>
+                        <span class="text-white">{{ apporteur.address|default:"Non renseignée" }}</span>
+                    </li>
+                    <li class="flex flex-col">
+                        <span class="text-gray-500 text-xs">Créé par</span>
+                        <span class="text-white">{{ apporteur.created_by.get_full_name|default:"Système" }}</span>
+                    </li>
+                </ul>
+            </div>
         </div>
 
-        <p class="text-xs text-gray-500 mt-4">
-            IP acceptation: {{ onboarding.ip_accept|default:"-" }} • UA: {{ onboarding.ua_accept|default:"-" }}
-        </p>
+        <div class="lg:col-span-2">
+            {% if onboarding %}
+            <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                <div class="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fas fa-file-signature text-green-500"></i> Dossier Onboarding
+                    </h3>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold border
+                        {% if onboarding.status == 'VALIDE' %}bg-green-500/10 text-green-400 border-green-500/50
+                        {% elif onboarding.status == 'REJETE' %}bg-red-500/10 text-red-400 border-red-500/50
+                        {% elif onboarding.status == 'SOUMIS' %}bg-orange-500/10 text-orange-400 border-orange-500/50 animate-pulse
+                        {% else %}bg-gray-600/30 text-gray-400 border-gray-600{% endif %}">
+                        {{ onboarding.get_status_display }}
+                    </span>
+                </div>
+
+                <div class="p-6 space-y-6">
+
+                    {% if onboarding.status == 'REJETE' and onboarding.motif_rejet %}
+                    <div class="bg-red-500/10 border border-red-500/30 p-4 rounded-lg">
+                        <p class="text-xs text-red-300 font-bold uppercase mb-1">Motif du rejet :</p>
+                        <p class="text-red-200">{{ onboarding.motif_rejet }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 flex flex-col items-center text-center hover:border-gray-500 transition">
+                            <span class="text-xs text-gray-500 uppercase font-bold mb-2">CNI Recto</span>
+                            {% if onboarding.cni_recto %}
+                                <a href="{{ onboarding.cni_recto.url }}" target="_blank" class="block mb-2 group">
+                                    <div class="w-full h-24 bg-gray-800 rounded flex items-center justify-center text-gray-600 group-hover:bg-gray-700 group-hover:text-green-500 transition">
+                                        <i class="fas fa-eye text-2xl"></i>
+                                    </div>
+                                </a>
+                                <a href="{{ onboarding.cni_recto.url }}" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 hover:underline">Ouvrir le fichier</a>
+                            {% else %}
+                                <span class="text-gray-600 text-sm py-8 italic">Non fourni</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 flex flex-col items-center text-center hover:border-gray-500 transition">
+                            <span class="text-xs text-gray-500 uppercase font-bold mb-2">CNI Verso</span>
+                            {% if onboarding.cni_verso %}
+                                <a href="{{ onboarding.cni_verso.url }}" target="_blank" class="block mb-2 group">
+                                    <div class="w-full h-24 bg-gray-800 rounded flex items-center justify-center text-gray-600 group-hover:bg-gray-700 group-hover:text-green-500 transition">
+                                        <i class="fas fa-eye text-2xl"></i>
+                                    </div>
+                                </a>
+                                <a href="{{ onboarding.cni_verso.url }}" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 hover:underline">Ouvrir le fichier</a>
+                            {% else %}
+                                <span class="text-gray-600 text-sm py-8 italic">Non fourni</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 flex flex-col items-center text-center hover:border-gray-500 transition">
+                            <span class="text-xs text-gray-500 uppercase font-bold mb-2">Signature</span>
+                            {% if onboarding.signature_image %}
+                                <div class="bg-white p-2 rounded w-full h-24 flex items-center justify-center mb-2">
+                                    <img src="{{ onboarding.signature_image.url }}" alt="Signature" class="max-h-full max-w-full">
+                                </div>
+                                <span class="text-xs text-green-500">Signé le {{ onboarding.approuve_at|date:"d/m/Y" }}</span>
+                            {% else %}
+                                <span class="text-gray-600 text-sm py-8 italic">Non signée</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-900/50 p-3 rounded border border-gray-700 text-xs text-gray-500 flex justify-between">
+                        <span>IP: {{ onboarding.ip_accept|default:"N/A" }}</span>
+                        <span>UA: {{ onboarding.ua_accept|truncatechars:30|default:"N/A" }}</span>
+                        <span>Version: {{ onboarding.version_conditions }}</span>
+                    </div>
+
+                    {% if user.is_staff and onboarding.status != 'VALIDE' %}
+                    <div class="bg-gray-900 border border-gray-700 rounded-lg p-5 mt-6">
+                        <h4 class="text-white text-sm font-bold mb-4 uppercase">Traitement du dossier</h4>
+
+                        {% if onboarding.est_complet %}
+                        <div class="flex flex-col gap-4">
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="valider_onboarding">
+                                <button type="submit" onclick="return confirm('Valider ce dossier ? L\'utilisateur pourra commencer à travailler.')"
+                                    class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg shadow-green-900/20 transition flex items-center justify-center gap-2">
+                                    <i class="fas fa-check-circle"></i> Valider et Activer le compte
+                                </button>
+                            </form>
+
+                            <div class="flex items-center gap-4 py-2">
+                                <div class="h-px bg-gray-700 flex-1"></div>
+                                <span class="text-gray-500 text-xs uppercase">OU</span>
+                                <div class="h-px bg-gray-700 flex-1"></div>
+                            </div>
+
+                            <form method="post" class="bg-red-500/5 border border-red-500/20 p-4 rounded-lg">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="rejeter_onboarding">
+                                <label class="block text-red-300 text-sm font-medium mb-2">Motif du rejet (Obligatoire)</label>
+                                <textarea name="motif_rejet" rows="2" required placeholder="Ex: Photo CNI illisible, Signature incomplète..."
+                                    class="w-full bg-gray-800 border border-red-500/30 rounded p-2 text-white text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 placeholder-gray-600"></textarea>
+                                <button type="submit" class="mt-3 w-full py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded transition flex items-center justify-center gap-2">
+                                    <i class="fas fa-times-circle"></i> Rejeter le dossier
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                            <div class="bg-orange-500/10 border-l-4 border-orange-500 p-4">
+                                <p class="text-orange-400 text-sm">Le dossier est incomplet (documents manquants). L'utilisateur doit compléter son profil.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if user.is_staff and onboarding.status == 'VALIDE' %}
+                         <div class="bg-green-500/10 border border-green-500/30 p-4 rounded text-center">
+                            <p class="text-green-400 font-bold mb-2">Dossier Validé</p>
+                            <p class="text-xs text-gray-500">Pour télécharger le contrat PDF, utilisez la vue Admin dédiée.</p>
+                         </div>
+                    {% endif %}
+
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-gray-800 p-8 rounded-xl border border-gray-700 text-center">
+                <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
+                    <i class="fas fa-folder-open text-2xl"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg">Aucun dossier d'onboarding</h3>
+                <p class="text-gray-400 mt-2">Cet utilisateur n'a pas encore initialisé son dossier.</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
-    {% endif %}
 </div>
 {% endblock %}

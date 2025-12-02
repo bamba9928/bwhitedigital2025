@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from django.views.decorators.cache import never_cache # Import important pour PWA
 
 urlpatterns = [
     # Administration
@@ -15,15 +16,16 @@ urlpatterns = [
     path("payments/", include("payments.urls")),
 
     # =========================================================
-    # Service Worker, Offline Page, et Manifest (PWA)
-    # Servis en tant que templates pour utiliser les tags Django.
+    # PWA (Service Worker, Manifest, Offline)
     # =========================================================
+    # IMPORTANT : On utilise never_cache pour forcer le navigateur
+    # à vérifier les mises à jour du Service Worker à chaque visite.
     path(
         "sw.js",
-        TemplateView.as_view(
+        never_cache(TemplateView.as_view(
             template_name="sw.js",
             content_type="application/javascript",
-        ),
+        )),
         name="sw.js",
     ),
     path(
@@ -39,14 +41,11 @@ urlpatterns = [
         ),
         name="manifest",
     ),
-
 ]
 
 # =========================================================
 # Gestion des fichiers Média et Statiques en mode DEBUG
 # =========================================================
-
 if settings.DEBUG:
-    # Cette section gère correctement les fichiers media et statiques
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

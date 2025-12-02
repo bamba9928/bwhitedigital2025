@@ -175,10 +175,10 @@ STORAGES = {
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-
+# L'URL publique pour accéder aux fichiers (ex: http://site.com/media/photo.jpg)
+MEDIA_URL = '/media/'
+# Le dossier physique sur le disque où Django enregistre les fichiers
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ==============================
