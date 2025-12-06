@@ -1059,7 +1059,6 @@ def detail_client(request, pk):
     client = get_object_or_404(Client, pk=pk)
 
     if getattr(request.user, "role", "") == "APPORTEUR":
-        # Vérifier que l'apporteur a au moins un contrat avec ce client
         contrats = (
             Contrat.objects.emis_avec_doc()
             .filter(client=client, apporteur=request.user)
@@ -1067,7 +1066,6 @@ def detail_client(request, pk):
             .order_by("-created_at")
         )
 
-        # Bloquer l'accès si aucun contrat trouvé
         if not contrats.exists():
             messages.error(request, "Vous n'avez pas accès à ce client.")
             return redirect("dashboard:home")
@@ -1079,7 +1077,13 @@ def detail_client(request, pk):
             .order_by("-created_at")
         )
 
-    return render(request, "contracts/detail_client.html", {...})
+    context = {
+        "client": client,
+        "contrats": contrats,
+    }
+
+    return render(request, "contracts/detail_client.html", context)
+
 @login_required
 @require_POST
 @transaction.atomic

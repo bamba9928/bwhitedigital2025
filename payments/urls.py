@@ -11,7 +11,8 @@ urlpatterns = [
         views.declarer_paiement,
         name="declarer_paiement",
     ),
-    # Admin
+
+    # Admin / staff
     path("admin/", views.liste_encaissements, name="liste_encaissements"),
     path(
         "admin/<int:paiement_id>/",
@@ -23,4 +24,7 @@ urlpatterns = [
         views.valider_encaissement,
         name="valider_encaissement",
     ),
+
+    # Callback Bictorys
+    path("callback/bictorys/", views.bictorys_callback, name="bictorys_callback"),
 ]

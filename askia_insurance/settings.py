@@ -352,3 +352,28 @@ JAZZMIN_SETTINGS = {
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-dot-circle",
 }
+# ==============================
+# BICTORYS
+# ==============================
+# URL de base de l’API Bictorys
+# - Sandbox : https://api.test.bictorys.com
+# - Production : https://api.bictorys.com
+BICTORYS_API_BASE_URL = config(
+    "BICTORYS_API_BASE_URL",
+    default="https://api.test.bictorys.com",  # par défaut : sandbox
+)
+
+# Clé publique (X-Api-Key) utilisée pour appeler /pay/v1/charges
+BICTORYS_PUBLIC_KEY = config("BICTORYS_PUBLIC_KEY", default="")
+
+# Clé secrète du webhook
+BICTORYS_WEBHOOK_SECRET = config("BICTORYS_WEBHOOK_SECRET", default="")
+
+# Optionnel : forcer la présence des clés en production
+if not DEBUG:
+    if not BICTORYS_PUBLIC_KEY or not BICTORYS_WEBHOOK_SECRET:
+        raise RuntimeError(
+            "BICTORYS_PUBLIC_KEY et BICTORYS_WEBHOOK_SECRET doivent être configurées en production."
+        )
+
+

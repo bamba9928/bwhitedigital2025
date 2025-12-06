@@ -15,7 +15,7 @@
                 extend: {
                     colors: {
                         'primary-green': '#00FF00',
-                        'gray-750': '#2d3748', // Utile pour les inputs
+                        'gray-750': '#2d3748',
                     },
                     fontFamily: {
                         inter: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
@@ -30,38 +30,20 @@
         .mobile-menu-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 30; backdrop-filter: blur(2px); }
         .sidebar-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        /* --- CORRECTIF SELECT2 DARK MODE --- */
+        /* Select2 Dark Mode Fixes */
         .select2-container--default .select2-selection--single {
-            background-color: #1f2937 !important; /* bg-gray-800 */
-            border-color: #374151 !important; /* border-gray-700 */
-            color: #e5e7eb !important; /* text-gray-200 */
-            height: 42px !important;
-            border-radius: 0.5rem !important;
-            display: flex;
-            align-items: center;
+            background-color: #1f2937 !important; border-color: #374151 !important; color: #e5e7eb !important;
+            height: 42px !important; border-radius: 0.5rem !important; display: flex; align-items: center;
         }
         .select2-container--default .select2-selection--single .select2-selection__rendered {
-            color: #e5e7eb !important;
-            line-height: 42px !important;
-            padding-left: 12px;
+            color: #e5e7eb !important; line-height: 42px !important; padding-left: 12px;
         }
-        .select2-dropdown {
-            background-color: #1f2937 !important;
-            border-color: #374151 !important;
-        }
-        .select2-results__option {
-            color: #e5e7eb;
-        }
+        .select2-dropdown { background-color: #1f2937 !important; border-color: #374151 !important; }
+        .select2-results__option { color: #e5e7eb; }
         .select2-container--default .select2-results__option--highlighted[aria-selected] {
-            background-color: #00FF00 !important; /* primary-green */
-            color: #000 !important;
+            background-color: #00FF00 !important; color: #000 !important;
         }
-        .select2-search__field {
-            background-color: #374151 !important;
-            color: white !important;
-            border-color: #4b5563 !important;
-        }
-        /* --- FIN CORRECTIF SELECT2 --- */
+        .select2-search__field { background-color: #374151 !important; color: white !important; border-color: #4b5563 !important; }
     </style>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -72,7 +54,8 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
     <link rel="manifest" href="{% url 'manifest' %}">
-    <meta name="theme-color" content="#111827"> <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#111827">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BWHITE">
 
@@ -106,9 +89,11 @@
     <div id="offline-indicator" class="hidden fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-medium z-[60] shadow-lg">
         <i class="fas fa-wifi-slash mr-2"></i>Connexion internet perdue
     </div>
+
     {% block banner %}
     {% include "includes/_top_banner.html" %}
     {% endblock %}
+
     <nav class="sticky top-0 z-40 bg-gray-900/90 backdrop-blur-md border-b border-gray-800 shadow-sm">
         <div class="px-4 md:px-6 py-3">
             <div class="flex items-center justify-between">
@@ -210,6 +195,11 @@
                         <a href="{% url 'contracts:nouveau_contrat' %}" class="block w-full text-center py-3 bg-blue-600 rounded-xl text-white font-bold shadow-lg shadow-blue-900/30">
                             <i class="fas fa-plus mr-2"></i> Nouveau Contrat
                         </a>
+                        {% if user.role == 'ADMIN' %}
+                        <a href="{% url 'accounts:nouveau_apporteur' %}" class="block w-full text-center py-3 bg-gray-800 border border-gray-700 hover:bg-gray-700 rounded-xl text-green-400 font-bold shadow-lg transition">
+                            <i class="fas fa-user-plus mr-2"></i> Ajouter Apporteur
+                        </a>
+                        {% endif %}
                     </div>
 
                     <ul class="space-y-1">

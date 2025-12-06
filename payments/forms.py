@@ -1,4 +1,5 @@
 from django import forms
+
 from .models import PaiementApporteur
 
 STANDARD_INPUT_STYLE = (
@@ -7,66 +8,33 @@ STANDARD_INPUT_STYLE = (
 )
 
 
-class DeclarationPaiementForm(forms.ModelForm):
-    """
-    Formulaire côté apporteur.
-    """
-    class Meta:
-        model = PaiementApporteur
-        fields = ["methode_paiement", "reference_transaction", "numero_compte", "notes"]
-        widgets = {
-            "methode_paiement": forms.Select(attrs={
-                "class": STANDARD_INPUT_STYLE,
-            }),
-            "reference_transaction": forms.TextInput(attrs={
-                "class": STANDARD_INPUT_STYLE,
-                "placeholder": "Ex: ID transaction OM/Wave"
-            }),
-            "numero_compte": forms.TextInput(attrs={
-                "class": STANDARD_INPUT_STYLE,
-                "placeholder": "Ex: 771234567"
-            }),
-            "notes": forms.Textarea(attrs={
-                "rows": 3,
-                "class": STANDARD_INPUT_STYLE,
-                "placeholder": "Informations complémentaires..."
-            }),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["methode_paiement"].required = True
-        self.fields["numero_compte"].required = True
-        self.fields["reference_transaction"].required = False
-        self.fields["notes"].required = False
-
-    def clean_reference_transaction(self):
-        ref = self.cleaned_data.get("reference_transaction", "") or ""
-        ref = ref.strip()
-        # Référence facultative mais si fournie : min 6 caractères
-        if ref and len(ref) < 6:
-            raise forms.ValidationError("Référence trop courte (≥ 6 caractères).")
-        return ref
-
-
 class ValidationPaiementForm(forms.Form):
     """
-    Formulaire côté admin pour marquer PAYE.
+    Formulaire côté staff (ADMIN/COMMERCIAL) pour marquer un encaissement comme PAYE
+    hors Bictorys (régularisation).
     """
-    methode_paiement = forms.ChoiceField(
-        choices=PaiementApporteur.METHODE,
+
+    methode_paiement = forms.CharField(
+        max_length=50,
         required=True,
-        widget=forms.Select(attrs={
-            "class": STANDARD_INPUT_STYLE
-        })
+        widget=forms.TextInput(
+            attrs={
+                "class": STANDARD_INPUT_STYLE,
+                "placeholder": "Ex: WAVE-SN, OM-SN, CARD, BICTORYS...",
+            }
+        ),
+        help_text="Méthode de paiement utilisée (texte libre).",
     )
+
     reference_transaction = forms.CharField(
         max_length=64,
         required=True,
-        widget=forms.TextInput(attrs={
-            "class": STANDARD_INPUT_STYLE,
-            "placeholder": "Référence de la transaction de validation"
-        })
+        widget=forms.TextInput(
+            attrs={
+                "class": STANDARD_INPUT_STYLE,
+                "placeholder": "Référence de la transaction (ID Bictorys / banque, etc.)",
+            }
+        ),
     )
 
     def clean_reference_transaction(self):

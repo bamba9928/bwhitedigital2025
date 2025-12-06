@@ -1,16 +1,13 @@
-import re
 from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models, transaction
+
 from contracts.models import Contrat
 
-# Constantes
-MAX_UPLOAD = 5 * 1024 * 1024
 REFERENCE_MIN_LENGTH = 6
-ALLOWED_PHONE_REGEX = re.compile(r"^\d{9}$")
 
 
 class PaiementApporteur(models.Model):
@@ -20,11 +17,6 @@ class PaiementApporteur(models.Model):
         ("EN_ATTENTE", "En attente"),
         ("PAYE", "Payé"),
         ("ANNULE", "Annulé"),
-    ]
-
-    METHODE = [
-        ("OM", "Orange Money"),
-        ("WAVE", "Wave"),
     ]
 
     contrat = models.OneToOneField(
@@ -39,37 +31,46 @@ class PaiementApporteur(models.Model):
         decimal_places=2,
         default=Decimal("0.00"),
         validators=[MinValueValidator(Decimal("0.00"))],
-        help_text="Prime TTC - commission apporteur",
+        help_text="Net à reverser (contrat.net_a_reverser).",
         verbose_name="Montant à payer",
     )
 
-    status = models.CharField(max_length=12, choices=STATUS, default="EN_ATTENTE")
-    methode_paiement = models.CharField(max_length=8, choices=METHODE, blank=True)
+    status = models.CharField(
+        max_length=12,
+        choices=STATUS,
+        default="EN_ATTENTE",
+    )
+
+    # Libre : valeur renvoyée par Bictorys (WAVE-SN, OM-SN, CARD, etc.)
+    methode_paiement = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Méthode utilisée",
+        help_text="Renseignée automatiquement par Bictorys ou lors d'une validation manuelle.",
+    )
 
     reference_transaction = models.CharField(
         max_length=64,
         blank=True,
         validators=[
             RegexValidator(
-                regex=r"^[A-Z0-9-]{6,64}$",
-                message="Référence alphanumérique de 6-64 caractères",
+                regex=r"^[0-9A-Za-z-]{6,64}$",
+                message="Référence alphanumérique de 6-64 caractères.",
             )
         ],
+        help_text="ID ou référence de transaction renvoyée par Bictorys / la banque.",
     )
 
+    # Optionnel, alimenté par le callback (MSISDN, PAN masqué, etc.)
     numero_compte = models.CharField(
         max_length=32,
         blank=True,
-        validators=[
-            RegexValidator(
-                regex=ALLOWED_PHONE_REGEX,
-                message="Numéro de 9 chiffres requis",
-            )
-        ],
         verbose_name="N° compte/Wallet",
+        help_text="Éventuellement rempli par Bictorys (numéro de téléphone, wallet, etc.).",
     )
 
     notes = models.TextField(blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -99,21 +100,24 @@ class PaiementApporteur(models.Model):
     # -----------------------------
     # Helpers métier
     # -----------------------------
-    def _get_montant_attendu(self):
+    def _get_montant_attendu(self) -> Decimal | None:
         """
         Montant dû par l'apporteur.
-        On s'appuie d'abord sur net_a_reverser (déjà calculé côté Contrat),
-        sinon fallback sur une éventuelle méthode old.
+
+        Référence : net_a_reverser.
+        Fallback de sécurité : prime_ttc - commission_askia.
         """
         if not self.contrat_id:
             return None
 
-        montant = getattr(self.contrat, "net_a_reverser", None)
+        contrat = self.contrat
 
+        montant = getattr(contrat, "net_a_reverser", None)
         if montant is None:
-            calc = getattr(self.contrat, "calculer_montant_du_apporteur", None)
-            if callable(calc):
-                montant = calc()
+            prime_ttc = getattr(contrat, "prime_ttc", None)
+            commission_askia = getattr(contrat, "commission_askia", None)
+            if prime_ttc is not None and commission_askia is not None:
+                montant = prime_ttc - commission_askia
 
         if montant is None:
             return None
@@ -124,16 +128,18 @@ class PaiementApporteur(models.Model):
             return None
 
     def clean(self):
-        """Validation métier robuste (ne doit jamais planter)."""
+        """Validation métier robuste (ne doit pas planter)."""
         super().clean()
 
         montant_attendu = self._get_montant_attendu()
         if montant_attendu is None:
             return
 
+        if self.montant_a_payer is None:
+            return
+
         # Tolérance d'arrondi
         if (self.montant_a_payer - montant_attendu).copy_abs() > Decimal("0.01"):
-
             raise ValidationError(
                 f"Incohérent. Montant attendu : {montant_attendu} (contrat {self.contrat_id})"
             )
@@ -142,7 +148,6 @@ class PaiementApporteur(models.Model):
         """
         Synchronise automatiquement le montant à payer
         si on crée l'objet ou si le montant est encore à 0.
-        Évite les incohérences silencieuses.
         """
         if self.contrat_id and (
             self._state.adding
@@ -170,30 +175,51 @@ class PaiementApporteur(models.Model):
     def est_annule(self) -> bool:
         return self.status == "ANNULE"
 
+    @property
+    def montant_paye(self) -> Decimal:
+        """Montant effectivement payé (0 si non PAYE)."""
+        return self.montant_a_payer if self.est_paye else Decimal("0.00")
+
     # -----------------------------
     # Transitions
     # -----------------------------
     @transaction.atomic
-    def marquer_comme_paye(self, methode: str, reference: str, validated_by=None) -> None:
-        """Transition vers PAYÉ avec historique."""
+    def marquer_comme_paye(
+        self,
+        methode: str,
+        reference: str,
+        numero_client: str = "",
+        validated_by=None,
+    ) -> None:
+        """
+        Transition vers PAYÉ avec historique.
+
+        Typiquement appelée depuis :
+        - le webhook Bictorys
+        - ou une validation manuelle staff (régularisation).
+        """
         if self.est_paye:
             raise ValueError("Déjà payé")
         if self.est_annule:
             raise ValueError("Encaissement annulé")
-        if methode not in dict(self.METHODE):
-            raise ValueError("Méthode invalide")
 
-        reference = reference.strip()
+        reference = (reference or "").strip()
         if len(reference) < REFERENCE_MIN_LENGTH:
             raise ValueError(f"Référence trop courte ({REFERENCE_MIN_LENGTH} min)")
 
-        self.methode_paiement = methode
+        self.methode_paiement = (methode or "").strip()[:50]
         self.reference_transaction = reference
+
+        if numero_client:
+            self.numero_compte = str(numero_client).strip()[:32]
+
         self.status = "PAYE"
+
         self.save(
             update_fields=[
                 "methode_paiement",
                 "reference_transaction",
+                "numero_compte",
                 "status",
                 "updated_at",
             ]
@@ -203,26 +229,10 @@ class PaiementApporteur(models.Model):
             paiement=self,
             action="VALIDATION",
             effectue_par=validated_by,
-            details=f"Paiement {self.get_methode_paiement_display()} | Ref={reference}",
+            details=f"Paiement {self.methode_paiement or 'N/A'} | Ref={reference}",
         )
 
-    @transaction.atomic
-    def annuler(self, reason: str = "", by=None) -> None:
-        """Transition vers ANNULÉ."""
-        if self.est_paye:
-            raise ValueError("Impossible d'annuler un paiement payé")
-        if self.est_annule:
-            return  # Idempotent
 
-        self.status = "ANNULE"
-        self.save(update_fields=["status", "updated_at"])
-
-        HistoriquePaiement.objects.create(
-            paiement=self,
-            action="STATUS_CHANGE",
-            effectue_par=by,
-            details=f"Annulé. {reason}".strip(),
-        )
 class HistoriquePaiement(models.Model):
     """Audit trail des modifications sur paiements."""
 
