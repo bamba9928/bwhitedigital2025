@@ -48,7 +48,22 @@ class PaiementApporteur(models.Model):
         verbose_name="Méthode utilisée",
         help_text="Renseignée automatiquement par Bictorys ou lors d'une validation manuelle.",
     )
+    reference_transaction = models.CharField(
+        max_length=64,
+        blank=True,
+        validators=[RegexValidator(
+            regex=r"^[A-Z0-9-]{6,64}$",
+            message="Référence alphanumérique de 6-64 caractères",
+        )],
+    )
 
+    # Nouveau champ
+    op_token = models.CharField(
+        max_length=128,
+        blank=True,
+        verbose_name="OpToken Bictorys",
+        help_text="Token renvoyé par Bictorys pour les appels GET/PATCH /charges/{id}.",
+    )
     reference_transaction = models.CharField(
         max_length=64,
         blank=True,

@@ -306,121 +306,156 @@ def bictorys_callback(request):
     """
     Webhook Bictorys.
 
-    Appelé côté serveur par Bictorys quand le statut d'un paiement change.
-    On NE dépend pas de la session de l'utilisateur.
+    - Bictorys envoie un POST JSON à cette URL.
+    - On vérifie la clé secrète (X-Secret-Key).
+    - On lit paymentReference pour retrouver PaiementApporteur.
+    - Si status = succeeded/authorized et montant OK => on marque PAYE.
     """
-    if request.method != "POST":
-        return HttpResponseBadRequest("Méthode non supportée")
 
-    # 1) Vérification de la clé secrète envoyée par Bictorys
-    header_secret = (
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    # 1) Vérification de la clé secrète
+    expected_secret = getattr(settings, "BICTORYS_WEBHOOK_SECRET", "")
+    if not expected_secret:
+        logger.error("BICTORYS_WEBHOOK_SECRET non configurée. Webhook ignoré.")
+        return HttpResponse(status=500)
+
+    # Les headers Django sont dans request.META en HTTP_X_SECRET_KEY
+    secret = (
         request.headers.get("X-Secret-Key")
         or request.META.get("HTTP_X_SECRET_KEY")
         or ""
     )
-    expected = getattr(settings, "BICTORYS_WEBHOOK_SECRET", None)
-
-    if not expected or header_secret != expected:
-        logger.warning(
-            "Webhook Bictorys refusé: secret invalide (reçu=%r)", header_secret
-        )
-        return HttpResponseForbidden("Invalid signature")
+    if secret != expected_secret:
+        logger.warning("Webhook Bictorys avec X-Secret-Key invalide.")
+        # On refuse clairement
+        return HttpResponse(status=401)
 
     # 2) Parsing du JSON
     try:
-        payload = json.loads(request.body.decode("utf-8"))
-    except Exception as exc:
-        logger.error("Webhook Bictorys: JSON invalide (%s)", exc)
-        return HttpResponseBadRequest("Invalid JSON")
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        logger.error("Webhook Bictorys : JSON invalide : %s", request.body[:500])
+        return HttpResponse(status=400)
 
-    # Payload typique (simplifié):
-    # {
-    #   "id": "...",
-    #   "amount": 100,
-    #   "currency": "XOF",
-    #   "status": "succeeded",
-    #   "paymentReference": "BWHITE-12",
-    #   "pspName": "OM-SN",
-    #   "paymentMeans": "0771234567",
-    #   "..."
-    # }
+    logger.info("Webhook Bictorys reçu : %s", payload)
 
-    status = str(payload.get("status", "")).lower()
+    status = (payload.get("status") or "").lower()
     payment_ref = payload.get("paymentReference") or payload.get("payment_reference")
+    amount = payload.get("amount")
+    currency = (payload.get("currency") or "").upper()
+    tx_id = payload.get("id")  # ID de la transaction Bictorys
+    psp_name = payload.get("pspName") or payload.get("psp_name")
+    payment_means = payload.get("paymentMeans") or payload.get("payment_means")
 
-    if not payment_ref:
-        logger.error("Webhook Bictorys: paymentReference manquant")
-        return HttpResponseBadRequest("Missing paymentReference")
+    # Champs indispensables
+    if not payment_ref or amount is None or not currency:
+        logger.error(
+            "Webhook Bictorys : champs requis manquants (paymentReference/amount/currency)."
+        )
+        return HttpResponse(status=400)
 
-    # 3) Récupérer l'ID du PaiementApporteur à partir de paymentReference
-    # Convention: paymentReference = "BWHITE-<paiement_id>"
+    # 3) Statut : on n'accepte que succeeded / authorized
+    if status not in ("succeeded", "authorized"):
+        logger.info(
+            "Webhook Bictorys pour %s avec status %s (ignoré).",
+            payment_ref,
+            status,
+        )
+        # On renvoie 200 pour éviter les retries inutiles
+        return HttpResponse(status=200)
+
+    # 4) Récupérer l'ID de PaiementApporteur à partir de paymentReference
+    #    Format défini dans BictorysClient : BWHITE_PAY_<id>
     paiement_id = None
+    if isinstance(payment_ref, str) and payment_ref.startswith("BWHITE_PAY_"):
+        try:
+            paiement_id = int(payment_ref.split("_")[-1])
+        except (ValueError, IndexError):
+            paiement_id = None
+
+    if not paiement_id:
+        logger.error(
+            "Webhook Bictorys : paymentReference %s ne correspond pas au format BWHITE_PAY_<id>.",
+            payment_ref,
+        )
+        return HttpResponse(status=400)
+
     try:
-        ref_str = str(payment_ref)
-        if "-" in ref_str:
-            paiement_id = int(ref_str.split("-")[-1])
-        else:
-            paiement_id = int(ref_str)
+        paiement = PaiementApporteur.objects.select_related("contrat").get(pk=paiement_id)
+    except PaiementApporteur.DoesNotExist:
+        logger.error(
+            "Webhook Bictorys : PaiementApporteur #%s introuvable.",
+            paiement_id,
+        )
+        return HttpResponse(status=404)
+
+    # Si déjà payé, on renvoie 200 (idempotent)
+    if paiement.est_paye:
+        logger.info(
+            "Webhook Bictorys : PaiementApporteur #%s déjà payé. Rien à faire.",
+            paiement_id,
+        )
+        return HttpResponse(status=200)
+
+    # Si annulé, on ne touche pas
+    if paiement.est_annule:
+        logger.warning(
+            "Webhook Bictorys : PaiementApporteur #%s est ANNULE. Ignoré.",
+            paiement_id,
+        )
+        return HttpResponse(status=200)
+
+    # 5) Vérification montant + devise
+    try:
+        amount_dec = Decimal(str(amount))
     except Exception:
         logger.error(
-            "Webhook Bictorys: impossible d'extraire paiement_id depuis %r", payment_ref
+            "Webhook Bictorys : montant invalide (%s) pour paiement #%s.",
+            amount,
+            paiement_id,
         )
-        return HttpResponseBadRequest("Invalid paymentReference")
+        return HttpResponse(status=400)
 
+    if currency != "XOF":
+        logger.error(
+            "Webhook Bictorys : devise inattendue %s pour paiement #%s (attendu: XOF).",
+            currency,
+            paiement_id,
+        )
+        return HttpResponse(status=400)
+
+    attendu = paiement.montant_a_payer
+    # Tolérance d'1 franc si besoin (tu peux ajuster)
+    if (amount_dec - attendu).copy_abs() > Decimal("1"):
+        logger.warning(
+            "Webhook Bictorys : montant incohérent pour paiement #%s (reçu=%s, attendu=%s).",
+            paiement_id,
+            amount_dec,
+            attendu,
+        )
+        # Ici, on choisit de NE PAS marquer comme payé
+        return HttpResponse(status=400)
+
+    # 6) Marquer comme payé
     try:
-        paiement = PaiementApporteur.objects.select_related("contrat").get(
-            pk=paiement_id
+        paiement.marquer_comme_paye(
+            methode=(psp_name or "BICTORYS"),
+            reference=(tx_id or payment_ref),
+            numero_client=(payment_means or ""),
+            validated_by=None,  # Validation système (API)
         )
-    except PaiementApporteur.DoesNotExist:
-        logger.error("Webhook Bictorys: paiement %s introuvable", paiement_id)
-        return HttpResponseBadRequest("Unknown payment")
-
-    # 4) Vérifier le montant (recommandé)
-    amount = payload.get("amount")
-    if amount is not None:
-        try:
-            amount_dec = Decimal(str(amount))
-        except Exception:
-            amount_dec = None
-
-        if amount_dec is not None and amount_dec != paiement.montant_a_payer:
-            logger.warning(
-                "Webhook Bictorys: montant incohérent pour paiement %s "
-                "(reçu=%s, attendu=%s)",
-                paiement.pk,
-                amount_dec,
-                paiement.montant_a_payer,
-            )
-            return HttpResponseBadRequest("Amount mismatch")
-
-    # 5) Si le statut est "succeeded" ou équivalent, on marque comme PAYE
-    if status in {"succeeded", "approved", "completed", "authorized"}:
-        try:
-            paiement.marquer_comme_paye(
-                methode=payload.get("pspName", "") or payload.get("paymentChannel", ""),
-                reference=str(payload.get("id") or payment_ref),
-                numero_client=str(payload.get("paymentMeans") or ""),
-                validated_by=None,  # validation système (Bictorys)
-            )
-            logger.info(
-                "Webhook Bictorys: paiement %s marqué PAYE (status=%s)",
-                paiement.pk,
-                status,
-            )
-        except Exception as exc:
-            logger.exception(
-                "Webhook Bictorys: erreur marquer_comme_paye pour paiement %s (%s)",
-                paiement.pk,
-                exc,
-            )
-            return HttpResponseBadRequest("Error updating payment")
-    else:
-        # Autres statuts: on log, on ne change pas le paiement
-        logger.info(
-            "Webhook Bictorys: statut %s pour paiement %s (aucune MAJ)",
-            status,
-            paiement.pk,
+    except Exception as e:
+        logger.error(
+            "Erreur lors de marquer_comme_paye pour PaiementApporteur #%s : %s",
+            paiement_id,
+            e,
         )
+        return HttpResponse(status=500)
 
-    # Bictorys attend un 200 pour considérer le webhook comme traité
-    return HttpResponse("OK")
+    logger.info(
+        "PaiementApporteur #%s marqué PAYE via webhook Bictorys.",
+        paiement_id,
+    )
+    return HttpResponse(status=200)
