@@ -20,11 +20,11 @@ class BictorysClient:
     """
 
     def __init__(self) -> None:
-        # D’après tes settings
+        # D'après tes settings
         self.base_url = getattr(
             settings,
             "BICTORYS_API_BASE_URL",
-            "https://api.test.bictorys.com ",  # Sandbox par défaut
+            "https://api.test.bictorys.com",  # Sandbox par défaut
         )
         self.public_key = settings.BICTORYS_PUBLIC_KEY
         self.timeout = getattr(settings, "BICTORYS_TIMEOUT", 15)
@@ -115,7 +115,7 @@ class BictorysClient:
                 headers={
                     "accept": "application/json",
                     "content-type": "application/json",
-                    "X-API-Key": self.public_key,  # Nom exact d’après la doc
+                    "X-API-Key": self.public_key,  # Nom exact d'après la doc
                 },
                 timeout=self.timeout,
             )
@@ -134,7 +134,7 @@ class BictorysClient:
         payload = resp.json()
         logger.info("Réponse Bictorys /charges : %s", payload)
 
-        # La doc parle d’un lien de confirmation / lien de paiement
+        # La doc parle d'un lien de confirmation / lien de paiement
         payment_url = (
             payload.get("redirectUrl")
             or payload.get("checkoutUrl")
@@ -170,7 +170,7 @@ class BictorysClient:
     def recuperer_charge(self, paiement) -> dict | None:
         """
         Relit l'état d'une charge Bictorys via GET /pay/v1/charges/{chargeId}.
-        Nécessite reference_transaction (chargeId) et op_token.
+        Necessite reference_transaction (chargeId) et op_token.
         """
         if not self.public_key:
             logger.error("BICTORYS_PUBLIC_KEY n'est pas configurée")

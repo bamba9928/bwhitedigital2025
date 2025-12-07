@@ -48,14 +48,16 @@ class PaiementApporteur(models.Model):
         verbose_name="Méthode utilisée",
         help_text="Renseignée automatiquement par Bictorys ou lors d'une validation manuelle.",
     )
-    reference_transaction = models.CharField(
-        max_length=64,
-        blank=True,
-        validators=[RegexValidator(
-            regex=r"^[A-Z0-9-]{6,64}$",
-            message="Référence alphanumérique de 6-64 caractères",
-        )],
-    )
+
+    # ATTENTION : Doublon à corriger - cette ligne doit être supprimée
+    # reference_transaction = models.CharField(
+    #     max_length=64,
+    #     blank=True,
+    #     validators=[RegexValidator(
+    #         regex=r"^[A-Z0-9-]{6,64}$",
+    #         message="Référence alphanumérique de 6-64 caractères",
+    #     )],
+    # )
 
     # Nouveau champ
     op_token = models.CharField(
@@ -64,6 +66,7 @@ class PaiementApporteur(models.Model):
         verbose_name="OpToken Bictorys",
         help_text="Token renvoyé par Bictorys pour les appels GET/PATCH /charges/{id}.",
     )
+
     reference_transaction = models.CharField(
         max_length=64,
         blank=True,
@@ -117,30 +120,32 @@ class PaiementApporteur(models.Model):
     # -----------------------------
     def _get_montant_attendu(self) -> Decimal | None:
         """
-        Montant dû par l'apporteur.
-
-        Référence : net_a_reverser.
-        Fallback de sécurité : prime_ttc - commission_askia.
+        Calcule le montant exact que l'apporteur doit payer à BWHITE.
+        Formule : Prime TTC - Commission Apporteur.
         """
         if not self.contrat_id:
             return None
 
         contrat = self.contrat
+        apporteur = contrat.apporteur
 
-        montant = getattr(contrat, "net_a_reverser", None)
-        if montant is None:
-            prime_ttc = getattr(contrat, "prime_ttc", None)
-            commission_askia = getattr(contrat, "commission_askia", None)
-            if prime_ttc is not None and commission_askia is not None:
-                montant = prime_ttc - commission_askia
+        # 1. Récupération des valeurs
+        prime_ttc = getattr(contrat, "prime_ttc", Decimal("0.00")) or Decimal("0.00")
 
-        if montant is None:
-            return None
+        # 2. Si c'est un ADMIN ou COMMERCIAL qui a fait le contrat
+        # Il doit encaisser le client et tout reverser (sauf si logique spécifique de caisse)
+        # Ici on assume qu'il reverse tout le TTC à la caisse centrale
+        if getattr(apporteur, "role", "") in ["ADMIN", "COMMERCIAL"]:
+            return prime_ttc
 
-        try:
-            return Decimal(montant)
-        except Exception:
-            return None
+        # 3. Si c'est un APPORTEUR
+        # Il garde sa commission à la source et paie le reste
+        commission_apporteur = getattr(contrat, "commission_apporteur", Decimal("0.00")) or Decimal("0.00")
+
+        montant_du = prime_ttc - commission_apporteur
+
+        # Sécurité : ne jamais retourner un montant négatif
+        return max(montant_du, Decimal("0.00"))
 
     def clean(self):
         """Validation métier robuste (ne doit pas planter)."""
@@ -165,9 +170,9 @@ class PaiementApporteur(models.Model):
         si on crée l'objet ou si le montant est encore à 0.
         """
         if self.contrat_id and (
-            self._state.adding
-            or self.montant_a_payer is None
-            or self.montant_a_payer == Decimal("0.00")
+                self._state.adding
+                or self.montant_a_payer is None
+                or self.montant_a_payer == Decimal("0.00")
         ):
             attendu = self._get_montant_attendu()
             if attendu is not None:
@@ -200,11 +205,11 @@ class PaiementApporteur(models.Model):
     # -----------------------------
     @transaction.atomic
     def marquer_comme_paye(
-        self,
-        methode: str,
-        reference: str,
-        numero_client: str = "",
-        validated_by=None,
+            self,
+            methode: str,
+            reference: str,
+            numero_client: str = "",
+            validated_by=None,
     ) -> None:
         """
         Transition vers PAYÉ avec historique.
