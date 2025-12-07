@@ -20,7 +20,6 @@
                             <i class="fas fa-file-contract text-green-400 text-2xl"></i>
                         </div>
                         <div>
-
                             <p class="text-gray-400 text-sm mt-1">
                                 Créé le {{ contrat.created_at|date:"d/m/Y à H:i" }}
                                 {% if contrat.apporteur %}par {{ contrat.apporteur.get_full_name }}{% endif %}
@@ -78,7 +77,7 @@
                     {% if user.is_true_admin and contrat.status != "ANNULE" %}
                         <form method="post"
                               action="{% url 'contracts:annuler_contrat' contrat.pk %}"
-                              onsubmit="return confirm('⚠️ Confirmer l\'annulation ? Action irréversible.');"
+                              onsubmit="return confirm('⚠️ Confirmer l\\'annulation ? Action irréversible.');"
                               class="inline">
                             {% csrf_token %}
                             <input type="hidden" name="raison" value="Annulation administrative">
@@ -135,7 +134,7 @@
                 </div>
 
                 {% if whatsapp_text %}
-                    <a href="https://wa.me/?text= {{ whatsapp_text|urlencode }}"
+                    <a href="https://wa.me/?text={{ whatsapp_text|urlencode }}"
                        target="_blank"
                        class="block w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-3 px-6 rounded-xl text-center shadow-lg transition-all flex items-center justify-center gap-3">
                         <i class="fab fa-whatsapp text-2xl"></i>
@@ -257,11 +256,15 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <p class="text-yellow-200 text-sm">Commission</p>
-                            <p class="text-yellow-400 font-bold text-lg">{{ contrat.commission_apporteur|floatformat:0|intcomma }} F</p>
+                            <p class="text-yellow-400 font-bold text-lg">
+                                {{ contrat.commission_apporteur|floatformat:0|intcomma }} F
+                            </p>
                         </div>
                         <div>
                             <p class="text-blue-200 text-sm">Net à reverser</p>
-                            <p class="text-blue-400 font-bold text-lg">{{ contrat.net_a_reverser|floatformat:0|intcomma }} F</p>
+                            <p class="text-blue-400 font-bold text-lg">
+                                {{ net_a_payer_user|floatformat:0|intcomma }} F
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -271,12 +274,16 @@
                     <div class="grid grid-cols-3 gap-4 text-sm">
                         <div>
                             <p class="text-gray-400">Commission Apporteur</p>
-                            <p class="text-yellow-400 font-semibold">{{ contrat.commission_apporteur|floatformat:0|intcomma }} F</p>
+                            <p class="text-yellow-400 font-semibold">
+                                {{ contrat.commission_apporteur|floatformat:0|intcomma }} F
+                            </p>
                         </div>
                         {% if user.is_true_admin %}
                         <div>
-                            <p class="text-gray-400">Net à reverser</p>
-                            <p class="text-blue-400 font-semibold">{{ contrat.net_a_reverser|floatformat:0|intcomma }} F</p>
+                            <p class="text-gray-400">Net à reverser (Askia)</p>
+                            <p class="text-blue-400 font-semibold">
+                                {{ contrat.net_a_reverser|floatformat:0|intcomma }} F
+                            </p>
                         </div>
                         {% endif %}
                     </div>

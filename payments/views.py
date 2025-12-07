@@ -70,6 +70,16 @@ def mes_paiements(request):
             "filter_status": status,
         },
     )
+# payments/views.py
+
+from decimal import Decimal
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
+
+from contracts.models import Contrat
+from .models import PaiementApporteur
+from .bictorys_client import bictorys_client
 
 
 # -----------------------------
@@ -89,8 +99,9 @@ def declarer_paiement(request, contrat_id):
         Contrat.objects.select_related("apporteur", "client"), pk=contrat_id
     )
 
-    # Sécurité : appartenance du contrat
+    # Sécurité : appartenance du contrat (un apporteur ne peut payer que ses contrats)
     if getattr(request.user, "role", "") == "APPORTEUR" and contrat.apporteur != request.user:
+        messages.error(request, "Vous n'avez pas accès à ce contrat.")
         return redirect("accounts:profile")
 
     # Contrat doit être déjà émis côté métier
@@ -102,12 +113,28 @@ def declarer_paiement(request, contrat_id):
         )
         return redirect("payments:mes_paiements")
 
-    # Montant payé par l'apporteur = net à reverser
-    montant_attendu = getattr(contrat, "net_a_reverser", None)
-    if montant_attendu is None:
-        # Fallback de sécurité si net_a_reverser est vide
-        montant_attendu = contrat.prime_ttc - contrat.commission_askia
+    # --- CORRECTION DE LA LOGIQUE DE CALCUL ---
+    # On ne se fie plus à 'net_a_reverser' (part Askia uniquement)
+    # On recalcule ce que l'apporteur ou le staff doit réellement reverser
 
+    montant_attendu = Decimal("0.00")
+
+    # On sécurise les accès aux champs
+    prime_ttc = getattr(contrat, "prime_ttc", Decimal("0.00")) or Decimal("0.00")
+    com_apporteur = getattr(contrat, "commission_apporteur", Decimal("0.00")) or Decimal("0.00")
+
+    if getattr(request.user, "role", "") == "APPORTEUR":
+        # Apporteur : TTC - sa commission
+        montant_attendu = prime_ttc - com_apporteur
+
+    elif request.user.is_staff:
+        # Admin / Commercial : doit reverser la totalité du TTC
+        montant_attendu = prime_ttc
+
+    # Sécurité anti-négatif
+    montant_attendu = max(montant_attendu, Decimal("0.00"))
+
+    # Création ou récupération du paiement
     paiement, created = PaiementApporteur.objects.get_or_create(
         contrat=contrat,
         defaults={
@@ -117,10 +144,12 @@ def declarer_paiement(request, contrat_id):
     )
 
     # Resync si recalcul sur le contrat
-    if paiement.est_en_attente and paiement.montant_a_payer != montant_attendu:
+    # On utilise une tolérance de 1 FCFA pour éviter les différences d'arrondis
+    if paiement.est_en_attente and abs(paiement.montant_a_payer - montant_attendu) > Decimal("1.00"):
         paiement.montant_a_payer = montant_attendu
         paiement.save(update_fields=["montant_a_payer"])
 
+    # Si déjà payé ou annulé, on bloque
     if paiement.est_paye:
         messages.info(request, "Ce contrat est déjà payé.")
         return redirect("payments:mes_paiements")
@@ -137,6 +166,7 @@ def declarer_paiement(request, contrat_id):
         payment_url = bictorys_client.initier_paiement(paiement, request)
         if payment_url:
             return redirect(payment_url)
+
         messages.error(
             request,
             "Impossible d'initialiser le paiement avec Bictorys. Réessayez plus tard.",
@@ -151,7 +181,6 @@ def declarer_paiement(request, contrat_id):
             "paiement": paiement,
         },
     )
-
 
 # -----------------------------
 # Staff : liste des encaissements

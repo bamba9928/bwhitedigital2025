@@ -656,14 +656,33 @@ def detail_contrat(request, pk):
 
     # Vérification des permissions
     if (
-            getattr(request.user, "role", "") == "APPORTEUR"
-            and contrat.apporteur != request.user
+        getattr(request.user, "role", "") == "APPORTEUR"
+        and contrat.apporteur != request.user
     ):
         messages.error(request, "Vous n'avez pas accès à ce contrat.")
         return redirect("dashboard:home")
 
     # Génération du message WhatsApp
     whatsapp_text = _generer_message_whatsapp(contrat)
+
+    # --- CALCUL DU "NET À PAYER PAR L'APPORTEUR" POUR L'AFFICHAGE ---
+    # Par défaut : on affiche le net_a_reverser (vue Admin / Staff)
+    net_a_payer_user = getattr(contrat, "net_a_reverser", None)
+
+    if getattr(request.user, "role", "") == "APPORTEUR":
+        # Pour l'apporteur, on affiche ce qu'il doit vraiment payer :
+        # prime TTC - sa commission
+        prime = getattr(contrat, "prime_ttc", None) or Decimal("0.00")
+        com = getattr(contrat, "commission_apporteur", None) or Decimal("0.00")
+        net_a_payer_user = prime - com
+
+        # Sécurité anti-négatif
+        if net_a_payer_user < Decimal("0.00"):
+            net_a_payer_user = Decimal("0.00")
+
+    # Fallback si jamais net_a_reverser est None côté admin/staff
+    if net_a_payer_user is None:
+        net_a_payer_user = getattr(contrat, "prime_ttc", None) or Decimal("0.00")
 
     return render(
         request,
@@ -672,6 +691,7 @@ def detail_contrat(request, pk):
             "title": f"Contrat {contrat.numero_police}",
             "contrat": contrat,
             "whatsapp_text": whatsapp_text,
+            "net_a_payer_user": net_a_payer_user,  # Nouvelle variable pour le template
         },
     )
 def _generer_message_whatsapp(contrat):

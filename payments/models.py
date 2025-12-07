@@ -48,17 +48,6 @@ class PaiementApporteur(models.Model):
         verbose_name="Méthode utilisée",
         help_text="Renseignée automatiquement par Bictorys ou lors d'une validation manuelle.",
     )
-
-    # ATTENTION : Doublon à corriger - cette ligne doit être supprimée
-    # reference_transaction = models.CharField(
-    #     max_length=64,
-    #     blank=True,
-    #     validators=[RegexValidator(
-    #         regex=r"^[A-Z0-9-]{6,64}$",
-    #         message="Référence alphanumérique de 6-64 caractères",
-    #     )],
-    # )
-
     # Nouveau champ
     op_token = models.CharField(
         max_length=128,
