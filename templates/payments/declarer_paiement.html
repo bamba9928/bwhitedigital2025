@@ -41,34 +41,55 @@
         <div class="bg-gray-800/60 rounded-lg p-4 text-sm text-gray-200 flex gap-3">
             <i class="fas fa-info-circle text-primary-green mt-0.5"></i>
             <p>
-                Vous allez être redirigé vers la page de paiement sécurisée de Bictorys.
-                Vous pourrez y choisir votre moyen de paiement (Orange Money, Wave, carte, etc.).
+                Vous allez être redirigé vers la page de paiement sécurisée de <strong>Bictorys</strong>.
+                Vous pourrez y choisir votre moyen de paiement (Orange Money, Wave, Carte, etc.).
                 Une fois le paiement validé, le statut de ce contrat sera mis à jour automatiquement.
             </p>
         </div>
     </div>
 
-    <form method="post" class="bg-gray-900 rounded-xl border border-gray-800 p-5 shadow-lg space-y-4">
+    <form method="post" id="paymentForm" class="bg-gray-900 rounded-xl border border-gray-800 p-5 shadow-lg space-y-4">
         {% csrf_token %}
-        <div class="flex items-center justify-between gap-3">
-            <div class="text-xs text-gray-400">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-gray-400 text-center sm:text-left">
                 <p>Contrat : <span class="text-gray-200">{{ contrat.numero_police|default:"-" }}</span></p>
-                <p>Montant à payer : <span class="text-blue-400 font-semibold">
-                    {{ paiement.montant_a_payer|floatformat:0|intcomma }} F
+                <p>Montant à payer : <span class="text-blue-400 font-semibold text-base">
+                    {{ paiement.montant_a_payer|floatformat:0|intcomma }} F CFA
                 </span></p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
                 <a href="{% url 'payments:mes_paiements' %}"
-                   class="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
-                    Retour à mes paiements
+                   class="flex-1 sm:flex-none text-center px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+                    Annuler
                 </a>
-                <button type="submit"
-                        class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold hover:bg-green-500 shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
-                    <span>Payer maintenant</span>
-                    <i class="fas fa-arrow-right text-sm"></i>
+
+                <button type="submit" id="btnSubmit"
+                        class="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-green-600 text-white font-bold hover:bg-green-500 shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                    <span id="btnText">Payer maintenant</span>
+                    <i id="btnIcon" class="fas fa-arrow-right text-sm"></i>
+                    <i id="btnSpinner" class="fas fa-spinner fa-spin hidden"></i>
                 </button>
             </div>
         </div>
     </form>
 </div>
+
+<script>
+    // Script pour désactiver le bouton après le clic (Anti-doublon)
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        var btn = document.getElementById('btnSubmit');
+        var text = document.getElementById('btnText');
+        var icon = document.getElementById('btnIcon');
+        var spinner = document.getElementById('btnSpinner');
+
+        // Désactive le bouton
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+        // Change le texte
+        text.innerText = "Redirection...";
+        icon.classList.add('hidden');
+        spinner.classList.remove('hidden');
+    });
+</script>
 {% endblock %}

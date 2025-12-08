@@ -70,18 +70,6 @@ def mes_paiements(request):
             "filter_status": status,
         },
     )
-# payments/views.py
-
-from decimal import Decimal
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect, render
-from django.contrib import messages
-
-from contracts.models import Contrat
-from .models import PaiementApporteur
-from .bictorys_client import bictorys_client
-
-
 # -----------------------------
 # Apporteur : lancer le paiement (Checkout Bictorys)
 # -----------------------------
@@ -113,10 +101,6 @@ def declarer_paiement(request, contrat_id):
         )
         return redirect("payments:mes_paiements")
 
-    # --- CORRECTION DE LA LOGIQUE DE CALCUL ---
-    # On ne se fie plus à 'net_a_reverser' (part Askia uniquement)
-    # On recalcule ce que l'apporteur ou le staff doit réellement reverser
-
     montant_attendu = Decimal("0.00")
 
     # On sécurise les accès aux champs
@@ -143,13 +127,10 @@ def declarer_paiement(request, contrat_id):
         },
     )
 
-    # Resync si recalcul sur le contrat
-    # On utilise une tolérance de 1 FCFA pour éviter les différences d'arrondis
     if paiement.est_en_attente and abs(paiement.montant_a_payer - montant_attendu) > Decimal("1.00"):
         paiement.montant_a_payer = montant_attendu
         paiement.save(update_fields=["montant_a_payer"])
 
-    # Si déjà payé ou annulé, on bloque
     if paiement.est_paye:
         messages.info(request, "Ce contrat est déjà payé.")
         return redirect("payments:mes_paiements")
@@ -325,11 +306,6 @@ def valider_encaissement(request, paiement_id):
 
     messages.success(request, "Paiement validé avec succès.")
     return redirect("payments:detail_encaissement", paiement_id=paiement.id)
-
-
-# -----------------------------
-# Webhook Bictorys
-# -----------------------------
 @csrf_exempt
 def bictorys_callback(request):
     """
@@ -350,7 +326,6 @@ def bictorys_callback(request):
         logger.error("BICTORYS_WEBHOOK_SECRET non configurée. Webhook ignoré.")
         return HttpResponse(status=500)
 
-    # Les headers Django sont dans request.META en HTTP_X_SECRET_KEY
     secret = (
         request.headers.get("X-Secret-Key")
         or request.META.get("HTTP_X_SECRET_KEY")
@@ -370,13 +345,24 @@ def bictorys_callback(request):
 
     logger.info("Webhook Bictorys reçu : %s", payload)
 
-    status = (payload.get("status") or "").lower()
-    payment_ref = payload.get("paymentReference") or payload.get("payment_reference")
-    amount = payload.get("amount")
-    currency = (payload.get("currency") or "").upper()
-    tx_id = payload.get("id")  # ID de la transaction Bictorys
-    psp_name = payload.get("pspName") or payload.get("psp_name")
-    payment_means = payload.get("paymentMeans") or payload.get("payment_means")
+    # NEW : gérer aussi le format {"data": {...}}
+    if isinstance(payload, dict) and isinstance(payload.get("data"), dict):
+        payload_data = payload["data"]
+    else:
+        payload_data = payload
+
+    if not isinstance(payload_data, dict):
+        logger.error("Webhook Bictorys : payload inattendu (pas un objet dict) : %r", payload)
+        return HttpResponse(status=400)
+
+    # 3) Extraction des champs utiles depuis payload_data
+    status = (payload_data.get("status") or "").lower()
+    payment_ref = payload_data.get("paymentReference") or payload_data.get("payment_reference")
+    amount = payload_data.get("amount")
+    currency = (payload_data.get("currency") or "").upper()
+    tx_id = payload_data.get("id")  # ID de la transaction Bictorys
+    psp_name = payload_data.get("pspName") or payload_data.get("psp_name")
+    payment_means = payload_data.get("paymentMeans") or payload_data.get("payment_means")
 
     # Champs indispensables
     if not payment_ref or amount is None or not currency:
@@ -385,8 +371,9 @@ def bictorys_callback(request):
         )
         return HttpResponse(status=400)
 
-    # 3) Statut : on n'accepte que succeeded / authorized
-    if status not in ("succeeded", "authorized"):
+    # 4) Statut : on n'accepte que succeeded / authorized
+    ACCEPTED_STATUSES = {"succeeded", "authorized"}
+    if status not in ACCEPTED_STATUSES:
         logger.info(
             "Webhook Bictorys pour %s avec status %s (ignoré).",
             payment_ref,
@@ -395,24 +382,33 @@ def bictorys_callback(request):
         # On renvoie 200 pour éviter les retries inutiles
         return HttpResponse(status=200)
 
-    # 4) Récupérer l'ID de PaiementApporteur à partir de paymentReference
+    # 5) Récupérer l'ID de PaiementApporteur à partir de paymentReference
     #    Format défini dans BictorysClient : BWHITE_PAY_<id>
     paiement_id = None
     if isinstance(payment_ref, str) and payment_ref.startswith("BWHITE_PAY_"):
         try:
-            paiement_id = int(payment_ref.split("_")[-1])
-        except (ValueError, IndexError):
-            paiement_id = None
+            paiement_id = int(payment_ref.replace("BWHITE_PAY_", ""))
+        except ValueError:
+            logger.error(
+                "Webhook Bictorys : paymentReference mal formé (%s).",
+                payment_ref,
+            )
+            return HttpResponse(status=400)
 
     if not paiement_id:
         logger.error(
-            "Webhook Bictorys : paymentReference %s ne correspond pas au format BWHITE_PAY_<id>.",
+            "Webhook Bictorys : impossible d'extraire l'id de PaiementApporteur depuis %s.",
             payment_ref,
         )
         return HttpResponse(status=400)
 
+    # 6) Récupérer le PaiementApporteur correspondant
     try:
-        paiement = PaiementApporteur.objects.select_related("contrat").get(pk=paiement_id)
+        paiement = (
+            PaiementApporteur.objects
+            .select_related("contrat")
+            .get(pk=paiement_id)
+        )
     except PaiementApporteur.DoesNotExist:
         logger.error(
             "Webhook Bictorys : PaiementApporteur #%s introuvable.",
@@ -436,7 +432,7 @@ def bictorys_callback(request):
         )
         return HttpResponse(status=200)
 
-    # 5) Vérification montant + devise
+    # 7) Vérification montant + devise
     try:
         amount_dec = Decimal(str(amount))
     except Exception:
@@ -455,19 +451,19 @@ def bictorys_callback(request):
         )
         return HttpResponse(status=400)
 
-    attendu = paiement.montant_a_payer
-    # Tolérance d'1 franc si besoin (tu peux ajuster)
-    if (amount_dec - attendu).copy_abs() > Decimal("1"):
-        logger.warning(
-            "Webhook Bictorys : montant incohérent pour paiement #%s (reçu=%s, attendu=%s).",
-            paiement_id,
+    montant_attendu = paiement.montant_a_payer or Decimal("0")
+    # Tolérance de 1 FCFA
+    if abs(montant_attendu - amount_dec) > Decimal("1"):
+        logger.error(
+            "Webhook Bictorys : montant %s ne correspond pas au montant attendu %s pour paiement #%s.",
             amount_dec,
-            attendu,
+            montant_attendu,
+            paiement_id,
         )
         # Ici, on choisit de NE PAS marquer comme payé
         return HttpResponse(status=400)
 
-    # 6) Marquer comme payé
+    # 8) Marquer comme payé
     try:
         paiement.marquer_comme_paye(
             methode=(psp_name or "BICTORYS"),

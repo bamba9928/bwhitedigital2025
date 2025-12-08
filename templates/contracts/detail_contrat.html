@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 {% load humanize %}
+
 {% block title %}Contrat {{ contrat.numero_police }}{% endblock %}
+
 {% block content %}
     <div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
         <nav class="text-sm text-gray-400">
-            <a href="{% url 'contracts:liste_contrats' %}"
-               class="hover:text-primary-green transition">
+            <a href="{% url 'contracts:liste_contrats' %}" class="hover:text-primary-green transition">
                 <i class="fas fa-file-contract mr-1"></i>Contrats
             </a>
             <span class="mx-2">/</span>
@@ -20,6 +21,7 @@
                             <i class="fas fa-file-contract text-green-400 text-2xl"></i>
                         </div>
                         <div>
+                            <h1 class="text-2xl font-bold text-white tracking-tight">{{ contrat.numero_police }}</h1>
                             <p class="text-gray-400 text-sm mt-1">
                                 Créé le {{ contrat.created_at|date:"d/m/Y à H:i" }}
                                 {% if contrat.apporteur %}par {{ contrat.apporteur.get_full_name }}{% endif %}
@@ -37,7 +39,7 @@
                         {% if enc %}
                             <span class="px-4 py-2 rounded-full border text-sm font-medium {% if enc.status == 'PAYE' %}bg-green-600/20 border-green-600 text-green-400 {% else %}bg-red-600/20 border-red-600 text-red-400{% endif %}">
                                 <i class="fas {% if enc.status == 'PAYE' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} mr-2"></i>
-                                {% if enc.status == 'PAYE' %}Payé{% else %}Non payé{% endif %}
+                                {{ enc.get_status_display }}
                             </span>
 
                             {% if user.role == 'APPORTEUR' and contrat.apporteur_id == user.id and not enc.est_paye %}
@@ -54,9 +56,12 @@
                                 </a>
                             {% endif %}
                         {% else %}
-                            <span class="px-4 py-2 rounded-full border text-sm font-medium bg-gray-600/20 border-gray-600 text-gray-300">
-                                <i class="fas fa-clock mr-2"></i>Encaissement non créé
-                            </span>
+                            {% if contrat.status != 'BROUILLON' %}
+                                <span class="px-4 py-2 rounded-full border text-sm font-medium bg-gray-600/20 border-gray-600 text-gray-300">
+                                    <i class="fas fa-clock mr-2"></i>En attente paiement
+                                </span>
+                            {% endif %}
+
                             {% if user.role == 'APPORTEUR' and contrat.apporteur_id == user.id and contrat.is_valide %}
                                 <a href="{% url 'payments:declarer_paiement' contrat.id %}"
                                    class="bg-yellow-600 hover:bg-yellow-700 text-white px-5 py-2 rounded-full font-semibold transition flex items-center gap-2 animate-pulse">
@@ -70,21 +75,19 @@
                         <a href="{% url 'contracts:telecharger_documents' contrat.pk %}"
                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold transition flex items-center gap-2">
                             <i class="fas fa-download"></i>
-                            <span>Télécharger les détails</span>
+                            <span>ZIP Admin</span>
                         </a>
                     {% endif %}
 
                     {% if user.is_true_admin and contrat.status != "ANNULE" %}
-                        <form method="post"
-                              action="{% url 'contracts:annuler_contrat' contrat.pk %}"
-                              onsubmit="return confirm('⚠️ Confirmer l\\'annulation ? Action irréversible.');"
+                        <form method="post" action="{% url 'contracts:annuler_contrat' contrat.pk %}"
+                              onsubmit="return confirm('⚠️ Confirmer l\'annulation ? Action irréversible.');"
                               class="inline">
                             {% csrf_token %}
                             <input type="hidden" name="raison" value="Annulation administrative">
                             <button type="submit"
                                     class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-full font-semibold transition flex items-center gap-2">
                                 <i class="fas fa-ban"></i>
-                                <span>Annuler</span>
                             </button>
                         </form>
                     {% endif %}
@@ -96,9 +99,7 @@
             <div class="space-y-4">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {% if contrat.link_attestation %}
-                        <a href="{{ contrat.link_attestation }}"
-                           target="_blank"
-                           rel="noopener noreferrer"
+                        <a href="{{ contrat.link_attestation }}" target="_blank" rel="noopener noreferrer"
                            class="group bg-gradient-to-br from-green-900/40 to-green-800/20 hover:from-green-800/50 hover:to-green-700/30 p-6 rounded-xl border border-green-700/50 hover:border-green-600 transition-all hover:shadow-lg hover:shadow-green-600/20">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
@@ -114,9 +115,7 @@
                         </a>
                     {% endif %}
                     {% if contrat.link_carte_brune %}
-                        <a href="{{ contrat.link_carte_brune }}"
-                           target="_blank"
-                           rel="noopener noreferrer"
+                        <a href="{{ contrat.link_carte_brune }}" target="_blank" rel="noopener noreferrer"
                            class="group bg-gradient-to-br from-blue-900/40 to-blue-800/20 hover:from-blue-800/50 hover:to-blue-700/30 p-6 rounded-xl border border-blue-700/50 hover:border-blue-600 transition-all hover:shadow-lg hover:shadow-blue-600/20">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
@@ -134,11 +133,10 @@
                 </div>
 
                 {% if whatsapp_text %}
-                    <a href="https://wa.me/?text={{ whatsapp_text|urlencode }}"
-                       target="_blank"
+                    <a href="https://wa.me/?text={{ whatsapp_text|urlencode }}" target="_blank"
                        class="block w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-3 px-6 rounded-xl text-center shadow-lg transition-all flex items-center justify-center gap-3">
                         <i class="fab fa-whatsapp text-2xl"></i>
-                        <span>Partager via WhatsApp</span>
+                        <span>Partager les documents via WhatsApp</span>
                     </a>
                 {% endif %}
             </div>
@@ -151,7 +149,7 @@
                     <div>
                         <h3 class="text-yellow-300 font-semibold">Documents indisponibles</h3>
                         <p class="text-yellow-200/70 text-sm mt-1">
-                            Les liens vers l'attestation et la carte brune n'ont pas été reçus.
+                            Les liens vers l'attestation et la carte brune n'ont pas encore été reçus de l'API Askia.
                         </p>
                     </div>
                 </div>
@@ -160,7 +158,7 @@
                         {% csrf_token %}
                         <button type="submit"
                                 class="whitespace-nowrap px-5 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-semibold rounded-lg shadow-lg shadow-yellow-900/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
-                            <i class="fas fa-sync-alt"></i><span>Récupérer</span>
+                            <i class="fas fa-sync-alt"></i><span>Réessayer récupération</span>
                         </button>
                     </form>
                 {% endif %}
@@ -263,7 +261,11 @@
                         <div>
                             <p class="text-blue-200 text-sm">Net à reverser</p>
                             <p class="text-blue-400 font-bold text-lg">
-                                {{ net_a_payer_user|floatformat:0|intcomma }} F
+                                {% if contrat.encaissement %}
+                                    {{ contrat.encaissement.montant_a_payer|floatformat:0|intcomma }} F
+                                {% else %}
+                                    <span class="text-sm italic text-blue-400/70">Calcul au paiement...</span>
+                                {% endif %}
                             </p>
                         </div>
                     </div>

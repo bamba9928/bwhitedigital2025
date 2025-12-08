@@ -1,16 +1,6 @@
 """
 BWHITE DIGITAL — Django settings
-
-Projet : Plateforme d’assurance BWHITE DIGITAL
 Version : V1.01
-Auteur : Mouhamadou Bamba DIENG
-Contact : +221 77 249 05 30 • bigrip2016@gmail.com 2025
-
-Notes :
-- Configurez via les variables d’environnement (SECRET_KEY, DEBUG, ALLOWED_HOSTS, DB…).
-- Ne stockez jamais de secrets en dur dans le dépôt.
-- Utilisez des fichiers .env séparés pour dev / staging / prod.
-- Réglez DJANGO_SETTINGS_MODULE pour cibler le bon module de settings.
 """
 
 import os
@@ -45,11 +35,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
-    "widget_tweaks",
-    "django_htmx",
     "django.contrib.humanize",
 
+    # Libs tierces
+    "widget_tweaks",
+    "django_htmx",
+
+    # Vos apps
     "accounts.apps.AccountsConfig",
     "contracts.apps.ContractsConfig",
     "payments.apps.PaymentsConfig",
@@ -70,9 +62,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# ==============================
-# URLs / WSGI
-# ==============================
 ROOT_URLCONF = "askia_insurance.urls"
 
 TEMPLATES = [
@@ -96,7 +85,6 @@ WSGI_APPLICATION = "askia_insurance.wsgi.application"
 # ==============================
 # Base de données
 # ==============================
-# On lit la configuration DB via .env
 DB_ENGINE = config("DB_ENGINE", default="django.db.backends.sqlite3").strip()
 DB_NAME = config("DB_NAME", default="db.sqlite3").strip()
 DB_USER = config("DB_USER", default="").strip()
@@ -105,7 +93,6 @@ DB_HOST = config("DB_HOST", default="").strip()
 DB_PORT = config("DB_PORT", default="").strip()
 
 if DB_ENGINE == "django.db.backends.sqlite3":
-    # MODE SQLITE (développement local typiquement)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -113,13 +100,10 @@ if DB_ENGINE == "django.db.backends.sqlite3":
         }
     }
 else:
-    # MODE POSTGRESQL (ou autre backend explicite)
-    if not (DB_NAME and DB_USER):
-        raise RuntimeError("DB_NAME et DB_USER sont requis pour PostgreSQL")
-
+    # PostgreSQL configuration
     DATABASES = {
         "default": {
-            "ENGINE": DB_ENGINE,  # ex: django.db.backends.postgresql
+            "ENGINE": DB_ENGINE,
             "NAME": DB_NAME,
             "USER": DB_USER,
             "PASSWORD": DB_PWD,
@@ -129,32 +113,23 @@ else:
         }
     }
 
-# En production (DEBUG=False), PostgreSQL est obligatoire
-if not DEBUG and DATABASES["default"]["ENGINE"] != "django.db.backends.postgresql":
-    raise RuntimeError(
-        "En production (DEBUG=False), la base doit impérativement être PostgreSQL."
-    )
-
 # ==============================
 # Authentification
 # ==============================
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 AUTH_USER_MODEL = "accounts.User"
-
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "dashboard:home"
 LOGOUT_REDIRECT_URL = "accounts:login"
 
 # ==============================
-# Internationalisation
+# I18N / L10N
 # ==============================
 LANGUAGE_CODE = "fr-FR"
 TIME_ZONE = "Africa/Dakar"
@@ -162,51 +137,32 @@ USE_I18N = True
 USE_TZ = True
 
 # ==============================
-# Static / Media / Whitenoise
+# Static / Media
 # ==============================
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {
-        # Intégré à Whitenoise pour servir le static en prod
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# L'URL publique pour accéder aux fichiers (ex: http://site.com/media/photo.jpg)
+
 MEDIA_URL = '/media/'
-# Le dossier physique sur le disque où Django enregistre les fichiers
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ==============================
-# ASKIA API
-# ==============================
-ASKIA_BASE_URL = config("ASKIA_BASE_URL")
-ASKIA_APP_CLIENT = config("ASKIA_APP_CLIENT")
-ASKIA_PV_CODE = config("ASKIA_PV_CODE")
-ASKIA_BR_CODE = config("ASKIA_BR_CODE")
-
-# ==============================
 # Email
 # ==============================
-EMAIL_BACKEND = config(
-    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
-)
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = config(
-    "DEFAULT_FROM_EMAIL", default="Bwhite Assurance <no-reply@bwhite.com>"
-)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Bwhite Assurance <no-reply@bwhite.com>")
 
-# ==============================
-# Messages (Bootstrap mapping)
-# ==============================
 MESSAGE_TAGS = {
     messages.DEBUG: "debug",
     messages.INFO: "info",
@@ -216,7 +172,7 @@ MESSAGE_TAGS = {
 }
 
 # ==============================
-# Logs
+# Logs (AJOUT PAYMENTS)
 # ==============================
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -234,7 +190,7 @@ LOGGING = {
         "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": str(LOG_DIR / "contracts.log"),
+            "filename": str(LOG_DIR / "bwhite.log"),
             "formatter": "verbose",
             "maxBytes": 5_000_000,
             "backupCount": 3,
@@ -243,67 +199,36 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "WARNING"},
     "loggers": {
         "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "django.request": {
-            "handlers": ["console"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-        "contracts": {
+        # Vos apps existantes
+        "contracts": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
+        "bwhite.contracts": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
+
+
+        "payments": {
             "handlers": ["console", "file"],
             "level": "INFO",
-            "propagate": False,
-        },
-        "contracts.api_client": {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "bwhite.contracts": {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            "propagate": False,
+            "propagate": False
         },
     },
 }
 
 # ==============================
-# Cache
+# ASKIA / Business
 # ==============================
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-snowflake",
-    }
-}
+ASKIA_BASE_URL = config("ASKIA_BASE_URL")
+ASKIA_APP_CLIENT = config("ASKIA_APP_CLIENT")
+ASKIA_PV_CODE = config("ASKIA_PV_CODE")
+ASKIA_BR_CODE = config("ASKIA_BR_CODE")
 
-# ==============================
-# COMMISSIONS & TARIFS
-# ==============================
-# Taux Askia (fixe)
 COMMISSION_ASKIA_TAUX = config("COMMISSION_ASKIA_TAUX", default="0.20", cast=Decimal)
 COMMISSION_ASKIA_FIXE = config("COMMISSION_ASKIA_FIXE", default="3000", cast=Decimal)
+COMMISSION_PLATINE_TAUX = config("COMMISSION_PLATINE_TAUX", default="0.18", cast=Decimal)
+COMMISSION_PLATINE_FIXE = config("COMMISSION_PLATINE_FIXE", default="2000", cast=Decimal)
+COMMISSION_FREEMIUM_TAUX = config("COMMISSION_FREEMIUM_TAUX", default="0.10", cast=Decimal)
+COMMISSION_FREEMIUM_FIXE = config("COMMISSION_FREEMIUM_FIXE", default="1800", cast=Decimal)
 
-# Taux Apporteurs
-COMMISSION_PLATINE_TAUX = config(
-    "COMMISSION_PLATINE_TAUX", default="0.18", cast=Decimal
-)
-COMMISSION_PLATINE_FIXE = config(
-    "COMMISSION_PLATINE_FIXE", default="2000", cast=Decimal
-)
-
-COMMISSION_FREEMIUM_TAUX = config(
-    "COMMISSION_FREEMIUM_TAUX", default="0.10", cast=Decimal
-)
-COMMISSION_FREEMIUM_FIXE = config(
-    "COMMISSION_FREEMIUM_FIXE", default="1800", cast=Decimal
-)
-
-COMMISSION_ADMIN_TAUX = COMMISSION_ASKIA_TAUX - COMMISSION_PLATINE_TAUX  # attendu 0.02
-COMMISSION_ADMIN_FIXE = COMMISSION_ASKIA_FIXE - COMMISSION_PLATINE_FIXE  # attendu 1000
-
-# Garde-fous
-if COMMISSION_ADMIN_TAUX < 0 or COMMISSION_ADMIN_FIXE < 0:
-    raise ValueError("Paramétrage commissions incohérent: admin < 0")
+COMMISSION_ADMIN_TAUX = COMMISSION_ASKIA_TAUX - COMMISSION_PLATINE_TAUX
+COMMISSION_ADMIN_FIXE = COMMISSION_ASKIA_FIXE - COMMISSION_PLATINE_FIXE
 
 FEATURES = {
     "QUOTE_FLOW": True,
@@ -315,29 +240,39 @@ FEATURES = {
 }
 
 BUSINESS = {
-    "SERVICE_PHONE": "780103636",
+    "SERVICE_PHONE": config("SERVICE_PHONE", default="770000000"),
 }
 
 # ==============================
-# Configuration JAZZMIN
+# BICTORYS
+# ==============================
+# Utilise BICTORYS_BASE_URL (client) ou BICTORYS_API_BASE_URL (settings)
+BICTORYS_API_BASE_URL = config("BICTORYS_API_BASE_URL", default="https://api.bictorys.com")
+# On lit aussi BICTORYS_BASE_URL pour être sûr, si présent dans le .env
+BICTORYS_BASE_URL = config("BICTORYS_BASE_URL", default=BICTORYS_API_BASE_URL)
+
+BICTORYS_PUBLIC_KEY = config("BICTORYS_PUBLIC_KEY", default="")
+BICTORYS_WEBHOOK_SECRET = config("BICTORYS_WEBHOOK_SECRET", default="")
+
+# Timeout (optionnel, 15s par défaut dans le client, on peut le surcharger ici)
+BICTORYS_TIMEOUT = config("BICTORYS_TIMEOUT", default=30, cast=int)
+
+# ==============================
+# JAZZMIN
 # ==============================
 JAZZMIN_SETTINGS = {
     "site_title": "BWHITE Admin",
     "site_header": "BWHITE DIGITAL",
     "site_brand": "BWHITE Admin",
-
     "login_logo": "images/logo.png",
     "login_logo_dark": "images/logo.png",
     "site_logo": "images/logo.png",
-
     "theme": "darkly",
-    "show_ui_builder": True,
-
+    "show_ui_builder": False,  # Désactivé pour la prod
     "topmenu_links": [
         {"name": "Accueil", "url": "dashboard:home", "permissions": ["auth.view_user"]},
         {"model": "accounts.User"},
     ],
-
     "icons": {
         "auth.User": "fas fa-users-cog",
         "accounts.User": "fas fa-users",
@@ -348,26 +283,6 @@ JAZZMIN_SETTINGS = {
         "payments.PaiementApporteur": "fas fa-money-check-alt",
         "payments.HistoriquePaiement": "fas fa-history",
     },
-
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-dot-circle",
 }
-# settings.py
-from decouple import config # Assurez-vous que l'import est là
-
-# ==============================
-# BICTORYS
-# ==============================
-# URL de base de l’API Bictorys
-# - Sandbox : https://api.test.bictorys.com
-# - Production : https://api.bictorys.com
-
-BICTORYS_API_BASE_URL = config(
-    "BICTORYS_API_BASE_URL",
-    default="https://api.test.bictorys.com",
-)
-
-BICTORYS_PUBLIC_KEY = config("BICTORYS_PUBLIC_KEY", default="")
-BICTORYS_WEBHOOK_SECRET = config("BICTORYS_WEBHOOK_SECRET", default="")
-
-
