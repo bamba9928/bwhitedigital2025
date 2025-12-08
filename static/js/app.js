@@ -182,6 +182,7 @@
       const spinner = document.getElementById('global-spinner');
       if (!spinner) return;
       spinner.classList.remove('hidden');
+      spinner.setAttribute('aria-hidden', 'false');
       if (this.spinnerTimer) clearTimeout(this.spinnerTimer);
       this.spinnerTimer = setTimeout(() => {
         this.hideSpinner();
@@ -193,6 +194,7 @@
       const spinner = document.getElementById('global-spinner');
       if (!spinner) return;
       spinner.classList.add('hidden');
+      spinner.setAttribute('aria-hidden', 'true');
       if (this.spinnerTimer) { clearTimeout(this.spinnerTimer); this.spinnerTimer = null; }
     }
 
