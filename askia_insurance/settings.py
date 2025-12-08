@@ -6,8 +6,8 @@ Version : V1.01
 import os
 from decimal import Decimal
 from pathlib import Path
-
-from decouple import config, Csv
+from decouple import Csv, config
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.messages import constants as messages
 from dotenv import load_dotenv
 
