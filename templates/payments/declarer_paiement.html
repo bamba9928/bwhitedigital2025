@@ -73,23 +73,24 @@
         </div>
     </form>
 </div>
-
 <script>
-    // Script pour désactiver le bouton après le clic (Anti-doublon)
     document.getElementById('paymentForm').addEventListener('submit', function(e) {
         var btn = document.getElementById('btnSubmit');
         var text = document.getElementById('btnText');
         var icon = document.getElementById('btnIcon');
         var spinner = document.getElementById('btnSpinner');
 
-        // Désactive le bouton
-        btn.disabled = true;
-        btn.classList.add('opacity-75', 'cursor-not-allowed');
-
-        // Change le texte
+        // 1. Changement visuel immédiat (Feedback utilisateur)
         text.innerText = "Redirection...";
         icon.classList.add('hidden');
         spinner.classList.remove('hidden');
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+        // 2. IMPORTANT : On attend 100ms avant de désactiver techniquement le bouton
+        // Cela permet au formulaire POST de partir correctement vers Django
+        setTimeout(function() {
+            btn.disabled = true;
+        }, 100);
     });
 </script>
 {% endblock %}
