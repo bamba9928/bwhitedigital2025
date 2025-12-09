@@ -242,21 +242,15 @@ FEATURES = {
 BUSINESS = {
     "SERVICE_PHONE": config("SERVICE_PHONE", default="770000000"),
 }
-
 # ==============================
 # BICTORYS
 # ==============================
-# Utilise BICTORYS_BASE_URL (client) ou BICTORYS_API_BASE_URL (settings)
-BICTORYS_API_BASE_URL = config("BICTORYS_API_BASE_URL", default="https://api.bictorys.com")
-# On lit aussi BICTORYS_BASE_URL pour être sûr, si présent dans le .env
-BICTORYS_BASE_URL = config("BICTORYS_BASE_URL", default=BICTORYS_API_BASE_URL)
-
-BICTORYS_PUBLIC_KEY = config("BICTORYS_PUBLIC_KEY", default="")
+BICTORYS_BASE_URL = config("BICTORYS_BASE_URL", default="https://api.bictorys.com")
+BICTORYS_PUBLIC_KEY = config("BICTORYS_PUBLIC_KEY")
+# La clé secrète indispensable pour éviter l'erreur 401 :
+BICTORYS_SECRET_KEY = config("BICTORYS_SECRET_KEY")
+# Optionnel : pour les webhooks plus tard
 BICTORYS_WEBHOOK_SECRET = config("BICTORYS_WEBHOOK_SECRET", default="")
-
-# Timeout (optionnel, 15s par défaut dans le client, on peut le surcharger ici)
-BICTORYS_TIMEOUT = config("BICTORYS_TIMEOUT", default=30, cast=int)
-
 # ==============================
 # JAZZMIN
 # ==============================
@@ -268,7 +262,7 @@ JAZZMIN_SETTINGS = {
     "login_logo_dark": "images/logo.png",
     "site_logo": "images/logo.png",
     "theme": "darkly",
-    "show_ui_builder": False,  # Désactivé pour la prod
+    "show_ui_builder": True,
     "topmenu_links": [
         {"name": "Accueil", "url": "dashboard:home", "permissions": ["auth.view_user"]},
         {"model": "accounts.User"},
