@@ -1,5 +1,3 @@
-# payments/bictorys_client.py
-
 import logging
 from decimal import Decimal
 from typing import Any
@@ -13,33 +11,30 @@ logger = logging.getLogger(__name__)
 
 class BictorysClient:
     """
-    Client simple pour l'intégration Checkout de Bictorys.
+    Client simple pour l'intégration Checkout de Bictorys (côté backend).
 
-    - POST /pay/v1/charges avec la clé PUBLIQUE (X-Api-Key)
+    - POST /pay/v1/charges avec la CLÉ SECRÈTE (X-API-Key)
     - Si payment_type est omis : redirection vers la page Checkout Bictorys
       où le client choisit (carte, OM, Wave, etc.)
     """
 
     def __init__(self) -> None:
-        # URL de base : .env peut définir soit BICTORYS_BASE_URL soit BICTORYS_API_BASE_URL.
+        # URL de base : BICTORYS_BASE_URL doit être défini dans .env
         raw_base_url = (
             getattr(settings, "BICTORYS_BASE_URL", None)
-            or getattr(settings, "BICTORYS_API_BASE_URL", "https://api.test.bictorys.com")
+            or "https://api.test.bictorys.com"  # fallback de sécurité
         )
         # On supprime un éventuel "/" final pour éviter les "//" dans les URLs
         self.base_url = raw_base_url.rstrip("/")
 
-        # Clé publique Bictorys (obligatoire pour /pay/v1/charges en Checkout)
-        self.public_key = getattr(settings, "BICTORYS_PUBLIC_KEY", "")
+        # Clé SECRÈTE Bictorys pour les appels serveur -> API
+        self.api_key = getattr(settings, "BICTORYS_SECRET_KEY", "")
 
         # Timeout pour les appels HTTP
         self.timeout = getattr(settings, "BICTORYS_TIMEOUT", 15)
 
     def _build_payment_reference(self, paiement) -> str:
-        """
-        Référence utilisée par Bictorys et renvoyée dans le webhook.
-        Exemple: BWHITE_PAY_42
-        """
+        """Référence utilisée par Bictorys et renvoyée dans le webhook."""
         return f"BWHITE_PAY_{paiement.pk}"
 
     def initier_paiement(
@@ -54,8 +49,8 @@ class BictorysClient:
         - Retourne l'URL de redirection si succès
         - Retourne None en cas d'erreur
         """
-        if not self.public_key:
-            logger.error("BICTORYS_PUBLIC_KEY n'est pas configurée")
+        if not self.api_key:
+            logger.error("BICTORYS_SECRET_KEY n'est pas configurée")
             return None
 
         # On s'assure que le PaiementApporteur a un ID
@@ -76,11 +71,10 @@ class BictorysClient:
 
         # URLs de redirection après le paiement (interface Bictorys)
         success_url = request.build_absolute_uri(reverse("payments:mes_paiements"))
-        # Tu pourras mettre une page dédiée "échec" plus tard
-        error_url = success_url
+        error_url = success_url  # TODO: page dédiée "échec" si besoin
 
         # ==========================
-        # Construction du customerObject
+        # customerObject
         # ==========================
         client = paiement.contrat.client
         customer_obj: dict[str, str] = {}
@@ -93,7 +87,7 @@ class BictorysClient:
 
         phone = getattr(client, "telephone", "") or getattr(client, "phone", "")
         if phone:
-            phone_str = str(phone).strip()
+            phone_str = str(phone).strip().replace(" ", "")
             if not phone_str.startswith("+"):
                 phone_str = f"+221{phone_str}"
             customer_obj["phone"] = phone_str
@@ -102,13 +96,12 @@ class BictorysClient:
         if email:
             customer_obj["email"] = email
 
-        # Pays & locale par défaut si on a un customerObject
         if customer_obj:
             customer_obj.setdefault("country", "SN")
             customer_obj.setdefault("locale", "fr-FR")
 
         # ==========================
-        # Corps JSON conforme Checkout
+        # Corps JSON
         # ==========================
         data: dict[str, Any] = {
             "amount": amount,
@@ -118,24 +111,20 @@ class BictorysClient:
             "errorRedirectUrl": error_url,
         }
 
-        # merchantReference : identifiant interne (ici, l'id du contrat)
         contrat = getattr(paiement, "contrat", None)
         if contrat is not None and getattr(contrat, "id", None) is not None:
+            # Assurons-nous que c'est bien une string propre
             data["merchantReference"] = str(contrat.id)
 
         if customer_obj:
             data["customerObject"] = customer_obj
-            # Si tu veux que Bictorys puisse mettre à jour le profil client :
-            # data["allowUpdateCustomer"] = True
-            data["allowUpdateCustomer"] = False
+            data["allowUpdateCustomer"] = True
 
         # ==========================
         # Query params (payment_type facultatif)
-        # Pour un pur Checkout, NE PAS envoyer payment_type.
         # ==========================
         params: dict[str, str] = {}
         if payment_type:
-            # ex: "card", "orange_money", "mtn_money", "free_money"
             params["payment_type"] = payment_type
 
         # ==========================
@@ -148,7 +137,7 @@ class BictorysClient:
                 json=data,
                 headers={
                     "Content-Type": "application/json",
-                    "X-Api-Key": self.public_key,
+                    "X-API-Key": self.api_key,
                 },
                 timeout=self.timeout,
             )
@@ -167,7 +156,6 @@ class BictorysClient:
         payload = resp.json()
         logger.info("Réponse Bictorys /charges : %s", payload)
 
-        # URL de paiement retournée par Bictorys
         payment_url = (
             payload.get("redirectUrl")
             or payload.get("checkoutUrl")
@@ -177,16 +165,13 @@ class BictorysClient:
             logger.error("Réponse Bictorys sans URL de paiement : %s", payload)
             return None
 
-        # ID de la charge
         charge_id = payload.get("id") or payload.get("chargeId")
 
-        # opToken (souvent dans un objet de type CheckoutLinkObject)
         op_token = payload.get("opToken")
         if not op_token:
             checkout = payload.get("checkoutLinkObject") or {}
             op_token = checkout.get("opToken")
 
-        # On stocke ce qu'on a dans le PaiementApporteur
         update_fields = ["updated_at"]
         if charge_id:
             paiement.reference_transaction = charge_id
@@ -207,8 +192,8 @@ class BictorysClient:
 
         Nécessite reference_transaction (chargeId) ET op_token.
         """
-        if not self.public_key:
-            logger.error("BICTORYS_PUBLIC_KEY n'est pas configurée")
+        if not self.api_key:
+            logger.error("BICTORYS_SECRET_KEY n'est pas configurée")
             return None
 
         if not paiement.reference_transaction or not paiement.op_token:
@@ -224,8 +209,8 @@ class BictorysClient:
                 f"{self.base_url}/pay/v1/charges/{paiement.reference_transaction}",
                 headers={
                     "Accept": "application/json",
-                    "X-Api-Key": self.public_key,
-                    "Op-Token": paiement.op_token,  # utilisation de l'opToken
+                    "X-API-Key": self.api_key,
+                    "Op-Token": paiement.op_token,
                 },
                 timeout=self.timeout,
             )

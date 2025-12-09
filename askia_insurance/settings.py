@@ -247,10 +247,10 @@ BUSINESS = {
 # ==============================
 BICTORYS_BASE_URL = config("BICTORYS_BASE_URL", default="https://api.bictorys.com")
 BICTORYS_PUBLIC_KEY = config("BICTORYS_PUBLIC_KEY")
-# La clé secrète indispensable pour éviter l'erreur 401 :
 BICTORYS_SECRET_KEY = config("BICTORYS_SECRET_KEY")
-# Optionnel : pour les webhooks plus tard
 BICTORYS_WEBHOOK_SECRET = config("BICTORYS_WEBHOOK_SECRET", default="")
+BICTORYS_TIMEOUT = config("BICTORYS_TIMEOUT", default=30, cast=int)
+
 # ==============================
 # JAZZMIN
 # ==============================
