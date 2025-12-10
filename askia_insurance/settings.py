@@ -240,7 +240,7 @@ FEATURES = {
 }
 
 BUSINESS = {
-    "SERVICE_PHONE": config("SERVICE_PHONE", default="770000000"),
+    "SERVICE_PHONE": config("SERVICE_PHONE", default="780103636"),
 }
 # ==============================
 # BICTORYS

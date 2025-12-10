@@ -95,7 +95,9 @@
         </style>
         {% block extra_css %}{% endblock %}
     </head>
-
+    {% block banner %}
+    {% include "includes/_top_banner.html" %}
+    {% endblock %}
     <body class="min-h-screen flex flex-col items-center justify-center relative p-4 selection:bg-green-500/30 selection:text-white">
         <script src="https://cdn.tailwindcss.com"></script>
 
