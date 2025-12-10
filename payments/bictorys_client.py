@@ -18,42 +18,30 @@ class BictorysClient:
     """
 
     def __init__(self) -> None:
-        # URL de base : Si non définie dans .env, on utilise la PROD par défaut
         raw_base_url = (
-                getattr(settings, "BICTORYS_BASE_URL", None)
-                or "https://api.bictorys.com"
+            getattr(settings, "BICTORYS_BASE_URL", None)
+            or "https://api.bictorys.com"
         )
-        # On supprime un éventuel "/" final pour éviter les "//" dans les URLs
         self.base_url = raw_base_url.rstrip("/")
 
-        # Clé SECRÈTE Bictorys pour les appels serveur -> API
         self.api_key = getattr(settings, "BICTORYS_SECRET_KEY", "")
-
-        # Timeout pour les appels HTTP
         self.timeout = getattr(settings, "BICTORYS_TIMEOUT", 15)
 
-        # --- LOGS DE DÉBOGAGE AU DÉMARRAGE DU CLIENT ---
-        logger.info("=== DEBUG BICTORYS ===")
-        logger.info("Base URL utilisée: %s", self.base_url)
-        logger.info("API Key présente: %s", bool(self.api_key))
-        if self.api_key:
-            masked_key = self.api_key[:10] + "..." if len(self.api_key) > 10 else "***"
-            logger.info("API Key preview: %s", masked_key)
-        else:
-            logger.warning("ATTENTION: API Key VIDE")
-
-        logger.info("Endpoint cible: %s/pay/v1/charges", self.base_url)
-        logger.info("======================")
+        logger.info(
+            "[payments.bictorys_client] Base URL: %s | API Key existe: %s",
+            self.base_url,
+            bool(self.api_key),
+        )
 
     def _build_payment_reference(self, paiement) -> str:
         """Référence utilisée par Bictorys et renvoyée dans le webhook."""
         return f"BWHITE_PAY_{paiement.pk}"
 
     def initier_paiement(
-            self,
-            paiement,
-            request,
-            payment_type: str | None = None,
+        self,
+        paiement,
+        request,
+        payment_type: str | None = None,
     ) -> str | None:
         """
         Crée la charge Checkout et renvoie l'URL de paiement Bictorys.
@@ -143,7 +131,10 @@ class BictorysClient:
         # ==========================
         # Appel HTTP vers /pay/v1/charges
         # ==========================
-        logger.info("Envoi requête Bictorys (POST /charges) pour Ref: %s", payment_reference)
+        logger.info(
+            "Envoi requête Bictorys (POST /charges) pour Ref: %s",
+            payment_reference,
+        )
 
         try:
             resp = requests.post(
@@ -173,13 +164,12 @@ class BictorysClient:
         logger.info("Réponse Bictorys /charges : %s", payload)
 
         # URL de paiement retournée par Bictorys
-        # On vérifie tous les champs possibles renvoyés par l'API
         payment_url = (
-                payload.get("link")
-                or payload.get("redirectUrl")
-                or payload.get("checkoutUrl")
-                or payload.get("url")
-                or (payload.get("checkoutLinkObject") or {}).get("link")
+            payload.get("link")
+            or payload.get("redirectUrl")
+            or payload.get("checkoutUrl")
+            or payload.get("url")
+            or (payload.get("checkoutLinkObject") or {}).get("link")
         )
 
         if not payment_url:
