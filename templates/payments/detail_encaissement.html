@@ -1,184 +1,212 @@
 {% extends "base.html" %}
 {% load humanize %}
+{% load widget_tweaks %} {# Ajout nécessaire pour styliser les champs du formulaire #}
 
 {% block title %}Détail encaissement{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
-    <h1 class="text-2xl font-bold text-white flex items-center gap-3">
-        <i class="fas fa-file-invoice-dollar text-primary-green"></i>
-        <span>Détail encaissement</span>
-    </h1>
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+            <i class="fas fa-file-invoice-dollar text-primary-green"></i>
+            <span>Détail encaissement</span>
+        </h1>
+        <a href="{% url 'payments:liste_encaissements' %}"
+           class="text-gray-400 hover:text-white text-sm flex items-center gap-2 transition">
+            <i class="fas fa-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
 
-    <!-- Bloc principal -->
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-6">
-        <div class="grid md:grid-cols-2 gap-5 text-sm">
-            <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Contrat</p>
-                <p class="text-white font-semibold">
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-6 shadow-lg">
+        <div class="grid md:grid-cols-2 gap-6 text-sm">
+            <div class="space-y-1">
+                <p class="text-gray-500 text-xs uppercase tracking-wider font-bold">Contrat</p>
+                <a href="{% url 'contracts:detail_contrat' paiement.contrat.pk %}"
+                   class="text-white font-semibold hover:text-primary-green transition block text-lg">
                     {{ paiement.contrat.numero_police|default:"SIMULATION" }}
-                </p>
-                <p class="text-gray-400 text-xs mt-1">
+                </a>
+                <p class="text-gray-500 text-xs">
                     Créé le {{ paiement.contrat.created_at|date:"d/m/Y H:i" }}
                 </p>
             </div>
-            <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Client</p>
-                <p class="text-white font-semibold">
+
+            <div class="space-y-1">
+                <p class="text-gray-500 text-xs uppercase tracking-wider font-bold">Client</p>
+                <p class="text-white font-semibold text-lg">
                     {{ paiement.contrat.client.nom_complet }}
                 </p>
-                <p class="text-gray-400 text-xs mt-1">
+                <p class="text-gray-400 text-xs">
                     {{ paiement.contrat.client.telephone }}
                 </p>
             </div>
-            <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Apporteur</p>
+
+            <div class="space-y-1">
+                <p class="text-gray-500 text-xs uppercase tracking-wider font-bold">Apporteur</p>
                 <p class="text-white font-semibold">
                     {{ paiement.contrat.apporteur.get_full_name }}
                 </p>
-                <p class="text-gray-400 text-xs mt-1">
+                <p class="text-gray-400 text-xs">
                     {{ paiement.contrat.apporteur.email }}
                 </p>
             </div>
-            <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Montants</p>
-                <p class="text-gray-300">
-                    Prime TTC :
+
+            <div class="space-y-1 bg-gray-800/50 p-3 rounded-lg border border-gray-700/50">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-gray-400">Prime TTC :</span>
                     <span class="text-green-400 font-semibold">
                         {{ paiement.contrat.prime_ttc|floatformat:0|intcomma }} F
                     </span>
-                </p>
-                <p class="text-gray-300">
-                    Net à reverser / dû :
-                    <span class="text-blue-400 font-semibold">
+                </div>
+                <div class="flex justify-between items-center border-t border-gray-700 pt-1 mt-1">
+                    <span class="text-gray-300 font-medium">Net à reverser :</span>
+                    <span class="text-blue-400 font-bold text-lg">
                         {{ paiement.montant_a_payer|floatformat:0|intcomma }} F
-                    </span>
-                </p>
-            </div>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-5 text-sm">
-            <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Statut encaissement</p>
-                <div class="flex items-center gap-2">
-                    {% if paiement.status == "PAYE" %}
-                        <span class="px-2 py-1 rounded-full text-xs bg-green-500/10 text-green-400 border border-green-500/40">
-                            Payé
-                        </span>
-                    {% elif paiement.status == "EN_ATTENTE" %}
-                        <span class="px-2 py-1 rounded-full text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/40">
-                            En attente
-                        </span>
-                    {% else %}
-                        <span class="px-2 py-1 rounded-full text-xs bg-red-500/10 text-red-400 border border-red-500/40">
-                            Annulé
-                        </span>
-                    {% endif %}
-                    <span class="text-gray-400 text-xs">
-                        Mis à jour le {{ paiement.updated_at|date:"d/m/Y H:i" }}
                     </span>
                 </div>
             </div>
+        </div>
+
+        <hr class="border-gray-800">
+
+        <div class="grid md:grid-cols-2 gap-6 text-sm">
             <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Montant payé</p>
-                <p class="text-green-400 font-bold text-base">
-                    {{ paiement.montant_paye|floatformat:0|intcomma }} F
+                <p class="text-gray-500 text-xs uppercase tracking-wider font-bold mb-2">Statut actuel</p>
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        {% if paiement.status == "PAYE" %}
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-400 border border-green-500/40 flex items-center gap-2">
+                                <i class="fas fa-check-circle"></i> Payé
+                            </span>
+                        {% elif paiement.status == "EN_ATTENTE" %}
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/40 flex items-center gap-2">
+                                <i class="fas fa-clock"></i> En attente
+                            </span>
+                        {% else %}
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/40 flex items-center gap-2">
+                                <i class="fas fa-ban"></i> Annulé
+                            </span>
+                        {% endif %}
+                    </div>
+                    <span class="text-gray-500 text-xs">
+                        Dernière mise à jour : {{ paiement.updated_at|date:"d/m/Y à H:i" }}
+                    </span>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Montant réellement payé</p>
+                <p class="text-2xl font-bold text-white tracking-tight">
+                    {{ paiement.montant_paye|floatformat:0|intcomma }} <span class="text-sm text-gray-400 font-normal">F CFA</span>
                 </p>
             </div>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-5 text-sm">
+        <hr class="border-gray-800">
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-gray-950/30 p-4 rounded-lg">
             <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Méthode de paiement</p>
-                <p class="text-gray-100">
+                <p class="text-gray-500 text-xs mb-1">Méthode</p>
+                <p class="text-gray-200 font-medium break-words">
                     {{ paiement.methode_paiement|default:"-" }}
                 </p>
             </div>
             <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Référence transaction</p>
-                <p class="text-gray-100">
+                <p class="text-gray-500 text-xs mb-1">Référence</p>
+                <p class="text-gray-200 font-medium break-words font-mono text-xs">
                     {{ paiement.reference_transaction|default:"-" }}
                 </p>
             </div>
             <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">N° compte / Wallet</p>
-                <p class="text-gray-100">
+                <p class="text-gray-500 text-xs mb-1">Compte / Wallet</p>
+                <p class="text-gray-200 font-medium break-words">
                     {{ paiement.numero_compte|default:"-" }}
                 </p>
             </div>
             <div>
-                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Notes</p>
-                <p class="text-gray-100">
+                <p class="text-gray-500 text-xs mb-1">Notes</p>
+                <p class="text-gray-200 font-medium italic">
                     {{ paiement.notes|default:"-" }}
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- Historique -->
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 space-y-3">
-        <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 space-y-4 shadow-lg">
+        <h2 class="text-lg font-semibold text-white flex items-center gap-2 border-b border-gray-800 pb-3">
             <i class="fas fa-history text-primary-green"></i>
             Historique des actions
         </h2>
-        <div class="divide-y divide-gray-800">
+        <div class="space-y-4">
             {% for h in paiement.historiques.all %}
-                <div class="py-3 text-sm flex items-start justify-between gap-4">
-                    <div>
-                        <p class="text-gray-200">
-                            <span class="font-semibold">{{ h.get_action_display }}</span>
+                <div class="flex gap-3 text-sm relative pl-4 border-l-2 border-gray-800 last:border-0">
+                    <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-700 border border-gray-900"></div>
+
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <p class="text-gray-200 font-medium">
+                                {{ h.get_action_display }}
+                            </p>
+                            <span class="text-xs text-gray-500 whitespace-nowrap">
+                                {{ h.created_at|date:"d/m/Y H:i" }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-0.5">
+                            Par :
                             {% if h.effectue_par %}
-                                · <span class="text-gray-300">{{ h.effectue_par.get_full_name }}</span>
+                                <span class="text-blue-300">{{ h.effectue_par.get_full_name }}</span>
                             {% else %}
-                                · <span class="text-gray-500 italic">Système / API</span>
+                                <span class="text-purple-300 italic">Système / API</span>
                             {% endif %}
                         </p>
                         {% if h.details %}
-                            <p class="text-gray-400 text-xs mt-1">{{ h.details }}</p>
+                            <p class="text-gray-500 text-xs mt-2 bg-gray-950 p-2 rounded border border-gray-800">
+                                {{ h.details }}
+                            </p>
                         {% endif %}
-                    </div>
-                    <div class="text-xs text-gray-500 whitespace-nowrap">
-                        {{ h.created_at|date:"d/m/Y H:i" }}
                     </div>
                 </div>
             {% empty %}
-                <p class="text-gray-500 text-sm py-2">
-                    Aucun historique enregistré pour cet encaissement.
+                <p class="text-gray-500 text-sm italic text-center py-2">
+                    Aucun historique enregistré.
                 </p>
             {% endfor %}
         </div>
     </div>
 
-    <!-- Validation manuelle staff -->
     {% if paiement.est_en_attente and user.is_staff %}
-        <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 space-y-4 form-dark-theme">
-            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-                <i class="fas fa-check-circle text-primary-green"></i>
-                Validation manuelle du paiement
-            </h2>
-            <p class="text-sm text-gray-400">
-                À utiliser uniquement en cas de régularisation manuelle (paiement confirmé hors Bictorys).
-            </p>
+        <div class="bg-gray-900 rounded-xl border border-gray-700 p-6 space-y-5 shadow-xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-primary-green/5 rounded-full blur-3xl pointer-events-none"></div>
 
-            <form method="post" action="{% url 'payments:valider_encaissement' paiement.id %}">
+            <div class="relative">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fas fa-tools text-primary-green"></i>
+                    Zone Administrative : Validation manuelle
+                </h2>
+                <p class="text-sm text-gray-400 mt-1">
+                    Utilisez ce formulaire <strong class="text-gray-300">uniquement</strong> si vous avez reçu le paiement par un autre moyen (Espèces, Virement direct, Chèque) et souhaitez régulariser le dossier.
+                </p>
+            </div>
+
+            <form method="post" action="{% url 'payments:valider_encaissement' paiement.id %}" class="space-y-4">
                 {% csrf_token %}
-                <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <div class="grid md:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-1.5">
-                            Méthode de paiement
+                            Méthode de paiement <span class="text-red-500">*</span>
                         </label>
-                        {{ vform.methode_paiement }}
+                        {% render_field vform.methode_paiement class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary-green focus:ring-1 focus:ring-primary-green transition shadow-sm" placeholder="Ex: Espèces, Virement..." %}
                         {% if vform.methode_paiement.errors %}
                             <p class="text-red-400 text-xs mt-1">
                                 {{ vform.methode_paiement.errors.0 }}
                             </p>
                         {% endif %}
                     </div>
+
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-1.5">
-                            Référence transaction
+                            Référence / Preuve <span class="text-red-500">*</span>
                         </label>
-                        {{ vform.reference_transaction }}
+                        {% render_field vform.reference_transaction class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary-green focus:ring-1 focus:ring-primary-green transition shadow-sm" placeholder="Ex: RECU-00123" %}
                         {% if vform.reference_transaction.errors %}
                             <p class="text-red-400 text-xs mt-1">
                                 {{ vform.reference_transaction.errors.0 }}
@@ -187,15 +215,11 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-3 pt-4">
-                    <a href="{% url 'payments:liste_encaissements' %}"
-                       class="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
-                        Annuler
-                    </a>
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-800 mt-4">
                     <button type="submit"
-                            class="px-5 py-2 rounded-lg bg-green-600 text-white font-bold hover:bg-green-500 shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 text-sm">
+                            class="px-6 py-2.5 rounded-lg bg-green-600 text-white font-bold hover:bg-green-500 shadow-lg shadow-green-900/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 text-sm">
                         <i class="fas fa-check-circle"></i>
-                        Valider le paiement
+                        Confirmer le paiement manuel
                     </button>
                 </div>
             </form>

@@ -43,12 +43,11 @@
         <i class="fas fa-chevron-down text-gray-400 text-sm"></i>
     </button>
 
-    <div id="filters-admin"
-         class="hidden border-t border-gray-800 px-5 py-5 bg-gray-900/50 animate-fadeIn">
+    <div id="filters-admin" class="hidden border-t border-gray-800 px-5 py-5 bg-gray-900/50 animate-fadeIn">
 
-        <form id="form-filtres-admin"
-              method="get"
-              class="grid grid-cols-1 md:grid-cols-3 gap-5 form-dark-theme"> <div>
+        <form id="form-filtres-admin" method="get" class="grid grid-cols-1 md:grid-cols-3 gap-5 form-dark-theme">
+
+            <div>
                 <label class="block text-gray-300 text-sm font-medium mb-1.5">Période</label>
                 <div class="relative">
                     <select name="periode">
@@ -64,7 +63,7 @@
             </div>
 
             <div>
-                <label class="block text-gray-300 text-sm font-medium mb-1.5">Statut</label>
+                <label class="block text-gray-300 text-sm font-medium mb-1.5">Statut Contrat</label>
                 <div class="relative">
                     <select name="statut">
                         <option value="">-- Tous --</option>
@@ -84,8 +83,7 @@
                     <select name="apporteur">
                         <option value="">Tous</option>
                         {% for a in apporteurs %}
-                            <option value="{{ a.id }}"
-                                    {% if apporteur_id == a.id|stringformat:'s' %}selected{% endif %}>
+                            <option value="{{ a.id }}" {% if apporteur_id == a.id|stringformat:'s' %}selected{% endif %}>
                                 {{ a.get_full_name }}
                             </option>
                         {% endfor %}
@@ -98,16 +96,12 @@
 
             <div>
                 <label class="block text-gray-300 text-sm font-medium mb-1.5">Date début</label>
-                <input type="date"
-                       name="date_debut"
-                       value="{{ date_debut|date:'Y-m-d' }}">
+                <input type="date" name="date_debut" value="{{ date_debut|date:'Y-m-d' }}">
             </div>
 
             <div>
                 <label class="block text-gray-300 text-sm font-medium mb-1.5">Date fin</label>
-                <input type="date"
-                       name="date_fin"
-                       value="{{ date_fin|date:'Y-m-d' }}">
+                <input type="date" name="date_fin" value="{{ date_fin|date:'Y-m-d' }}">
             </div>
 
             <div class="md:col-span-3 md:w-2/3">
@@ -121,7 +115,8 @@
                                name="search"
                                value="{{ search }}"
                                placeholder="Immatriculation, Nom, Prénom..."
-                               style="padding-left: 2.5rem;"> </div>
+                               style="padding-left: 2.5rem;">
+                    </div>
                     {% if search %}
                         <a href="{% url 'dashboard:home' %}"
                            class="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"

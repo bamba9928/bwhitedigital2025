@@ -41,14 +41,13 @@ class PaiementApporteur(models.Model):
         default="EN_ATTENTE",
     )
 
-    # Libre : valeur renvoyée par Bictorys (WAVE-SN, OM-SN, CARD, etc.)
     methode_paiement = models.CharField(
         max_length=50,
         blank=True,
         verbose_name="Méthode utilisée",
         help_text="Renseignée automatiquement par Bictorys ou lors d'une validation manuelle.",
     )
-    # Nouveau champ
+
     op_token = models.CharField(
         max_length=128,
         blank=True,
@@ -61,14 +60,14 @@ class PaiementApporteur(models.Model):
         blank=True,
         validators=[
             RegexValidator(
-                regex=r"^[0-9A-Za-z-]{6,64}$",
+                # ✅ underscore autorisé
+                regex=r"^[0-9A-Za-z_-]{6,64}$",
                 message="Référence alphanumérique de 6-64 caractères.",
             )
         ],
         help_text="ID ou référence de transaction renvoyée par Bictorys / la banque.",
     )
 
-    # Optionnel, alimenté par le callback (MSISDN, PAN masqué, etc.)
     numero_compte = models.CharField(
         max_length=32,
         blank=True,
@@ -116,24 +115,22 @@ class PaiementApporteur(models.Model):
             return None
 
         contrat = self.contrat
-        apporteur = contrat.apporteur
 
-        # 1. Récupération des valeurs
         prime_ttc = getattr(contrat, "prime_ttc", Decimal("0.00")) or Decimal("0.00")
 
-        # 2. Si c'est un ADMIN ou COMMERCIAL qui a fait le contrat
-        # Il doit encaisser le client et tout reverser (sauf si logique spécifique de caisse)
-        # Ici on assume qu'il reverse tout le TTC à la caisse centrale
+        # ✅ fix: apporteur peut être None
+        apporteur = getattr(contrat, "apporteur", None)
+        if not apporteur:
+            return prime_ttc
+
         if getattr(apporteur, "role", "") in ["ADMIN", "COMMERCIAL"]:
             return prime_ttc
 
-        # 3. Si c'est un APPORTEUR
-        # Il garde sa commission à la source et paie le reste
-        commission_apporteur = getattr(contrat, "commission_apporteur", Decimal("0.00")) or Decimal("0.00")
-
+        commission_apporteur = (
+            getattr(contrat, "commission_apporteur", Decimal("0.00")) or Decimal("0.00")
+        )
         montant_du = prime_ttc - commission_apporteur
 
-        # Sécurité : ne jamais retourner un montant négatif
         return max(montant_du, Decimal("0.00"))
 
     def clean(self):
@@ -147,7 +144,6 @@ class PaiementApporteur(models.Model):
         if self.montant_a_payer is None:
             return
 
-        # Tolérance d'arrondi
         if (self.montant_a_payer - montant_attendu).copy_abs() > Decimal("0.01"):
             raise ValidationError(
                 f"Incohérent. Montant attendu : {montant_attendu} (contrat {self.contrat_id})"
@@ -159,9 +155,9 @@ class PaiementApporteur(models.Model):
         si on crée l'objet ou si le montant est encore à 0.
         """
         if self.contrat_id and (
-                self._state.adding
-                or self.montant_a_payer is None
-                or self.montant_a_payer == Decimal("0.00")
+            self._state.adding
+            or self.montant_a_payer is None
+            or self.montant_a_payer == Decimal("0.00")
         ):
             attendu = self._get_montant_attendu()
             if attendu is not None:
@@ -186,7 +182,6 @@ class PaiementApporteur(models.Model):
 
     @property
     def montant_paye(self) -> Decimal:
-        """Montant effectivement payé (0 si non PAYE)."""
         return self.montant_a_payer if self.est_paye else Decimal("0.00")
 
     # -----------------------------
@@ -194,18 +189,14 @@ class PaiementApporteur(models.Model):
     # -----------------------------
     @transaction.atomic
     def marquer_comme_paye(
-            self,
-            methode: str,
-            reference: str,
-            numero_client: str = "",
-            validated_by=None,
+        self,
+        methode: str,
+        reference: str,
+        numero_client: str = "",
+        validated_by=None,
     ) -> None:
         """
         Transition vers PAYÉ avec historique.
-
-        Typiquement appelée depuis :
-        - le webhook Bictorys
-        - ou une validation manuelle staff (régularisation).
         """
         if self.est_paye:
             raise ValueError("Déjà payé")
@@ -223,6 +214,9 @@ class PaiementApporteur(models.Model):
             self.numero_compte = str(numero_client).strip()[:32]
 
         self.status = "PAYE"
+
+        # ✅ fix: exécute validators (RegexValidator, MinValue, constraints, + clean())
+        self.full_clean()
 
         self.save(
             update_fields=[
@@ -271,7 +265,8 @@ class HistoriquePaiement(models.Model):
         verbose_name = "Historique encaissement"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["paiement", "-created_at"]),
+            # ✅ fix: index simple et compatible
+            models.Index(fields=["paiement", "created_at"]),
         ]
 
     def __str__(self):

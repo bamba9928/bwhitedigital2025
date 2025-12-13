@@ -78,45 +78,37 @@ def mes_paiements(request):
 def declarer_paiement(request, contrat_id):
     """
     Récap + bouton 'Payer maintenant' (Checkout Bictorys).
-
-    Règles :
-    - l'apporteur ne peut payer que si le contrat est au moins EMIS
-      (EMIS / ACTIF / EXPIRE)
-    - l'émission Askia n'est PAS bloquée par le paiement
+    Si déjà payé : affiche le reçu.
     """
     contrat = get_object_or_404(
         Contrat.objects.select_related("apporteur", "client"), pk=contrat_id
     )
 
-    # Sécurité : appartenance du contrat (un apporteur ne peut payer que ses contrats)
+    # Sécurité : appartenance du contrat
     if getattr(request.user, "role", "") == "APPORTEUR" and contrat.apporteur != request.user:
         messages.error(request, "Vous n'avez pas accès à ce contrat.")
         return redirect("accounts:profile")
 
-    # Contrat doit être déjà émis côté métier
+    # Le contrat doit être émis pour pouvoir payer
     if contrat.status not in ("EMIS", "ACTIF", "EXPIRE"):
         messages.error(
             request,
-            "Ce contrat n'est pas encore émis. "
-            "Vous pourrez payer le net à reverser une fois le contrat émis.",
+            "Ce contrat n'est pas encore émis. Vous pourrez payer le net à reverser une fois le contrat émis.",
         )
         return redirect("payments:mes_paiements")
 
+    # Calcul du montant attendu
     montant_attendu = Decimal("0.00")
-
-    # On sécurise les accès aux champs
     prime_ttc = getattr(contrat, "prime_ttc", Decimal("0.00")) or Decimal("0.00")
     com_apporteur = getattr(contrat, "commission_apporteur", Decimal("0.00")) or Decimal("0.00")
 
     if getattr(request.user, "role", "") == "APPORTEUR":
         # Apporteur : TTC - sa commission
         montant_attendu = prime_ttc - com_apporteur
-
     elif request.user.is_staff:
-        # Admin / Commercial : doit reverser la totalité du TTC
+        # Admin / Commercial : Totalité du TTC
         montant_attendu = prime_ttc
 
-    # Sécurité anti-négatif
     montant_attendu = max(montant_attendu, Decimal("0.00"))
 
     # Création ou récupération du paiement
@@ -128,23 +120,17 @@ def declarer_paiement(request, contrat_id):
         },
     )
 
-    if paiement.est_en_attente and abs(paiement.montant_a_payer - montant_attendu) > Decimal("1.00"):
+    # Mise à jour du montant si nécessaire (et si pas encore payé)
+    if not paiement.est_paye and abs(paiement.montant_a_payer - montant_attendu) > Decimal("1.00"):
         paiement.montant_a_payer = montant_attendu
         paiement.save(update_fields=["montant_a_payer"])
-
-    if paiement.est_paye:
-        messages.info(request, "Ce contrat est déjà payé.")
-        return redirect("payments:mes_paiements")
-
     if paiement.est_annule:
         messages.error(
             request,
-            "Ce paiement a été annulé. Contactez l'administration pour plus d'informations.",
+            "Ce paiement a été annulé. Contactez l'administration.",
         )
         return redirect("payments:mes_paiements")
-
-    # Clic sur "Payer maintenant" → Bictorys
-    if request.method == "POST":
+    if request.method == "POST" and not paiement.est_paye:
         payment_url = bictorys_client.initier_paiement(paiement, request)
         if payment_url:
             return redirect(payment_url)
@@ -154,7 +140,7 @@ def declarer_paiement(request, contrat_id):
             "Impossible d'initialiser le paiement avec Bictorys. Réessayez plus tard.",
         )
 
-    # Affichage récap + bouton
+    # Affichage (Formulaire de paiement OU Reçu si payé)
     return render(
         request,
         "payments/declarer_paiement.html",
@@ -163,7 +149,6 @@ def declarer_paiement(request, contrat_id):
             "paiement": paiement,
         },
     )
-
 # -----------------------------
 # Staff : liste des encaissements
 # -----------------------------

@@ -39,20 +39,24 @@
                 <th class="px-4 py-3 text-center text-gray-400 font-medium">Action</th>
             </tr>
             </thead>
+
             <tbody class="divide-y divide-gray-800">
             {% for p in paiements %}
                 <tr class="hover:bg-gray-800/60">
                     <td class="px-4 py-3 text-white">
                         {{ p.contrat.numero_police|default:"SIMULATION" }}
                     </td>
+
                     <td class="px-4 py-3 text-gray-200">
                         {{ p.contrat.client.nom_complet }}
                     </td>
+
                     <td class="px-4 py-3 text-right">
                         <span class="text-blue-400 font-semibold">
                             {{ p.montant_a_payer|floatformat:0|intcomma }} F
                         </span>
                     </td>
+
                     <td class="px-4 py-3 text-center">
                         {% if p.status == "PAYE" %}
                             <span class="px-2 py-1 rounded-full text-xs bg-green-500/10 text-green-400 border border-green-500/40">
@@ -68,25 +72,50 @@
                             </span>
                         {% endif %}
                     </td>
+
                     <td class="px-4 py-3 text-gray-300">
                         {{ p.methode_paiement|default:"-" }}
                         {% if p.reference_transaction %}
                             • <span class="text-gray-400">{{ p.reference_transaction }}</span>
                         {% endif %}
                     </td>
+
                     <td class="px-4 py-3 text-center text-gray-400">
                         {{ p.updated_at|date:"d/m/Y H:i" }}
                     </td>
+
+                    {# ======================= #}
+                    {# COLONNE ACTIONS (CORRIGÉE) #}
+                    {# ======================= #}
                     <td class="px-4 py-3 text-center">
-                        {% if p.status == "EN_ATTENTE" %}
+                        {% if p.est_paye or p.status == "PAYE" %}
+                            {# CAS 1 : Déjà payé #}
+                            <div class="flex items-center justify-center gap-2">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-500/10 text-green-400 border border-green-500/40 cursor-default">
+                                    <i class="fas fa-check-circle mr-1"></i> Payé
+                                </span>
+                                {# Bouton Voir détail (lecture seule) #}
+                                <a href="{% url 'payments:declarer_paiement' p.contrat.id %}"
+                                   class="text-gray-500 hover:text-white transition"
+                                   title="Voir le reçu">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+
+                        {% elif p.est_annule or p.status == "ANNULE" %}
+                            {# CAS 2 : Annulé #}
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-500/10 text-red-400 border border-red-500/40 cursor-default">
+                                <i class="fas fa-ban mr-1"></i> Annulé
+                            </span>
+
+                        {% else %}
+                            {# CAS 3 : En attente (Bouton de paiement actif) #}
                             <a href="{% url 'payments:declarer_paiement' p.contrat.id %}"
-                               class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-primary-green text-black text-xs font-semibold hover:bg-green-400 transition"
+                               class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-primary-green text-black text-xs font-semibold hover:bg-green-400 transition shadow-lg shadow-green-900/20"
                                title="Payer maintenant">
                                 <i class="fas fa-credit-card mr-1.5"></i>
                                 Payer
                             </a>
-                        {% else %}
-                            <span class="text-gray-600 text-xs">-</span>
                         {% endif %}
                     </td>
                 </tr>

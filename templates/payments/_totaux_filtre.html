@@ -12,11 +12,18 @@
             {% if request.GET.date_debut %}• du {{ request.GET.date_debut }}{% endif %}
             {% if request.GET.date_fin %}• au {{ request.GET.date_fin }}{% endif %}
         </span>
+
         <span class="px-3 py-1 rounded-full bg-yellow-900/40 text-yellow-300 border border-yellow-800/40">
             Total en attente: {{ total_attente|default_if_none:0|floatformat:0|intcomma }} F
         </span>
+
         <span class="px-3 py-1 rounded-full bg-green-900/40 text-green-300 border border-green-800/40">
             Total payé: {{ total_paye|default_if_none:0|floatformat:0|intcomma }} F
+        </span>
+
+        {# AJOUT DU TOTAL ANNULÉ #}
+        <span class="px-3 py-1 rounded-full bg-red-900/40 text-red-300 border border-red-800/40">
+            Total annulé: {{ total_annule|default_if_none:0|floatformat:0|intcomma }} F
         </span>
     </div>
 </div>
