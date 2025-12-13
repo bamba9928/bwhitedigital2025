@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 {% load static %}
+{% block banner %}
+    {% include "includes/_top_banner.html" %}
+{% endblock %}
 <html lang="fr" class="h-full">
     <head>
         <meta charset="UTF-8" />
@@ -95,18 +98,10 @@
         </style>
         {% block extra_css %}{% endblock %}
     </head>
-    {% block banner %}
-    {% include "includes/_top_banner.html" %}
-    {% endblock %}
     <body class="min-h-screen flex flex-col items-center justify-center relative p-4 selection:bg-green-500/30 selection:text-white">
         <script src="https://cdn.tailwindcss.com"></script>
 
-        <header class="fixed top-0 inset-x-0 z-50 pointer-events-none">
-            <div class="mx-auto max-w-7xl p-2 pointer-events-auto">
-            </div>
-        </header>
-
-        <main class="w-full max-w-md z-10">
+        <main class="w-full max-w-md z-10 mt-24">
             <div class="text-center mb-8 animate-[fadeIn_0.5s_ease-out]">
                 <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 brand-chip shadow-2xl shadow-green-500/20 overflow-hidden relative group">
                     <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
