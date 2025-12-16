@@ -1,255 +1,297 @@
 <!DOCTYPE html>
 {% load static %}
-{% block banner %}
-    {% include "includes/_top_banner.html" %}
-{% endblock %}
 <html lang="fr" class="h-full">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-        <title>Connexion | BWHITE DIGITAL</title>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Connexion | BWHITE DIGITAL</title>
 
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
-        <link rel="stylesheet" href="{% static 'css/style.css' %}">
-        <link rel="manifest" href="{% url 'manifest' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
-        <meta name="theme-color" content="#0b1220"> <link rel="apple-touch-icon" sizes="180x180" href="{% static 'icons/apple-touch-icon.png' %}">
-        <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32x32.png' %}">
-        <link rel="icon" type="image/png" sizes="16x16" href="{% static 'icons/favicon-16x16.png' %}">
+    <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
 
-        <style>
-            /* Variables CSS */
-            :root {
-                --brand-accent: #00FF00;
-                --brand-500: #22c55e;
-                --ink-primary: #e5e7eb;
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "primary-green": "#00FF00", // Utilisé dans le banner
+              "brand-dark": "#0b1220",
+              "brand-accent": "#00FF00",
+              "brand-500": "#22c55e"
             }
+          }
+        }
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-            /* Styles de base */
-            body {
-                font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-                background:
-                    radial-gradient(900px 500px at 20% 10%, rgba(34,197,94,0.10), transparent 60%),
-                    radial-gradient(700px 400px at 80% 20%, rgba(34,197,94,0.08), transparent 60%),
-                    radial-gradient(1200px 700px at 50% 120%, rgba(2,6,23,0.9), rgba(2,6,23,1)),
-                    linear-gradient(180deg, #0b1220 0%, #0b1220 100%);
-                color: var(--ink-primary);
-                min-height: 100vh;
-                /* Empêcher le rebond élastique sur mobile */
-                overscroll-behavior-y: none;
-            }
+    <style>
+        :root {
+            --brand-accent: #00FF00;
+            --brand-500: #22c55e;
+            --ink-primary: #e5e7eb;
+        }
 
-            /* Carte de connexion Glassmorphism */
-            .login-card {
-                background: rgba(17, 24, 39, 0.75);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            }
+        body {
+            font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+            background:
+                radial-gradient(900px 500px at 20% 10%, rgba(34,197,94,0.10), transparent 60%),
+                radial-gradient(700px 400px at 80% 20%, rgba(34,197,94,0.08), transparent 60%),
+                radial-gradient(1200px 700px at 50% 120%, rgba(2,6,23,0.9), rgba(2,6,23,1)),
+                linear-gradient(180deg, #0b1220 0%, #0b1220 100%);
+            color: var(--ink-primary);
+            min-height: 100vh;
+            overscroll-behavior-y: none;
+        }
 
-            /* Focus personnalisé */
-            .input-focus:focus {
-                box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.25);
-                border-color: var(--brand-500);
-                outline: none;
-            }
+        /* Glassmorphism Card */
+        .login-card {
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
 
-            /* AJOUT CRITIQUE : Fix Autofill Chrome/Safari (Fond Jaune/Bleu moche) */
-            input:-webkit-autofill,
-            input:-webkit-autofill:hover,
-            input:-webkit-autofill:focus,
-            input:-webkit-autofill:active {
-                -webkit-box-shadow: 0 0 0 30px rgba(31, 41, 55, 0.8) inset !important; /* bg-gray-800/80 */
-                -webkit-text-fill-color: white !important;
-                caret-color: white !important;
-                border-radius: 0.5rem;
-                transition: background-color 5000s ease-in-out 0s;
-            }
+        /* Focus Inputs */
+        .input-focus:focus {
+            box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.25);
+            border-color: var(--brand-500);
+            outline: none;
+        }
 
-            /* Typographie Marque */
-            .brand-chip { background: var(--brand-accent); }
-            .brand-text { color: var(--brand-500); }
-            .font-montserrat { font-family: 'Montserrat', sans-serif; }
+        /* Autofill Fix for Dark Mode */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px rgba(31, 41, 55, 0.8) inset !important;
+            -webkit-text-fill-color: white !important;
+            caret-color: white !important;
+            border-radius: 0.75rem; /* Match rounded-xl */
+            transition: background-color 5000s ease-in-out 0s;
+        }
 
-            /* Boutons */
-            .btn-brand {
-                background: var(--brand-accent);
-                transition: all 0.2s ease;
-            }
-            .btn-brand:hover {
-                background: #22c55e; /* Un peu plus foncé au survol */
-                transform: translateY(-1px);
-            }
-            .btn-brand:active { transform: translateY(0); }
+        /* Checkbox native color force */
+        input[type="checkbox"] {
+            accent-color: var(--brand-accent);
+        }
 
-            .link-brand { color: #34d399; }
-            .link-brand:hover { color: #bbf7d0; }
+        .brand-chip { background: var(--brand-accent); }
+        .font-montserrat { font-family: 'Montserrat', sans-serif; }
 
-            /* Animations */
-            @keyframes slideIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-        </style>
-        {% block extra_css %}{% endblock %}
-    </head>
-    <body class="min-h-screen flex flex-col items-center justify-center relative p-4 selection:bg-green-500/30 selection:text-white">
-        <script src="https://cdn.tailwindcss.com"></script>
+        .btn-brand {
+            background: var(--brand-accent);
+            transition: all 0.2s ease;
+        }
+        .btn-brand:hover {
+            background: var(--brand-500);
+            transform: translateY(-1px);
+        }
+        .btn-brand:active { transform: translateY(0); }
+        .btn-brand:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-        <main class="w-full max-w-md z-10 mt-24">
-            <div class="text-center mb-8 animate-[fadeIn_0.5s_ease-out]">
-                <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 brand-chip shadow-2xl shadow-green-500/20 overflow-hidden relative group">
-                    <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-                    <img src="{% static 'images/logo.png' %}"
-                         alt="BWHITE DIGITAL"
-                         class="w-full h-full object-contain p-1 relative z-10"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                    <div class="hidden w-full h-full items-center justify-center bg-black/20">
-                         <i class="fas fa-gem text-white text-3xl"></i>
-                    </div>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-center relative p-4 selection:bg-green-500/30 selection:text-white">
+
+    {% include "includes/_top_banner.html" %}
+
+    <main class="w-full max-w-md z-10 mt-24">
+
+        <div class="text-center mb-8 animate-[fadeIn_0.5s_ease-out]">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 brand-chip shadow-2xl shadow-green-500/20 overflow-hidden relative group">
+                <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+
+                <img src="{% static 'images/logo.png' %}"
+                     alt="BWHITE DIGITAL"
+                     class="w-full h-full object-contain p-1 relative z-10"
+                     onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+
+                <div class="hidden w-full h-full flex items-center justify-center bg-black/20">
+                    <i class="fas fa-gem text-white text-3xl" aria-hidden="true"></i>
                 </div>
-                <h1 class="text-3xl font-extrabold text-white tracking-tight font-montserrat">BWHITE DIGITAL</h1>
-                <p class="text-gray-400 mt-2 text-sm font-medium">Plateforme de gestion d'assurance</p>
             </div>
 
-            <section class="login-card rounded-2xl p-8 sm:p-10" style="animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
-                <h2 class="text-xl font-bold text-white mb-6 text-center">Connexion à votre espace</h2>
+            <h1 class="text-3xl font-extrabold text-white tracking-tight font-montserrat">BWHITE DIGITAL</h1>
+            <p class="text-gray-400 mt-2 text-sm font-medium">Plateforme de gestion d'assurance</p>
+        </div>
 
-                {% if messages %}
-                    <div class="mb-6 space-y-2">
+        <section class="login-card rounded-2xl p-8 sm:p-10" style="animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
+            <h2 class="text-xl font-bold text-white mb-6 text-center">Connexion à votre espace</h2>
+
+            {% if messages %}
+                <div class="mb-6 space-y-2">
                     {% for message in messages %}
-                        <div class="p-3 rounded-lg text-sm font-medium flex items-center gap-3
+                        <div class="p-3 rounded-lg text-sm font-medium flex items-center gap-3 animate-pulse
                             {% if message.level_tag == 'error' %} bg-red-500/10 text-red-400 border border-red-500/20
                             {% else %} bg-green-500/10 text-green-400 border border-green-500/20 {% endif %}" role="alert">
-                            <i class="fas {% if message.level_tag == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+                            <i class="fas {% if message.level_tag == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}" aria-hidden="true"></i>
                             {{ message }}
                         </div>
                     {% endfor %}
-                    </div>
-                {% endif %}
-
-                {% if form.non_field_errors %}
-                    <div class="mb-6 p-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg text-sm font-medium flex items-start gap-2">
-                        <i class="fas fa-exclamation-triangle mt-0.5"></i>
-                        <div>{% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}</div>
-                    </div>
-                {% endif %}
-
-                <form method="post" action="{% url 'accounts:login' %}" class="space-y-5" novalidate>
-                    {% csrf_token %}
-
-                    <div class="space-y-1.5">
-                        <label for="id_username" class="block text-gray-300 text-xs font-bold uppercase tracking-wider ml-1">
-                            Nom d'utilisateur
-                        </label>
-                        <div class="relative group">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <i class="fas fa-user text-gray-500 group-focus-within:text-green-500 transition-colors"></i>
-                            </div>
-                            <input type="text" name="username" id="id_username" required autofocus autocomplete="username"
-                                   class="w-full pl-11 pr-4 py-3 bg-gray-800/50 text-white rounded-xl border border-gray-700 focus:border-green-500 input-focus placeholder-gray-600 transition-all duration-200"
-                                   placeholder="Ex: admin"
-                                   {% if form.username.errors %}aria-invalid="true"{% endif %}>
-                        </div>
-                        {% if form.username.errors %}
-                            <p class="text-red-400 text-xs mt-1 ml-1">{{ form.username.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-
-                    <div class="space-y-1.5">
-                        <label for="id_password" class="block text-gray-300 text-xs font-bold uppercase tracking-wider ml-1">
-                            Mot de passe
-                        </label>
-                        <div class="relative group">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <i class="fas fa-lock text-gray-500 group-focus-within:text-green-500 transition-colors"></i>
-                            </div>
-                            <input type="password" name="password" id="id_password" required autocomplete="current-password"
-                                   class="w-full pl-11 pr-12 py-3 bg-gray-800/50 text-white rounded-xl border border-gray-700 focus:border-green-500 input-focus placeholder-gray-600 transition-all duration-200"
-                                   placeholder="••••••••"
-                                   {% if form.password.errors %}aria-invalid="true"{% endif %}>
-
-                            <button type="button" id="togglePwd"
-                                    class="absolute right-0 top-0 h-full px-4 text-gray-500 hover:text-white transition-colors cursor-pointer focus:outline-none"
-                                    aria-label="Afficher le mot de passe">
-                                <i id="password-icon" class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        {% if form.password.errors %}
-                            <p class="text-red-400 text-xs mt-1 ml-1">{{ form.password.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-
-                    <div class="flex items-center justify-between pt-2">
-                        <label class="inline-flex items-center text-gray-400 text-sm cursor-pointer group">
-                            <input type="checkbox" name="remember" id="id_remember"
-                                   class="rounded border-gray-600 bg-gray-700 text-green-500 focus:ring-offset-gray-900 focus:ring-green-500 w-4 h-4 cursor-pointer">
-                            <span class="ml-2 group-hover:text-gray-200 transition-colors">Rester connecté</span>
-                        </label>
-                        </div>
-
-                    <button type="submit"
-                            class="w-full btn-brand text-black font-bold py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-green-500/20 hover:shadow-green-500/30 flex items-center justify-center gap-2 mt-4">
-                        <span>Se connecter</span>
-                        <i class="fas fa-arrow-right text-sm"></i>
-                    </button>
-
-                    {% if next %}
-                        <input type="hidden" name="next" value="{{ next }}">
-                    {% endif %}
-                </form>
-            </section>
-
-            <div class="mt-8 text-center">
-                <div class="inline-flex items-center gap-6 text-xs text-gray-500">
-                    <span class="flex items-center gap-1.5">
-                        <i class="fas fa-lock text-green-500/70"></i> 256-bit SSL
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                        <i class="fas fa-shield-alt text-green-500/70"></i> Sécurisé
-                    </span>
                 </div>
-                <p class="mt-4 text-xs text-gray-600">
-                    © 2025 BWHITE DIGITAL. Tous droits réservés.
-                </p>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+                <div class="mb-6 p-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg text-sm font-medium flex items-start gap-2">
+                    <i class="fas fa-exclamation-triangle mt-0.5" aria-hidden="true"></i>
+                    <div>{% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}</div>
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'accounts:login' %}" class="space-y-5" novalidate id="loginForm">
+                {% csrf_token %}
+
+                <div class="space-y-1.5">
+                    <label for="id_username" class="block text-gray-300 text-xs font-bold uppercase tracking-wider ml-1">
+                        Nom d'utilisateur
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-500 group-focus-within:text-green-500 transition-colors" aria-hidden="true"></i>
+                        </div>
+                        <input type="text" name="username" id="id_username" required autofocus autocomplete="username"
+                               class="w-full pl-11 pr-4 py-3 bg-gray-800/50 text-white rounded-xl border border-gray-700 focus:border-green-500 input-focus placeholder-gray-600 transition-all duration-200"
+                               placeholder="Ex: admin"
+                               {% if form.username.errors %}aria-invalid="true"{% endif %}>
+                    </div>
+                    {% if form.username.errors %}
+                        <p class="text-red-400 text-xs mt-1 ml-1">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="id_password" class="block text-gray-300 text-xs font-bold uppercase tracking-wider ml-1">
+                        Mot de passe
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-500 group-focus-within:text-green-500 transition-colors" aria-hidden="true"></i>
+                        </div>
+
+                        <input type="password" name="password" id="id_password" required autocomplete="current-password"
+                               class="w-full pl-11 pr-12 py-3 bg-gray-800/50 text-white rounded-xl border border-gray-700 focus:border-green-500 input-focus placeholder-gray-600 transition-all duration-200"
+                               placeholder="••••••••"
+                               {% if form.password.errors %}aria-invalid="true"{% endif %}>
+
+                        <button type="button" id="togglePwd"
+                                class="absolute right-0 top-0 h-full px-4 text-gray-500 hover:text-white transition-colors cursor-pointer focus:outline-none"
+                                aria-label="Afficher le mot de passe">
+                            <i id="password-icon" class="fas fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                        <p class="text-red-400 text-xs mt-1 ml-1">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center justify-between pt-2">
+                    <label class="inline-flex items-center text-gray-400 text-sm cursor-pointer group">
+                        <input type="checkbox" name="remember" id="id_remember" value="true"
+                               class="rounded border-gray-600 bg-gray-700 focus:ring-green-500 w-4 h-4 cursor-pointer transition-colors">
+                        <span class="ml-2 group-hover:text-gray-200 transition-colors">Rester connecté</span>
+                    </label>
+
+
+                </div>
+
+                <button type="submit" id="btnSubmit"
+                        class="w-full btn-brand text-black font-bold py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-green-500/20 hover:shadow-green-500/30 flex items-center justify-center gap-2 mt-4">
+                    <span id="btnText">Se connecter</span>
+                    <i id="btnIcon" class="fas fa-arrow-right text-sm" aria-hidden="true"></i>
+                </button>
+
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+            </form>
+        </section>
+
+        <div class="mt-8 text-center">
+            <div class="inline-flex items-center gap-6 text-xs text-gray-500">
+                <span class="flex items-center gap-1.5">
+                    <i class="fas fa-lock text-green-500/70" aria-hidden="true"></i> 256-bit SSL
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <i class="fas fa-shield-alt text-green-500/70" aria-hidden="true"></i> Sécurisé
+                </span>
             </div>
-        </main>
+            <p class="mt-4 text-xs text-gray-600">
+                © 2025 BWHITE DIGITAL. Tous droits réservés.
+            </p>
+        </div>
+    </main>
 
-        <noscript>
-            <div class="fixed bottom-0 inset-x-0 bg-yellow-600 text-white text-center py-2 text-sm z-50">
-                L'activation de JavaScript est requise pour utiliser cette application.
-            </div>
-        </noscript>
+    <noscript>
+        <div class="fixed bottom-0 inset-x-0 bg-yellow-600 text-white text-center py-2 text-sm z-50">
+            L'activation de JavaScript est requise pour utiliser cette application.
+        </div>
+    </noscript>
 
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                var btn = document.getElementById('togglePwd');
-                var input = document.getElementById('id_password');
-                var icon = document.getElementById('password-icon');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Toggle Password Visibility
+            const btnToggle = document.getElementById('togglePwd');
+            const inputPwd = document.getElementById('id_password');
+            const iconPwd = document.getElementById('password-icon');
 
-                if(btn && input && icon) {
-                    btn.addEventListener('click', function(e) {
-                        e.preventDefault(); // Empêche le focus loss
-                        var isPassword = input.type === 'password';
-                        input.type = isPassword ? 'text' : 'password';
+            if (btnToggle && inputPwd && iconPwd) {
+                btnToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const isPassword = inputPwd.type === 'password';
+                    inputPwd.type = isPassword ? 'text' : 'password';
 
-                        // Icon logic: Eye slash means "Hide" (so click to hide), Eye means "Show"
-                        if (isPassword) {
-                            icon.classList.replace('fa-eye', 'fa-eye-slash');
-                            btn.setAttribute('aria-label', 'Masquer le mot de passe');
-                        } else {
-                            icon.classList.replace('fa-eye-slash', 'fa-eye');
-                            btn.setAttribute('aria-label', 'Afficher le mot de passe');
-                        }
-                    });
-                }
-            });
-        </script>
-    </body>
+                    if (isPassword) {
+                        iconPwd.classList.replace('fa-eye', 'fa-eye-slash');
+                        btnToggle.setAttribute('aria-label', 'Masquer le mot de passe');
+                    } else {
+                        iconPwd.classList.replace('fa-eye-slash', 'fa-eye');
+                        btnToggle.setAttribute('aria-label', 'Afficher le mot de passe');
+                    }
+                });
+            }
+
+            // 2. Prevent Double Submission & Show Loading State
+            const loginForm = document.getElementById('loginForm');
+            const btnSubmit = document.getElementById('btnSubmit');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+
+            if(loginForm && btnSubmit) {
+                loginForm.addEventListener('submit', function() {
+                    // Désactive le bouton pour éviter le double-clic
+                    btnSubmit.disabled = true;
+                    btnSubmit.classList.add('opacity-75', 'cursor-not-allowed');
+
+                    // Change le texte et l'icône
+                    btnText.innerText = "Connexion...";
+                    btnIcon.classList.remove('fa-arrow-right');
+                    btnIcon.classList.add('fa-spinner', 'fa-spin');
+                });
+            }
+        });
+    </script>
+
+</body>
 </html>

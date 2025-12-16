@@ -165,7 +165,7 @@ def detail_apporteur(request, pk):
                 )
 
         elif action == "valider_onboarding" and onboarding:
-            if onboarding.est_complet():  # utilise ta méthode helper :contentReference[oaicite:3]{index=3}
+            if onboarding.est_complet:  # utilise ta méthode helper :contentReference[oaicite:3]{index=3}
                 onboarding.status = ApporteurOnboarding.Status.VALIDE
                 onboarding.save(update_fields=["status"])
                 messages.success(request, "Onboarding validé.")

@@ -22,17 +22,17 @@
                     <th class="py-3 px-3 text-left">Échéance</th>
                     <th class="py-3 px-3 text-right">TTC</th>
 
-                    {# COLONNES ADMIN AJOUTÉES #}
+                    {# COLONNES ADMIN #}
                     {% if user.is_true_admin %}
-                        <th class="py-3 px-3 text-right text-blue-300">Prime Net</th>
-                        <th class="py-3 px-3 text-left text-blue-300">Com. Bwhite</th>
-                        <th class="py-3 px-3 text-left text-blue-300">Com. Askia</th>
+                        <th class="py-3 px-3 text-right text-blue-300">P.Net</th>
+                        <th class="py-3 px-3 text-left text-blue-300">Com.Bw</th>
+                        <th class="py-3 px-3 text-left text-blue-300">Rev.Askia</th>
                     {% endif %}
 
-                    <th class="py-3 px-3 text-left">Com. Apporteur</th>
+                    <th class="py-3 px-3 text-left">Com.App</th>
 
                     {% if user.is_staff %}
-                        <th class="py-3 px-3 text-left">Créé par</th>
+                        <th class="py-3 px-3 text-left">De</th>
                     {% endif %}
                     <th class="py-3 px-3 text-center">Paiement</th>
                     <th class="py-3 px-3 text-center">Docs</th>
@@ -88,7 +88,7 @@
                         </span>
                     </td>
 
-                    {# DONNÉES ADMIN AJOUTÉES #}
+                    {# DONNÉES ADMIN #}
                     {% if user.is_true_admin %}
                         <td class="py-3 px-3 font-semibold whitespace-nowrap text-right">
                             <span class="text-gray-400">
@@ -100,15 +100,15 @@
                                 {{ contrat.commission_bwhite|default_if_none:0|floatformat:0|intcomma }} F
                             </span>
                         </td>
+
                         <td class="py-3 px-3 whitespace-nowrap">
-                            <span class="px-2 py-1 rounded-full bg-purple-900/50 text-purple-300 text-xs font-medium border border-purple-800">
-                                {{ contrat.commission_askia|default_if_none:0|floatformat:0|intcomma }} F
+                            <span class="px-2 py-1 rounded-full bg-teal-900/50 text-teal-300 text-xs font-medium border border-teal-800">
+                                {{ contrat.net_a_reverser|default_if_none:0|floatformat:0|intcomma }} F
                             </span>
                         </td>
                     {% endif %}
 
                     <td class="py-3 px-3 whitespace-nowrap">
-                        {# Commission Apporteur (Visible par tous les autorisés) #}
                         <span class="px-2 py-1 rounded-full bg-yellow-900/50 text-yellow-300 text-xs font-medium">
                             {{ contrat.commission_apporteur|default_if_none:0|floatformat:0|intcomma }} F
                         </span>
@@ -229,7 +229,7 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="{% if user.is_true_admin %}14{% elif user.is_staff %}11{% else %}10{% endif %}"
+                    <td colspan="{% if user.is_true_admin %}15{% elif user.is_staff %}11{% else %}10{% endif %}"
                         class="text-center py-8 text-gray-500 rounded-lg bg-gray-800/60">
                         <i class="fas fa-inbox text-3xl mb-3 block"></i>
                         <p class="font-semibold">Aucun contrat émis pour le moment</p>

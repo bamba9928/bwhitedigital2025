@@ -85,34 +85,12 @@ WSGI_APPLICATION = "askia_insurance.wsgi.application"
 # ==============================
 # Base de données
 # ==============================
-DB_ENGINE = config("DB_ENGINE", default="django.db.backends.sqlite3").strip()
-DB_NAME = config("DB_NAME", default="db.sqlite3").strip()
-DB_USER = config("DB_USER", default="").strip()
-DB_PWD = config("DB_PASSWORD", default="").strip()
-DB_HOST = config("DB_HOST", default="").strip()
-DB_PORT = config("DB_PORT", default="").strip()
-
-if DB_ENGINE == "django.db.backends.sqlite3":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": str((BASE_DIR / DB_NAME).resolve()),
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    # PostgreSQL configuration
-    DATABASES = {
-        "default": {
-            "ENGINE": DB_ENGINE,
-            "NAME": DB_NAME,
-            "USER": DB_USER,
-            "PASSWORD": DB_PWD,
-            "HOST": DB_HOST or "127.0.0.1",
-            "PORT": DB_PORT or "5432",
-            "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
-        }
-    }
-
+}
 # ==============================
 # Authentification
 # ==============================
@@ -155,14 +133,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ==============================
 # Email
 # ==============================
-EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
-EMAIL_HOST = config("EMAIL_HOST", default="")
-EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Bwhite Assurance <no-reply@bwhite.com>")
-
 MESSAGE_TAGS = {
     messages.DEBUG: "debug",
     messages.INFO: "info",
